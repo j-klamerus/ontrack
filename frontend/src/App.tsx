@@ -7,6 +7,16 @@ import './App.css'
 function App() {
   const [count, setCount] = useState(0)
 
+  const sampleGetRequest = async () => {
+    const response = await fetch("http://localhost:3000");
+    if (!response.ok) {
+      throw new Error(`Backend request failed with status ${response.status}`);
+    }
+    const data = await response.json();
+    console.log(data);
+    return data;
+  }
+
   return (
     <>
       <section id="center">
@@ -30,6 +40,11 @@ function App() {
         </button>
         <button
           className="counter"
+          onClick={() => {
+            sampleGetRequest().catch((error: unknown) => {
+              console.error("Could not reach the backend:", error);
+            });
+          }}
         >
           Test Backend
         </button>
