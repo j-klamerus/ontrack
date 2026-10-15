@@ -1,0 +1,217 @@
+.dashboard-page {
+  min-height: calc(100vh - 80px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 32px;
+}
+
+.scanning-container {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.scanning-container h2,
+.summary-container h2 {
+  margin: 0;
+  color: #133048;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.scanning-description,
+.summary-description {
+  margin: 12px 0 40px;
+  color: #64748b;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.progress-circle {
+  width: 230px;
+  height: 230px;
+  position: relative;
+}
+
+.progress-ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.progress-ring-background {
+  fill: none;
+  stroke: #e5edf5;
+  stroke-width: 16;
+}
+
+.progress-ring-value {
+  fill: none;
+  stroke: #1c8afd;
+  stroke-width: 16;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.1s linear;
+}
+
+.progress-circle-inner {
+  position: absolute;
+  inset: 24px;
+  border-radius: 50%;
+  background-color: #f5f7fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-percentage {
+  color: #133048;
+  font-size: 44px;
+  font-weight: 700;
+}
+
+.scanning-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 28px 0 8px;
+  color: #133048;
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.scanning-count {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.summary-container {
+  width: 100%;
+  max-width: 1100px;
+  align-self: flex-start;
+}
+
+.summary-description {
+  margin: 12px 0 24px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summary-card {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  text-align: center;
+  border: 1px solid transparent;
+  border-radius: 16px;
+}
+
+.total-emails {
+  background-color: rgba(59, 130, 246, 0.10);
+  border-color: rgba(59, 130, 246, 0.18);
+}
+
+.high-priority {
+  background-color: rgba(239, 68, 68, 0.09);
+  border-color: rgba(239, 68, 68, 0.17);
+}
+
+.commitments {
+  background-color: rgba(245, 158, 11, 0.11);
+  border-color: rgba(245, 158, 11, 0.20);
+}
+
+.events {
+  background-color: rgba(16, 185, 129, 0.10);
+  border-color: rgba(16, 185, 129, 0.18);
+}
+
+.summary-icon {
+  box-sizing: content-box;
+  width: 32px;
+  height: 32px;
+  padding: 12px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+}
+
+.total-emails .summary-icon {
+  color: #2563eb;
+  background-color: rgba(59, 130, 246, 0.15);
+}
+
+.high-priority .summary-icon {
+  color: #dc2626;
+  background-color: rgba(239, 68, 68, 0.14);
+}
+
+.commitments .summary-icon {
+  color: #b7791f;
+  background-color: rgba(245, 158, 11, 0.17);
+}
+
+.events .summary-icon {
+  color: #059669;
+  background-color: rgba(16, 185, 129, 0.15);
+}
+
+.summary-number {
+  font-size: 34px;
+  font-weight: 700;
+}
+
+.total-emails .summary-number {
+  color: #2563eb;
+}
+
+.high-priority .summary-number {
+  color: #dc2626;
+}
+
+.commitments .summary-number {
+  color: #b7791f;
+}
+
+.events .summary-number {
+  color: #059669;
+}
+
+.summary-label {
+  color: #475569;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+@media (max-width: 1000px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .scanning-container h2,
+  .summary-container h2 {
+    font-size: 26px;
+  }
+
+  .summary-card {
+    min-height: 120px;
+  }
+}
