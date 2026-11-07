@@ -1,0 +1,112 @@
+[
+  {
+    "id": 1,
+    "title": "Capstone Proposal Draft",
+    "course": "CIT 485",
+    "dateOffsetDays": 1,
+    "time": "09:00",
+    "category": "Assignment",
+    "priority": "High",
+    "description": "Finalize the proposal outline and submit the first draft for review."
+  },
+  {
+    "id": 2,
+    "title": "Biology Exam",
+    "course": "BIO 210",
+    "dateOffsetDays": 3,
+    "time": "13:30",
+    "category": "Exam",
+    "priority": "High",
+    "description": "Unit 3 exam covering cell respiration and lab techniques."
+  },
+  {
+    "id": 3,
+    "title": "Group Project Meeting",
+    "course": "CS 350",
+    "dateOffsetDays": 5,
+    "time": "14:00",
+    "category": "Meeting",
+    "priority": "Medium",
+    "description": "Team check-in to review sprint progress and assign next tasks."
+  },
+  {
+    "id": 4,
+    "title": "Career Center Advising",
+    "course": "Career Development",
+    "dateOffsetDays": 7,
+    "time": "11:00",
+    "category": "Appointment",
+    "priority": "Medium",
+    "description": "Advisor appointment to review internship application strategy."
+  },
+  {
+    "id": 5,
+    "title": "History Essay Deadline",
+    "course": "HIST 120",
+    "dateOffsetDays": -2,
+    "time": "23:59",
+    "category": "Deadline",
+    "priority": "High",
+    "description": "Final draft submission for the primary source analysis essay."
+  },
+  {
+    "id": 6,
+    "title": "Math Quiz Review",
+    "course": "MATH 220",
+    "dateOffsetDays": 10,
+    "time": "18:15",
+    "category": "Assignment",
+    "priority": "Medium",
+    "description": "Review worksheets for derivatives and optimization practice."
+  },
+  {
+    "id": 7,
+    "title": "Professor Office Hours",
+    "course": "CHEM 130",
+    "dateOffsetDays": 12,
+    "time": "16:00",
+    "category": "Meeting",
+    "priority": "Low",
+    "description": "Office hours for lab report feedback and concept clarification."
+  },
+  {
+    "id": 8,
+    "title": "Writing Center Consultation",
+    "course": "Research Writing",
+    "dateOffsetDays": 3,
+    "time": "14:30",
+    "category": "Appointment",
+    "priority": "Medium",
+    "description": "Review the latest research paper draft with a writing consultant."
+  },
+  {
+    "id": 9,
+    "title": "MATH 220 Midterm Review",
+    "course": "MATH 220",
+    "dateOffsetDays": 6,
+    "time": "16:00",
+    "category": "Meeting",
+    "priority": "Medium",
+    "description": "Optional group review session covering integration techniques."
+  },
+  {
+    "id": 10,
+    "title": "CS 350 Prototype Milestone",
+    "course": "CS 350",
+    "dateOffsetDays": 5,
+    "time": "18:00",
+    "category": "Assignment",
+    "priority": "High",
+    "description": "Upload the team prototype and progress summary to the course site."
+  },
+  {
+    "id": 11,
+    "title": "Spring Course Advising",
+    "course": "Academic Advising",
+    "dateOffsetDays": 9,
+    "time": "10:30",
+    "category": "Appointment",
+    "priority": "Medium",
+    "description": "Meet with an advisor to review spring courses and prerequisites."
+  }
+]

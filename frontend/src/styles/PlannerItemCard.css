@@ -1,0 +1,229 @@
+.planner-item-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background-color: #fbfdff;
+}
+
+.planner-item-leading {
+  flex: 0 0 auto;
+  padding-top: 2px;
+}
+
+.planner-item-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.planner-item-trailing {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  justify-content: flex-end;
+  min-width: 112px;
+}
+
+.planner-item-actions-right {
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: 0;
+}
+
+.planner-item-actions-right .planner-item-action {
+  width: 100%;
+}
+
+.commitment-card-trailing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.commitment-card-trailing .planner-item-date {
+  text-align: right;
+}
+
+.commitment-card-trailing .planner-item-action {
+  min-width: 88px;
+}
+
+.planner-item-labels {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.planner-item-kind {
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.planner-item-category {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.planner-item-labels .priority-badge {
+  padding: 4px 7px;
+  font-size: 10px;
+}
+
+.planner-item-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.planner-item-status-overdue {
+  background-color: #fef2f2;
+  color: #b91c1c;
+}
+
+.planner-item-status-completed {
+  background-color: #ecfdf5;
+  color: #047857;
+}
+
+.planner-item-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 16px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.planner-item-subtitle,
+.planner-item-date,
+.planner-item-description {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.planner-item-description {
+  color: #475569;
+}
+
+.planner-item-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.planner-item-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-control-border);
+  border-radius: 8px;
+  background-color: #ffffff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.planner-item-action:hover:not(:disabled) {
+  border-color: #93c5fd;
+  background-color: #eff6ff;
+  color: #1d4ed8;
+}
+
+.planner-item-action-confirm {
+  border-color: #86efac;
+  background-color: #f0fdf4;
+  color: #15803d;
+}
+
+.planner-item-action-confirm:hover:not(:disabled) {
+  border-color: #4ade80;
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.planner-item-action-send {
+  border-color: #93c5fd;
+  background-color: #eff6ff;
+  color: #1d4ed8;
+}
+
+.planner-item-action-send:hover:not(:disabled) {
+  border-color: #60a5fa;
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.planner-item-action-delete {
+  border-color: #fca5a5;
+  background-color: #fef2f2;
+  color: #b91c1c;
+}
+
+.planner-item-action-delete:hover:not(:disabled) {
+  border-color: #f87171;
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.planner-item-action:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.planner-item-editor {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .planner-item-card {
+    flex-wrap: wrap;
+    padding: 12px;
+  }
+
+  .planner-item-trailing {
+    flex-basis: 100%;
+    min-width: 0;
+    padding-left: 34px;
+  }
+
+  .planner-item-actions-right {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .planner-item-actions-right .planner-item-action {
+    width: auto;
+  }
+
+  .commitment-card-trailing {
+    align-items: flex-start;
+  }
+
+  .commitment-card-trailing .planner-item-date {
+    text-align: left;
+  }
+}

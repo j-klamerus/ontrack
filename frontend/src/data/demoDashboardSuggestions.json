@@ -1,0 +1,71 @@
+[
+  {
+    "id": 1,
+    "kind": "Commitment",
+    "title": "Confirm fall course selections",
+    "description": "Review the recommended course plan before the priority registration window closes.",
+    "daysFromNow": 4,
+    "time": "17:00",
+    "category": "Deadline",
+    "priority": "High",
+    "sourceEmailId": 10
+  },
+  {
+    "id": 2,
+    "kind": "Calendar event",
+    "title": "BIO 210 Lab Practical",
+    "course": "BIO 210",
+    "description": "The practical was rescheduled; review the specimen list before class.",
+    "daysFromNow": 3,
+    "time": "13:30",
+    "category": "Exam",
+    "priority": "High",
+    "sourceEmailId": 3
+  },
+  {
+    "id": 3,
+    "kind": "Commitment",
+    "title": "Schedule spring advising appointment",
+    "description": "Book a 20-minute meeting to review your spring course plan before registration.",
+    "daysFromNow": 7,
+    "time": "17:00",
+    "category": "Appointment",
+    "priority": "Medium",
+    "sourceEmailId": 15
+  },
+  {
+    "id": 4,
+    "kind": "Commitment",
+    "title": "Prepare MATH 220 midterm review",
+    "description": "Review integration techniques before the optional Thursday study session.",
+    "daysFromNow": 4,
+    "time": "16:00",
+    "category": "Exam",
+    "priority": "Medium",
+    "sourceEmailId": 14
+  },
+  {
+    "id": 5,
+    "kind": "Calendar event",
+    "title": "Writing Center Consultation",
+    "course": "Research Writing",
+    "description": "Review your latest research paper draft with a writing consultant.",
+    "daysFromNow": 3,
+    "time": "14:30",
+    "category": "Appointment",
+    "priority": "Medium",
+    "sourceEmailId": 12
+  },
+  {
+    "id": 6,
+    "kind": "Calendar event",
+    "title": "MATH 220 Midterm Review",
+    "course": "MATH 220",
+    "description": "Join the optional review session covering integration techniques.",
+    "daysFromNow": 6,
+    "time": "16:00",
+    "category": "Meeting",
+    "priority": "Medium",
+    "sourceEmailId": 14
+  }
+]

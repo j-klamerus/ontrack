@@ -1,109 +1,31 @@
 .dashboard-page {
-  min-height: calc(100vh - 80px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px 32px;
 }
 
-.scanning-container {
-  width: 100%;
-  max-width: 600px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.scanning-container h2,
-.summary-container h2 {
-  margin: 0;
-  color: #133048;
-  font-size: 32px;
-  font-weight: 700;
-}
-
-.scanning-description,
 .summary-description {
-  margin: 12px 0 40px;
+  margin: 12px 0 24px;
   color: #64748b;
   font-size: 16px;
   line-height: 1.6;
 }
 
-.progress-circle {
-  width: 230px;
-  height: 230px;
-  position: relative;
-}
-
-.progress-ring {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-  overflow: visible;
-}
-
-.progress-ring-background {
-  fill: none;
-  stroke: #e5edf5;
-  stroke-width: 16;
-}
-
-.progress-ring-value {
-  fill: none;
-  stroke: #1c8afd;
-  stroke-width: 16;
-  stroke-linecap: round;
-  transition: stroke-dashoffset 0.1s linear;
-}
-
-.progress-circle-inner {
-  position: absolute;
-  inset: 24px;
-  border-radius: 50%;
-  background-color: #f5f7fb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.progress-percentage {
-  color: #133048;
-  font-size: 44px;
-  font-weight: 700;
-}
-
-.scanning-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 28px 0 8px;
-  color: #133048;
-  font-size: 19px;
-  font-weight: 600;
-}
-
-.scanning-count {
-  margin: 0;
-  color: #64748b;
+.suggestion-action-error {
+  margin: -12px 0 20px;
+  color: #b91c1c;
   font-size: 14px;
 }
 
 .summary-container {
   width: 100%;
-  max-width: 1100px;
   align-self: flex-start;
-}
-
-.summary-description {
-  margin: 12px 0 24px;
 }
 
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 16px;
 }
 
 .summary-card {
@@ -195,23 +117,142 @@
   font-weight: 600;
 }
 
+.dashboard-sections {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr);
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.dashboard-panel {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.dashboard-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.dashboard-panel-header h3 {
+  margin: 0;
+  color: #133048;
+  font-size: 18px;
+}
+
+.dashboard-panel-header p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.panel-count {
+  min-width: 28px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background-color: #eff6ff;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.dashboard-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.suggestion-edit-form {
+  display: grid;
+  width: 100%;
+  gap: 10px;
+}
+
+.suggestion-edit-form-grid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.suggestion-edit-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #133048;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.suggestion-edit-form-grid input,
+.suggestion-edit-form-grid select,
+.suggestion-edit-form-grid textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background-color: #ffffff;
+  color: #133048;
+  font: inherit;
+}
+
+.suggestion-edit-form-grid textarea {
+  resize: vertical;
+}
+
+.suggestion-full-width {
+  grid-column: 1 / -1;
+}
+
+.dashboard-empty-state {
+  margin: 0;
+  padding: 20px 8px;
+  color: #64748b;
+  font-size: 14px;
+  text-align: center;
+}
+
 @media (max-width: 1000px) {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-sections {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 600px) {
   .summary-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .scanning-container h2,
-  .summary-container h2 {
-    font-size: 26px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .summary-card {
-    min-height: 120px;
+    min-height: 140px;
+    aspect-ratio: auto;
   }
+
+  .dashboard-panel {
+    padding: 16px;
+  }
+
+  .suggestion-edit-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .suggestion-full-width {
+    grid-column: auto;
+  }
+
 }
