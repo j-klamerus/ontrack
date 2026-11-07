@@ -1,128 +1,85 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Plus } from 'lucide-react'
+import CommitmentFormModal from './commitments/CommitmentFormModal'
+import CommitmentSummaryCards from './commitments/CommitmentSummaryCards'
+import CommitmentTracker from './commitments/CommitmentTracker'
+import SuggestedCommitmentsPanel from './commitments/SuggestedCommitmentsPanel'
+import {
+  allFilterOption,
+  type CommitmentFilter,
+  type CommitmentSuggestion
+} from './commitments/types'
+import { getStatus } from './commitments/utils'
+import { getEventCategories, saveItemCategoryOverride } from '../constants/eventCategories'
+import {
+  addCommitment,
+  deleteCommitment,
+  deleteCommitments,
+  getCommitments,
+  updateCommitment
+} from '../services/commitments'
+import { getDashboardSuggestions } from '../services/dashboardSuggestions'
+import { getEmails } from '../services/emails'
+import {
+  confirmDashboardSuggestion,
+  dismissDashboardSuggestion
+} from '../services/reviewedSuggestions'
+import { recordPlannerPageChange } from '../services/plannerNavigation'
+import type { Commitment } from '../types/commitment'
+import type { StudentEmail } from '../types/email'
 import '../styles/Commitments.css'
 
-type Priority = 'High' | 'Medium' | 'Low'
-type CommitmentStatus = 'Upcoming' | 'Overdue' | 'Completed'
-type Filter = 'All' | CommitmentStatus
-
-type Commitment = {
-  id: number
-  name: string
-  course: string
-  dueDate: string
-  dueTime: string
-  priority: Priority
-  completed: boolean
-  sourceEmail: string
-}
-
-const initialCommitments: Commitment[] = [
-  {
-    id: 1,
-    name: 'Capstone Proposal Draft',
-    course: 'CIT 485',
-    dueDate: '2026-10-21',
-    dueTime: '09:00',
-    priority: 'High',
-    completed: false,
-    sourceEmail: 'instructor@college.edu'
-  },
-  {
-    id: 2,
-    name: 'Biology Lab Report',
-    course: 'BIO 210',
-    dueDate: '2026-10-18',
-    dueTime: '17:30',
-    priority: 'High',
-    completed: false,
-    sourceEmail: 'bio-lab@college.edu'
-  },
-  {
-    id: 3,
-    name: 'Math Quiz Review',
-    course: 'MATH 220',
-    dueDate: '2026-10-24',
-    dueTime: '18:15',
-    priority: 'Medium',
-    completed: false,
-    sourceEmail: 'math-help@college.edu'
-  },
-  {
-    id: 4,
-    name: 'Group Project Meeting',
-    course: 'CS 350',
-    dueDate: '2026-10-20',
-    dueTime: '14:00',
-    priority: 'Low',
-    completed: false,
-    sourceEmail: 'team-project@college.edu'
-  },
-  {
-    id: 5,
-    name: 'History Reading Notes',
-    course: 'HIST 120',
-    dueDate: '2026-10-15',
-    dueTime: '08:00',
-    priority: 'Medium',
-    completed: true,
-    sourceEmail: 'history@college.edu'
-  },
-  {
-    id: 6,
-    name: 'Portfolio Check-In',
-    course: 'ART 110',
-    dueDate: '2026-10-17',
-    dueTime: '12:00',
-    priority: 'Low',
-    completed: true,
-    sourceEmail: 'design-review@college.edu'
-  }
-]
-
-const filterOptions: Filter[] = ['All', 'Upcoming', 'Overdue', 'Completed']
-
-const getStatus = (commitment: Commitment): CommitmentStatus => {
-  if (commitment.completed) {
-    return 'Completed'
-  }
-
-  const dueAt = new Date(`${commitment.dueDate}T${commitment.dueTime}:00`)
-
-  return dueAt < new Date() ? 'Overdue' : 'Upcoming'
-}
-
-const formatDueDate = (date: string, time: string) => {
-  const dueAt = new Date(`${date}T${time}:00`)
-
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit'
-  }).format(dueAt)
-}
-
 function Commitments() {
-  const [commitments, setCommitments] = useState(initialCommitments)
-  const [activeFilter, setActiveFilter] = useState<Filter>('All')
+  const eventCategories = getEventCategories()
+  const [commitments, setCommitments] = useState<Commitment[]>([])
+  const [suggestions, setSuggestions] = useState<CommitmentSuggestion[]>([])
+  const [emails, setEmails] = useState<StudentEmail[]>([])
+  const [activeFilter, setActiveFilter] = useState<CommitmentFilter>('All')
+  const [categoryFilter, setCategoryFilter] = useState(allFilterOption)
+  const [priorityFilter, setPriorityFilter] = useState(allFilterOption)
   const [searchTerm, setSearchTerm] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [suggestionError, setSuggestionError] = useState<string | null>(null)
+  const [savingSuggestionId, setSavingSuggestionId] = useState<number | null>(null)
+  const [editingSuggestion, setEditingSuggestion] = useState<CommitmentSuggestion | null>(null)
+  const [editingCommitment, setEditingCommitment] = useState<Commitment | null>(null)
+  const [isAddingCommitment, setIsAddingCommitment] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [commitmentFormError, setCommitmentFormError] = useState<string | null>(null)
 
-  const summary = useMemo(() => {
-    const total = commitments.length
-    const upcoming = commitments.filter((item) => getStatus(item) === 'Upcoming').length
-    const overdue = commitments.filter((item) => getStatus(item) === 'Overdue').length
-    const completed = commitments.filter((item) => getStatus(item) === 'Completed').length
+  useEffect(() => {
+    Promise.all([getCommitments(), getDashboardSuggestions(), getEmails()])
+      .then(([loadedCommitments, loadedSuggestions, loadedEmails]) => {
+        setCommitments(loadedCommitments)
+        setSuggestions(
+          loadedSuggestions.filter(
+            (suggestion): suggestion is CommitmentSuggestion => suggestion.kind === 'Commitment'
+          )
+        )
+        setEmails(loadedEmails)
+      })
+      .catch((error: unknown) => {
+        setLoadError(error instanceof Error ? error.message : 'Unable to load commitments.')
+      })
+      .finally(() => setIsLoading(false))
+  }, [])
 
-    return { total, upcoming, overdue, completed }
-  }, [commitments])
+  const summary = useMemo(() => ({
+    total: commitments.length,
+    upcoming: commitments.filter((item) => getStatus(item) === 'Upcoming').length,
+    overdue: commitments.filter((item) => getStatus(item) === 'Overdue').length,
+    completed: commitments.filter((item) => getStatus(item) === 'Completed').length
+  }), [commitments])
 
   const filteredCommitments = commitments.filter((commitment) => {
     const status = getStatus(commitment)
-    const matchesFilter = activeFilter === 'All' ? true : status === activeFilter
+    const matchesFilter = activeFilter === 'All' || status === activeFilter
+    const matchesCategory = categoryFilter === allFilterOption || commitment.category === categoryFilter
+    const matchesPriority = priorityFilter === allFilterOption || commitment.priority === priorityFilter
     const trimmedSearch = searchTerm.trim().toLowerCase()
 
-    if (!matchesFilter) {
+    if (!matchesFilter || !matchesCategory || !matchesPriority) {
       return false
     }
 
@@ -134,144 +91,290 @@ function Commitments() {
       commitment.name,
       commitment.course,
       commitment.sourceEmail,
+      commitment.category,
       commitment.priority,
-      status
-    ]
-      .join(' ')
-      .toLowerCase()
+      status,
+      commitment.dueDate,
+      commitment.dueTime,
+      commitment.completed ? 'read done complete' : 'active incomplete'
+    ].join(' ').toLowerCase()
 
     return searchableText.includes(trimmedSearch)
   })
 
-  const handleToggleCompletion = (id: number) => {
-    setCommitments((currentCommitments) =>
-      currentCommitments.map((commitment) =>
-        commitment.id === id
-          ? { ...commitment, completed: !commitment.completed }
-          : commitment
-      )
+  const hasActiveSearchFilters =
+    searchTerm.trim().length > 0 ||
+    activeFilter !== 'All' ||
+    categoryFilter !== allFilterOption ||
+    priorityFilter !== allFilterOption
+
+  const visibleActiveCommitments = filteredCommitments.filter((item) => !item.completed)
+  const completedCommitments = filteredCommitments.filter((item) => item.completed)
+
+  const clearSearchFilters = () => {
+    setSearchTerm('')
+    setActiveFilter('All')
+    setCategoryFilter(allFilterOption)
+    setPriorityFilter(allFilterOption)
+  }
+
+  const handleClearCompleted = () => {
+    const completedIds = commitments
+      .filter((commitment) => commitment.completed)
+      .map((commitment) => commitment.id)
+
+    if (completedIds.length === 0) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Permanently delete ${completedIds.length} completed commitment${completedIds.length === 1 ? '' : 's'}?`
     )
+    if (!confirmed) {
+      return
+    }
+
+    try {
+      deleteCommitments(completedIds)
+      setCommitments((current) =>
+        current.filter((commitment) => !completedIds.includes(commitment.id))
+      )
+      recordPlannerPageChange('commitments')
+      setActionError(null)
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Unable to delete completed commitments.')
+    }
+  }
+
+  const handleToggleCompletion = (id: number) => {
+    const commitment = commitments.find((item) => item.id === id)
+    if (!commitment) {
+      return
+    }
+
+    const updated = { ...commitment, completed: !commitment.completed }
+    try {
+      updateCommitment(updated)
+      setCommitments((current) =>
+        current.map((item) => item.id === id ? updated : item)
+      )
+      recordPlannerPageChange('commitments')
+      setActionError(null)
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Unable to update the commitment.')
+    }
+  }
+
+  const handleSaveCommitment = () => {
+    if (!editingCommitment) {
+      return
+    }
+
+    if (
+      !editingCommitment.name.trim() ||
+      !editingCommitment.course.trim() ||
+      !editingCommitment.dueDate ||
+      !editingCommitment.dueTime
+    ) {
+      setCommitmentFormError('Enter a title, course, due date, and due time.')
+      return
+    }
+
+    const preparedCommitment = {
+      ...editingCommitment,
+      name: editingCommitment.name.trim(),
+      course: editingCommitment.course.trim(),
+      sourceEmail: editingCommitment.sourceEmail.trim()
+    }
+
+    try {
+      if (isAddingCommitment) {
+        addCommitment(preparedCommitment)
+        setCommitments((current) => [...current, preparedCommitment])
+      } else {
+        saveItemCategoryOverride('commitment', preparedCommitment.id, preparedCommitment.category)
+        updateCommitment(preparedCommitment)
+        setCommitments((current) =>
+          current.map((item) => item.id === preparedCommitment.id ? preparedCommitment : item)
+        )
+      }
+      recordPlannerPageChange('commitments')
+      setActionError(null)
+      setCommitmentFormError(null)
+    } catch (error) {
+      setCommitmentFormError(error instanceof Error ? error.message : 'Unable to save the commitment.')
+      return
+    }
+
+    setEditingCommitment(null)
+    setIsAddingCommitment(false)
+    setCommitmentFormError(null)
+  }
+
+  const handleDeleteCommitment = (id: number) => {
+    try {
+      deleteCommitment(id)
+      setCommitments((current) => current.filter((commitment) => commitment.id !== id))
+      recordPlannerPageChange('commitments')
+      setActionError(null)
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Unable to delete the commitment.')
+      return
+    }
+
+    setEditingCommitment(null)
+    setIsAddingCommitment(false)
+  }
+
+  const openAddCommitment = () => {
+    const now = new Date()
+    const date = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0')
+    ].join('-')
+
+    setEditingCommitment({
+      id: Math.max(Date.now(), ...commitments.map((item) => item.id)) + 1,
+      name: '',
+      course: '',
+      dueDate: date,
+      dueTime: '09:00',
+      category: 'Other',
+      priority: 'Medium',
+      completed: false,
+      sourceEmail: ''
+    })
+    setIsAddingCommitment(true)
+    setActionError(null)
+    setCommitmentFormError(null)
+  }
+
+  const openEditCommitment = (commitment: Commitment) => {
+    setEditingCommitment({ ...commitment })
+    setIsAddingCommitment(false)
+    setCommitmentFormError(null)
+  }
+
+  const handleConfirmSuggestion = (suggestion: CommitmentSuggestion) => {
+    setSavingSuggestionId(suggestion.id)
+    setSuggestionError(null)
+
+    try {
+      const sourceEmail = emails.find((email) => email.id === suggestion.sourceEmailId)
+      const confirmed = confirmDashboardSuggestion(suggestion, sourceEmail?.email ?? '')
+      if (confirmed.kind !== 'Commitment') {
+        throw new Error('This suggestion is not a commitment.')
+      }
+
+      setCommitments((current) => [...current, confirmed.commitment])
+      setSuggestions((current) => current.filter((item) => item.id !== suggestion.id))
+      setEditingSuggestion(null)
+    } catch (error) {
+      setSuggestionError(error instanceof Error ? error.message : 'Unable to add this suggested commitment.')
+    } finally {
+      setSavingSuggestionId(null)
+    }
+  }
+
+  const handleDismissSuggestion = (suggestionId: number) => {
+    try {
+      dismissDashboardSuggestion(suggestionId, 'Commitment')
+      setSuggestions((current) => current.filter((suggestion) => suggestion.id !== suggestionId))
+      setEditingSuggestion(null)
+      setSuggestionError(null)
+    } catch (error) {
+      setSuggestionError(error instanceof Error ? error.message : 'Unable to dismiss this suggestion.')
+    }
+  }
+
+  const handleSaveSuggestion = () => {
+    if (!editingSuggestion || !editingSuggestion.title.trim() || !editingSuggestion.date || !editingSuggestion.time) {
+      return
+    }
+
+    const updatedSuggestion = { ...editingSuggestion, title: editingSuggestion.title.trim() }
+    setSuggestions((current) =>
+      current.map((suggestion) => suggestion.id === updatedSuggestion.id ? updatedSuggestion : suggestion)
+    )
+    recordPlannerPageChange('commitments')
+    setEditingSuggestion(null)
+  }
+
+  const closeCommitmentForm = () => {
+    setEditingCommitment(null)
+    setIsAddingCommitment(false)
+    setCommitmentFormError(null)
+  }
+
+  if (isLoading) {
+    return <section className="commitments-page" role="status">Loading commitments...</section>
+  }
+
+  if (loadError) {
+    return <section className="commitments-page" role="alert">{loadError}</section>
   }
 
   return (
     <section className="commitments-page">
-      <header className="commitments-header">
+      <header className="commitments-intro">
         <div>
-          <p className="eyebrow">Student planning</p>
-          <h2>Commitment Tracker</h2>
+          <h2>Your Commitments</h2>
+          <p>Keep track of your tasks, deadlines, and suggested action items.</p>
         </div>
-
-        <button type="button" className="sync-button">
-          Sync from Emails
+        <button type="button" className="primary-button" onClick={openAddCommitment}>
+          <Plus size={16} aria-hidden="true" />
+          Add Commitment
         </button>
       </header>
 
-      <div className="summary-grid">
-        <div className="summary-card summary-total">
-          <span className="summary-label">Total</span>
-          <strong className="summary-value">{summary.total}</strong>
-        </div>
+      {actionError && <p className="commitment-action-error" role="alert">{actionError}</p>}
 
-        <div className="summary-card summary-upcoming">
-          <span className="summary-label">Upcoming</span>
-          <strong className="summary-value">{summary.upcoming}</strong>
-        </div>
-
-        <div className="summary-card summary-overdue">
-          <span className="summary-label">Overdue</span>
-          <strong className="summary-value">{summary.overdue}</strong>
-        </div>
-
-        <div className="summary-card summary-completed">
-          <span className="summary-label">Completed</span>
-          <strong className="summary-value">{summary.completed}</strong>
-        </div>
-      </div>
-
-      <div className="tracker-controls">
-        <label className="search-box" htmlFor="commitment-search">
-          <span className="search-label">Search</span>
-          <input
-            id="commitment-search"
-            type="text"
-            placeholder="Search commitments"
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-          />
-        </label>
-
-        <div className="filter-group" aria-label="Commitment filters">
-          {filterOptions.map((filter) => (
-            <button
-              key={filter}
-              type="button"
-              className={`filter-button ${activeFilter === filter ? 'active' : ''}`}
-              onClick={() => setActiveFilter(filter)}
-            >
-              {filter}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="commitment-list">
-        {filteredCommitments.length > 0 ? (
-          filteredCommitments.map((commitment) => {
-            const status = getStatus(commitment)
-
-            return (
-              <article key={commitment.id} className="commitment-card">
-                <div className="commitment-main">
-                  <label className="checkbox-wrap">
-                    <input
-                      type="checkbox"
-                      checked={commitment.completed}
-                      onChange={() => handleToggleCompletion(commitment.id)}
-                    />
-                    <span className="checkbox-custom" aria-hidden="true" />
-                  </label>
-
-                  <div className="commitment-info">
-                    <div className="commitment-header-row">
-                      <h3>{commitment.name}</h3>
-                      <span className={`priority-badge priority-${commitment.priority.toLowerCase()}`}>
-                        {commitment.priority}
-                      </span>
-                    </div>
-
-                    <div className="meta-row">
-                      <span className="meta-item">
-                        <strong>Course:</strong> {commitment.course}
-                      </span>
-                      <span className="meta-item">
-                        <strong>Due:</strong> {formatDueDate(commitment.dueDate, commitment.dueTime)}
-                      </span>
-                    </div>
-
-                    <div className="meta-row meta-row-bottom">
-                      <span className="meta-item">
-                        <strong>Status:</strong>
-                        <span className={`status-badge status-${status.toLowerCase()}`}>
-                          {status}
-                        </span>
-                      </span>
-
-                      <span className="meta-item source-email-item">
-                        <strong>Source Email:</strong> {commitment.sourceEmail}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </article>
-            )
-          })
-        ) : (
-          <div className="empty-state">
-            <h3>No commitments match this view.</h3>
-            <p>Try a different filter or search term.</p>
-          </div>
-        )}
-      </div>
+      <CommitmentSummaryCards summary={summary} />
+      <SuggestedCommitmentsPanel
+        suggestions={suggestions}
+        emails={emails}
+        categories={eventCategories}
+        editingSuggestion={editingSuggestion}
+        savingSuggestionId={savingSuggestionId}
+        error={suggestionError}
+        onEditingSuggestionChange={setEditingSuggestion}
+        onConfirm={handleConfirmSuggestion}
+        onDismiss={handleDismissSuggestion}
+        onSave={handleSaveSuggestion}
+      />
+      <CommitmentTracker
+        commitments={commitments}
+        activeCommitments={visibleActiveCommitments}
+        completedCommitments={completedCommitments}
+        categories={eventCategories}
+        activeFilter={activeFilter}
+        categoryFilter={categoryFilter}
+        priorityFilter={priorityFilter}
+        searchTerm={searchTerm}
+        hasActiveSearchFilters={hasActiveSearchFilters}
+        onFilterChange={setActiveFilter}
+        onCategoryChange={setCategoryFilter}
+        onPriorityChange={setPriorityFilter}
+        onSearchChange={setSearchTerm}
+        onClearFilters={clearSearchFilters}
+        onClearCompleted={handleClearCompleted}
+        onToggleCompletion={handleToggleCompletion}
+        onEdit={openEditCommitment}
+        onDelete={handleDeleteCommitment}
+      />
+      {editingCommitment && (
+        <CommitmentFormModal
+          commitment={editingCommitment}
+          isAdding={isAddingCommitment}
+          error={commitmentFormError}
+          categories={eventCategories}
+          onChange={setEditingCommitment}
+          onClose={closeCommitmentForm}
+          onSave={handleSaveCommitment}
+          onDelete={handleDeleteCommitment}
+        />
+      )}
     </section>
   )
 }

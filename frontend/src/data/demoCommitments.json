@@ -1,0 +1,112 @@
+[
+  {
+    "id": 1,
+    "name": "Capstone Proposal Draft",
+    "course": "CIT 485",
+    "dueInDays": 2,
+    "dueTime": "17:00",
+    "category": "Assignment",
+    "priority": "High",
+    "completed": false,
+    "sourceEmail": "instructor@college.edu"
+  },
+  {
+    "id": 2,
+    "name": "Biology Lab Report",
+    "course": "BIO 210",
+    "dueInDays": -2,
+    "dueTime": "17:30",
+    "category": "Assignment",
+    "priority": "High",
+    "completed": false,
+    "sourceEmail": "bio-lab@college.edu"
+  },
+  {
+    "id": 3,
+    "name": "Math Quiz Review",
+    "course": "MATH 220",
+    "dueInDays": 5,
+    "dueTime": "18:15",
+    "category": "Exam",
+    "priority": "Medium",
+    "completed": false,
+    "sourceEmail": "math-help@college.edu"
+  },
+  {
+    "id": 4,
+    "name": "Group Project Meeting",
+    "course": "CS 350",
+    "dueInDays": 1,
+    "dueTime": "14:00",
+    "category": "Meeting",
+    "priority": "Low",
+    "completed": false,
+    "sourceEmail": "team-project@college.edu"
+  },
+  {
+    "id": 5,
+    "name": "History Reading Notes",
+    "course": "HIST 120",
+    "dueInDays": -22,
+    "dueTime": "08:00",
+    "category": "Assignment",
+    "priority": "Medium",
+    "completed": true,
+    "sourceEmail": "history@college.edu"
+  },
+  {
+    "id": 6,
+    "name": "Portfolio Check-In",
+    "course": "ART 110",
+    "dueInDays": -20,
+    "dueTime": "12:00",
+    "category": "Meeting",
+    "priority": "Low",
+    "completed": true,
+    "sourceEmail": "design-review@college.edu"
+  },
+  {
+    "id": 7,
+    "name": "CS 350 Prototype Milestone",
+    "course": "CS 350",
+    "dueInDays": 5,
+    "dueTime": "18:00",
+    "category": "Assignment",
+    "priority": "High",
+    "completed": false,
+    "sourceEmail": "brooks@northlake.edu"
+  },
+  {
+    "id": 8,
+    "name": "Return Research Methods Textbook",
+    "course": "HIST 240",
+    "dueInDays": 2,
+    "dueTime": "17:00",
+    "category": "Deadline",
+    "priority": "Low",
+    "completed": false,
+    "sourceEmail": "library@northlake.edu"
+  },
+  {
+    "id": 9,
+    "name": "Schedule Spring Advising Appointment",
+    "course": "Academic Advising",
+    "dueInDays": 7,
+    "dueTime": "17:00",
+    "category": "Appointment",
+    "priority": "Medium",
+    "completed": false,
+    "sourceEmail": "advising@northlake.edu"
+  },
+  {
+    "id": 10,
+    "name": "Prepare MATH 220 Midterm Review",
+    "course": "MATH 220",
+    "dueInDays": 4,
+    "dueTime": "16:00",
+    "category": "Exam",
+    "priority": "Medium",
+    "completed": false,
+    "sourceEmail": "math.help@northlake.edu"
+  }
+]
