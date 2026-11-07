@@ -17,7 +17,7 @@ function App() {
     return (
         <div>
             {isLoggedIn ? (
-                <AppStart />
+                <AppStart onLogOut={() => setIsLoggedIn(false)} />
             ) : (
                 <Login onLogIn={() => setIsLoggedIn(true)} />
             )}

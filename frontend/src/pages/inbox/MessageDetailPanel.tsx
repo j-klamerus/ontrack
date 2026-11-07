@@ -79,6 +79,21 @@ function MessageDetailPanel({
               <p key={`${email.id}-${index}`}>{line || ' '}</p>
             ))}
           </div>
+          {email.important && (
+            <div className="ai-card">
+              <div className="ai-header">
+                <span className="section-label">AI summary</span>
+              </div>
+              <p className="ai-summary">{email.summary}</p>
+              <div className="ai-detected">
+                <h5>Detected items</h5>
+                <ul>
+                  {email.signals.map((signal) => <li key={signal}>{signal}</li>)}
+                </ul>
+              </div>
+            </div>
+          )}
+
           {suggestedReply ? (
             <SuggestedReplyCard
               email={email}
@@ -96,21 +111,6 @@ function MessageDetailPanel({
                 Generate reply
               </button>
               {replyError && <p className="reply-error" role="alert">{replyError}</p>}
-            </div>
-          )}
-
-          {email.important && (
-            <div className="ai-card">
-              <div className="ai-header">
-                <span className="section-label">Simulated AI analysis</span>
-              </div>
-              <p className="ai-summary">{email.summary}</p>
-              <div className="ai-detected">
-                <h5>Detected items</h5>
-                <ul>
-                  {email.signals.map((signal) => <li key={signal}>{signal}</li>)}
-                </ul>
-              </div>
             </div>
           )}
 

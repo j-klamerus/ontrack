@@ -38,7 +38,11 @@ const defaultSettings: SettingsState = {
   plannerKeyDefaults: DEFAULT_PLANNER_KEY_DEFAULTS
 }
 
-function Settings() {
+type SettingsProps = {
+  onLogOut: () => void
+}
+
+function Settings({ onLogOut }: SettingsProps) {
   const [settings, setSettings] = useState<SettingsState>(() => {
     try {
       const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY)
@@ -165,6 +169,10 @@ function Settings() {
       </div>
 
       <div className="settings-actions">
+        <button type="button" className="settings-logout-button" onClick={onLogOut}>
+          Log Out
+        </button>
+
         <button type="button" className="secondary-button" onClick={handleRestoreSuggestions}>
           Restore Suggestions
         </button>

@@ -154,19 +154,24 @@
 
 .tracker-controls {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   gap: 16px;
   margin-bottom: 16px;
-  flex-wrap: wrap;
 }
 
 .commitments-page .search-box {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-width: min(100%, 320px);
-  flex: 1;
+  width: 100%;
+}
+
+.tracker-filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .filter-group {
@@ -174,6 +179,11 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.commitment-tracker .search-facets {
+  flex: 0 1 420px;
+  justify-content: flex-end;
 }
 
 .commitment-list {
@@ -542,16 +552,24 @@
   }
 
   .tracker-controls {
-    flex-direction: column;
+    gap: 12px;
+  }
+
+  .tracker-filter-row {
     align-items: stretch;
+    flex-direction: column;
   }
 
   .commitments-page .search-box {
-    min-width: 100%;
+    width: 100%;
   }
 
   .filter-group {
     width: 100%;
+  }
+
+  .commitment-tracker .search-facets {
+    flex: 1 1 auto;
   }
 
   .filter-button {

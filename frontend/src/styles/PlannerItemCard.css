@@ -7,6 +7,14 @@
   border: 1px solid var(--color-border);
   border-radius: 12px;
   background-color: #fbfdff;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.planner-item-card-suggestion:hover,
+.planner-item-card-actions-on-hover:hover,
+.planner-item-card:has(.commitment-card-actions):hover {
+  border-color: #cbd5e1;
+  background-color: #f3f6fa;
 }
 
 .planner-item-leading {
@@ -36,6 +44,26 @@
   margin-top: 0;
 }
 
+.planner-item-card-suggestion .planner-item-trailing {
+  align-self: stretch;
+  justify-content: center;
+}
+
+.planner-item-card-suggestion .planner-item-actions-right {
+  align-self: stretch;
+  justify-content: center;
+}
+
+.planner-item-card-actions-on-hover .planner-item-trailing {
+  align-self: stretch;
+  justify-content: center;
+}
+
+.planner-item-card-actions-on-hover .planner-item-actions-right {
+  align-self: stretch;
+  justify-content: center;
+}
+
 .planner-item-actions-right .planner-item-action {
   width: 100%;
 }
@@ -53,6 +81,21 @@
 
 .commitment-card-trailing .planner-item-action {
   min-width: 88px;
+}
+
+.commitment-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.planner-item-card:has(.commitment-card-actions):hover .commitment-card-actions,
+.planner-item-card:has(.commitment-card-actions):has(:focus-visible) .commitment-card-actions {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .planner-item-labels {
@@ -128,6 +171,30 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 2px;
+}
+
+.planner-item-card-suggestion:not(.planner-item-card-editing) .planner-item-actions {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.planner-item-card-actions-on-hover:not(.planner-item-card-editing) .planner-item-actions {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.planner-item-card-suggestion:not(.planner-item-card-editing):hover .planner-item-actions,
+.planner-item-card-suggestion:not(.planner-item-card-editing):has(:focus-visible) .planner-item-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.planner-item-card-actions-on-hover:not(.planner-item-card-editing):hover .planner-item-actions,
+.planner-item-card-actions-on-hover:not(.planner-item-card-editing):has(:focus-visible) .planner-item-actions {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .planner-item-action {
@@ -210,9 +277,18 @@
     padding-left: 34px;
   }
 
+  .planner-item-card-suggestion .planner-item-trailing {
+    padding-left: 0;
+  }
+
+  .planner-item-card-actions-on-hover .planner-item-trailing {
+    padding-left: 0;
+  }
+
   .planner-item-actions-right {
     flex-direction: row;
     flex-wrap: wrap;
+    justify-content: center;
   }
 
   .planner-item-actions-right .planner-item-action {
@@ -225,5 +301,14 @@
 
   .commitment-card-trailing .planner-item-date {
     text-align: left;
+  }
+}
+
+@media (hover: none) {
+  .planner-item-card-suggestion:not(.planner-item-card-editing) .planner-item-actions,
+  .planner-item-card-actions-on-hover:not(.planner-item-card-editing) .planner-item-actions,
+  .commitment-card-actions {
+    opacity: 1;
+    pointer-events: auto;
   }
 }

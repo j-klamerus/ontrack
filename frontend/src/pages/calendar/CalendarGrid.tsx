@@ -53,7 +53,7 @@ function CalendarGrid({
                     <span
                       className={`day-event priority-${item.priority.toLowerCase()} ${item.kind === 'Commitment' ? 'day-commitment' : ''}`}
                       key={item.id}
-                      title={`${item.kind}: ${item.title}`}
+                      title={`${item.kind === 'Calendar event' ? 'Calendar Event' : item.kind} (${item.category}): ${item.title}`}
                     >
                       <span
                         className={`type-marker ${item.kind === 'Commitment' ? 'type-marker-commitment' : 'type-marker-event'}`}

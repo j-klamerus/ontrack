@@ -93,11 +93,11 @@
 
 .logo::after {
   position: absolute;
-  right: 12px;
+  right: 0;
   bottom: 0;
-  left: 12px;
+  left: 0;
   height: 1px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.03));
+  background-color: rgba(255, 255, 255, 0.12);
   content: '';
 }
 
@@ -244,8 +244,8 @@
   }
 
   .logo::after {
-    right: 4px;
-    left: 4px;
+    right: 0;
+    left: 0;
   }
 
   .nav-item {

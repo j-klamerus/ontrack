@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { PlannerKey } from '../components/PlannerKey'
 import CalendarEventFormModal from './calendar/CalendarEventFormModal'
+import CommitmentFormModal from './commitments/CommitmentFormModal'
 import CalendarGrid from './calendar/CalendarGrid'
 import CalendarSidebar from './calendar/CalendarSidebar'
 import CalendarToolbar from './calendar/CalendarToolbar'
@@ -30,7 +31,12 @@ import {
   saveItemCategoryOverride
 } from '../constants/eventCategories'
 import type { CalendarEvent, EventFormState, EventPriority } from '../types/calendarEvent'
-import { addCommitment, getCommitments } from '../services/commitments'
+import {
+  addCommitment,
+  deleteCommitment,
+  getCommitments,
+  updateCommitment
+} from '../services/commitments'
 import type { Commitment } from '../types/commitment'
 import type { StudentEmail } from '../types/email'
 
@@ -65,6 +71,8 @@ function Calendar() {
   const [suggestionError, setSuggestionError] = useState<string | null>(null)
   const [savingSuggestionId, setSavingSuggestionId] = useState<number | null>(null)
   const [editingSuggestion, setEditingSuggestion] = useState<CalendarSuggestion | null>(null)
+  const [editingCommitment, setEditingCommitment] = useState<Commitment | null>(null)
+  const [commitmentFormError, setCommitmentFormError] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([getCalendarEvents(), getCommitments(), getDashboardSuggestions(), getEmails()])
@@ -187,6 +195,63 @@ function Calendar() {
     recordPlannerPageChange('calendar')
     setShowEventForm(false)
     setEditingId(null)
+  }
+
+  const openEditCommitment = (commitment: Commitment) => {
+    setEditingCommitment({ ...commitment })
+    setCommitmentFormError(null)
+  }
+
+  const handleSaveCommitment = () => {
+    if (!editingCommitment) {
+      return
+    }
+
+    if (
+      !editingCommitment.name.trim() ||
+      !editingCommitment.course.trim() ||
+      !editingCommitment.dueDate ||
+      !editingCommitment.dueTime
+    ) {
+      setCommitmentFormError('Enter a title, course, due date, and due time.')
+      return
+    }
+
+    const updatedCommitment = {
+      ...editingCommitment,
+      name: editingCommitment.name.trim(),
+      course: editingCommitment.course.trim(),
+      sourceEmail: editingCommitment.sourceEmail.trim()
+    }
+
+    try {
+      saveItemCategoryOverride('commitment', updatedCommitment.id, updatedCommitment.category)
+      updateCommitment(updatedCommitment)
+      setCommitments((current) =>
+        current.map((commitment) =>
+          commitment.id === updatedCommitment.id ? updatedCommitment : commitment
+        )
+      )
+      recordPlannerPageChange('commitments')
+      setEditingCommitment(null)
+      setCommitmentFormError(null)
+    } catch (error) {
+      setCommitmentFormError(error instanceof Error ? error.message : 'Unable to save the commitment.')
+    }
+  }
+
+  const handleDeleteCommitment = (commitmentId: number) => {
+    try {
+      deleteCommitment(commitmentId)
+      setCommitments((current) =>
+        current.filter((commitment) => commitment.id !== commitmentId)
+      )
+      recordPlannerPageChange('commitments')
+      setEditingCommitment(null)
+      setCommitmentFormError(null)
+    } catch (error) {
+      setCommitmentFormError(error instanceof Error ? error.message : 'Unable to delete the commitment.')
+    }
   }
 
   const handleConfirmSuggestion = (suggestion: CalendarSuggestion) => {
@@ -416,6 +481,8 @@ function Calendar() {
           onAddEvent={openAddForm}
           onEditEvent={openEditForm}
           onDeleteEvent={handleDeleteEvent}
+          onEditCommitment={openEditCommitment}
+          onDeleteCommitment={handleDeleteCommitment}
           onConfirmSuggestion={handleConfirmSuggestion}
           onDismissSuggestion={handleDismissSuggestion}
           onSaveSuggestion={handleSaveSuggestion}
@@ -435,6 +502,21 @@ function Calendar() {
           onClose={() => setShowEventForm(false)}
           onDelete={handleDeleteEvent}
           onSubmit={handleFormSubmit}
+        />
+      )}
+      {editingCommitment && (
+        <CommitmentFormModal
+          commitment={editingCommitment}
+          isAdding={false}
+          error={commitmentFormError}
+          categories={categoryOptions}
+          onChange={setEditingCommitment}
+          onClose={() => {
+            setEditingCommitment(null)
+            setCommitmentFormError(null)
+          }}
+          onSave={handleSaveCommitment}
+          onDelete={handleDeleteCommitment}
         />
       )}
     </section>

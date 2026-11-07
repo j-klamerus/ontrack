@@ -26,7 +26,11 @@ import {
 type Page = 'Dashboard' | 'Inbox' | 'Commitments' | 'Calendar' | 'Settings'
 type SuggestionCounts = Record<PlannerPage, number>
 
-function App() {
+type AppProps = {
+  onLogOut: () => void
+}
+
+function App({ onLogOut }: AppProps) {
   const [currentPage, setCurrentPage] = useState<Page>('Dashboard')
   const [unreadEmailCount, setUnreadEmailCount] = useState(0)
   const [navigationError, setNavigationError] = useState<string | null>(null)
@@ -103,12 +107,17 @@ function App() {
     }
   }, [currentPage])
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' })
+    document.querySelector('.main-content')?.scrollTo({ top: 0, behavior: 'instant' })
+  }, [currentPage])
+
   const pages = {
     Dashboard: <Dashboard />,
     Inbox: <Inbox onUnreadCountChange={setUnreadEmailCount} />,
     Commitments: <Commitments />,
     Calendar: <Calendar />,
-    Settings: <Settings />
+    Settings: <Settings onLogOut={onLogOut} />
   }
 
   const navigationItems = [
@@ -144,9 +153,13 @@ function App() {
                 <Icon size={20} strokeWidth={1.8} />
                 <span>{page}</span>
                 {page === 'Inbox' && unreadEmailCount > 0 && (
-                <span className="nav-unread-count" aria-label={`${unreadEmailCount} unread emails`}>
-                  {unreadEmailCount}
-                </span>
+                  <span
+                    className="nav-unread-count"
+                    aria-label={`${unreadEmailCount} unread emails`}
+                    title="Unread emails"
+                  >
+                    {unreadEmailCount}
+                  </span>
                 )}
                 {plannerPage && (
                   <>
@@ -154,6 +167,7 @@ function App() {
                       <span
                         className="nav-suggestion-count"
                         aria-label={`${suggestionCounts[plannerPage]} pending suggestions`}
+                        title={plannerPage === 'calendar' ? 'Suggested calendar events' : 'Suggested commitments'}
                       >
                         {suggestionCounts[plannerPage]}
                       </span>
