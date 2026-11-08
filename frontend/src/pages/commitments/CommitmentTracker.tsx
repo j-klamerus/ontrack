@@ -80,39 +80,41 @@ function CommitmentTracker({
           />
         </label>
 
-        <div className="filter-group" aria-label="Commitment filters">
-          {filterOptions.map((filter) => (
-            <button
-              key={filter}
-              type="button"
-              className={`filter-button ${activeFilter === filter ? 'active' : ''}`}
-              onClick={() => onFilterChange(filter)}
-            >
-              {filter}
-            </button>
-          ))}
-        </div>
+        <div className="tracker-filter-row">
+          <div className="filter-group" aria-label="Commitment filters">
+            {filterOptions.map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                className={`filter-button ${activeFilter === filter ? 'active' : ''}`}
+                onClick={() => onFilterChange(filter)}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
 
-        <div className="search-facets" aria-label="Filter commitments">
-          <label>
-            <span>Category</span>
-            <select value={categoryFilter} onChange={(event) => onCategoryChange(event.target.value)}>
-              <option value={allFilterOption}>All categories</option>
-              {categories.map((category) => <option key={category} value={category}>{category}</option>)}
-            </select>
-          </label>
-          <label>
-            <span>Priority</span>
-            <select value={priorityFilter} onChange={(event) => onPriorityChange(event.target.value)}>
-              <option value={allFilterOption}>All priorities</option>
-              {priorityOptions.map((priority: Priority) => <option key={priority} value={priority}>{priority}</option>)}
-            </select>
-          </label>
-          {hasActiveSearchFilters && (
-            <button type="button" className="clear-search-button" onClick={onClearFilters}>
-              Clear filters
-            </button>
-          )}
+          <div className="search-facets" aria-label="Filter commitments">
+            <label>
+              <span>Category</span>
+              <select value={categoryFilter} onChange={(event) => onCategoryChange(event.target.value)}>
+                <option value={allFilterOption}>All categories</option>
+                {categories.map((category) => <option key={category} value={category}>{category}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Priority</span>
+              <select value={priorityFilter} onChange={(event) => onPriorityChange(event.target.value)}>
+                <option value={allFilterOption}>All priorities</option>
+                {priorityOptions.map((priority: Priority) => <option key={priority} value={priority}>{priority}</option>)}
+              </select>
+            </label>
+            {hasActiveSearchFilters && (
+              <button type="button" className="clear-search-button" onClick={onClearFilters}>
+                Clear filters
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

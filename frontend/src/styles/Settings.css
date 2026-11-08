@@ -311,6 +311,29 @@
   margin-top: 24px;
 }
 
+.settings-logout-button {
+  margin-right: auto;
+  padding: 10px 14px;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-control);
+  background: #fff;
+  color: #b91c1c;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.settings-logout-button:hover {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.settings-logout-button:focus-visible {
+  outline: 2px solid #ef4444;
+  outline-offset: 2px;
+}
+
 @media (max-width: 980px) {
   .settings-grid {
     grid-template-columns: 1fr;
@@ -344,7 +367,8 @@
   }
 
   .settings-actions .secondary-button,
-  .settings-actions .primary-button {
+  .settings-actions .primary-button,
+  .settings-actions .settings-logout-button {
     flex: 1;
   }
 }

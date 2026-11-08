@@ -21,6 +21,8 @@ type CalendarSidebarProps = {
   onAddEvent: () => void
   onEditEvent: (event: CalendarEvent) => void
   onDeleteEvent: (id: number) => void
+  onEditCommitment: (commitment: Commitment) => void
+  onDeleteCommitment: (id: number) => void
   onConfirmSuggestion: (suggestion: CalendarSuggestion) => void
   onDismissSuggestion: (id: number) => void
   onSaveSuggestion: () => void
@@ -41,6 +43,8 @@ function CalendarSidebar({
   onAddEvent,
   onEditEvent,
   onDeleteEvent,
+  onEditCommitment,
+  onDeleteCommitment,
   onConfirmSuggestion,
   onDismissSuggestion,
   onSaveSuggestion
@@ -71,6 +75,8 @@ function CalendarSidebar({
                 dateLabel={`${formatFullDate(event.date)} · ${formatTime(event.time)}`}
                 subtitle={event.course}
                 description={event.description}
+                actionsOnHover
+                actionsPlacement="right"
                 actions={(
                   <>
                     <PlannerItemAction kind="edit" onClick={() => onEditEvent(event)} />
@@ -88,7 +94,14 @@ function CalendarSidebar({
                 priority={commitment.priority}
                 dateLabel={`Due ${formatFullDate(commitment.dueDate)} · ${formatTime(commitment.dueTime)}`}
                 subtitle={commitment.course}
-                description="Manage this commitment on the Commitments page."
+                actionsOnHover
+                actionsPlacement="right"
+                actions={(
+                  <>
+                    <PlannerItemAction kind="edit" onClick={() => onEditCommitment(commitment)} />
+                    <PlannerItemAction kind="delete" onClick={() => onDeleteCommitment(commitment.id)} />
+                  </>
+                )}
               />
             ))}
           </>

@@ -18,6 +18,7 @@ type PlannerItemCardProps = {
   status?: string
   isSuggestion?: boolean
   isEditing?: boolean
+  actionsOnHover?: boolean
   actionsPlacement?: 'bottom' | 'right'
   leadingAction?: ReactNode
   actions?: ReactNode
@@ -82,6 +83,7 @@ export function PlannerItemCard({
   status,
   isSuggestion = false,
   isEditing = false,
+  actionsOnHover = false,
   actionsPlacement = 'bottom',
   leadingAction,
   actions,
@@ -91,7 +93,14 @@ export function PlannerItemCard({
   const categoryColor = getEventCategoryColor(category)
 
   return (
-    <article className={`planner-item-card${isSuggestion ? ' planner-item-card-suggestion' : ''}`}>
+    <article
+      className={[
+        'planner-item-card',
+        isSuggestion && 'planner-item-card-suggestion',
+        actionsOnHover && 'planner-item-card-actions-on-hover',
+        isEditing && 'planner-item-card-editing'
+      ].filter(Boolean).join(' ')}
+    >
       {leadingAction && <div className="planner-item-leading">{leadingAction}</div>}
       <div className="planner-item-content">
         <div className="planner-item-labels">

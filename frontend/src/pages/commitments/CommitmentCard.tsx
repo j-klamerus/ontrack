@@ -35,8 +35,10 @@ function CommitmentCard({ commitment, onToggleCompletion, onEdit, onDelete }: Co
           <p className="planner-item-date">
             Due {formatDueDate(commitment.dueDate, commitment.dueTime)}
           </p>
-          <PlannerItemAction kind="edit" onClick={() => onEdit(commitment)} />
-          <PlannerItemAction kind="delete" onClick={() => onDelete(commitment.id)} />
+          <div className="commitment-card-actions">
+            <PlannerItemAction kind="edit" onClick={() => onEdit(commitment)} />
+            <PlannerItemAction kind="delete" onClick={() => onDelete(commitment.id)} />
+          </div>
         </div>
       }
     />

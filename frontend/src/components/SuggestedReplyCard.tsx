@@ -44,7 +44,9 @@ function SuggestedReplyCard({ email, reply, onResolve, onSave }: SuggestedReplyC
   }
 
   return (
-    <article className="planner-item-card planner-item-card-suggestion suggested-reply-item">
+    <article
+      className={`planner-item-card planner-item-card-suggestion suggested-reply-item${isEditing ? ' planner-item-card-editing' : ''}`}
+    >
       <div className="planner-item-content">
         <div className="planner-item-labels">
           <span className="planner-item-kind">Suggested reply</span>
