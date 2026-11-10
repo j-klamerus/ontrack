@@ -190,6 +190,14 @@
   min-width: 0;
 }
 
+.auth-error {
+  margin: 0;
+  padding: 10px 32px;
+  background-color: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
 .top-bar {
   position: sticky;
   top: 0;
@@ -300,6 +308,10 @@
   .top-bar {
     height: 64px;
     padding: 0 16px;
+  }
+
+  .auth-error {
+    padding: 10px 16px;
   }
 
   .top-bar h1 {

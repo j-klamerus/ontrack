@@ -1,18 +1,17 @@
 import { useState, type FormEvent } from 'react'
+import { getSupabaseClient } from '../services/supabase'
 import './LogIn.css'
 
-interface LoginProps {
-  onLogIn: () => void
-}
-
-function Login({ onLogIn }: LoginProps) {
+function Login() {
   const [isRegistering, setIsRegistering] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     if (isRegistering && password !== confirmPassword) {
@@ -20,9 +19,62 @@ function Login({ onLogIn }: LoginProps) {
       return
     }
 
-    console.log(isRegistering ? 'Creating account:' : 'Logging in:', email)
     setFormError(null)
-    onLogIn()
+    setSuccessMessage(null)
+    setIsSubmitting(true)
+
+    try {
+      const supabase = getSupabaseClient()
+      if (isRegistering) {
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password
+        })
+
+        if (error) {
+          throw error
+        }
+
+        if (!data.session) {
+          setSuccessMessage('Account created. Check your email to confirm your address, then sign in.')
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password
+        })
+
+        if (error) {
+          throw error
+        }
+      }
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Unable to authenticate. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleGoogleSignIn = async () => {
+    setFormError(null)
+    setSuccessMessage(null)
+    setIsSubmitting(true)
+
+    try {
+      const { error } = await getSupabaseClient().auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      })
+
+      if (error) {
+        throw error
+      }
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Unable to sign in with Google. Please try again.')
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -37,6 +89,19 @@ function Login({ onLogIn }: LoginProps) {
           <h1 id="login-heading">
             {isRegistering ? 'Create your account' : 'Sign in to your account'}
           </h1>
+        </div>
+
+        <button
+          className="login-google"
+          type="button"
+          onClick={handleGoogleSignIn}
+          disabled={isSubmitting}
+        >
+          Continue with Google
+        </button>
+
+        <div className="login-divider" aria-hidden="true">
+          <span>or use email</span>
         </div>
 
         <form className="login-form" onSubmit={handleSubmit}>
@@ -80,9 +145,14 @@ function Login({ onLogIn }: LoginProps) {
           )}
 
           {formError && <p className="login-form-error" id="login-form-error" role="alert">{formError}</p>}
+          {successMessage && <p className="login-form-success" role="status">{successMessage}</p>}
 
-          <button className="login-submit" type="submit">
-            {isRegistering ? 'Create account' : 'Sign in'}
+          <button className="login-submit" type="submit" disabled={isSubmitting}>
+            {isSubmitting
+              ? 'Please wait...'
+              : isRegistering
+                ? 'Create account'
+                : 'Sign in'}
           </button>
         </form>
 
@@ -94,7 +164,9 @@ function Login({ onLogIn }: LoginProps) {
               setIsRegistering(!isRegistering)
               setConfirmPassword('')
               setFormError(null)
+              setSuccessMessage(null)
             }}
+            disabled={isSubmitting}
           >
             {isRegistering ? 'Sign in' : 'Create account'}
           </button>

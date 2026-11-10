@@ -33,6 +33,13 @@
   ➜  press h + enter to show help
 ~~~
 
+### Set Up Login
+The frontend login uses Supabase Auth. Create `frontend/.env` (in the frontend folder, not `frontend/src/`) with the Supabase project URL and publishable/anon key:
+~~~
+VITE_SUPABASE_URL=your-supabase-project-url
+VITE_SUPABASE_ANON_KEY=your-supabase-publishable-key
+~~~
+Restart Vite after changing this file. In Supabase, enable the Email provider for password sign-in and account creation. To use "Continue with Google", enable the Google provider under Authentication > Sign In / Providers, add the Supabase callback URL shown there to your Google OAuth client's authorized redirect URIs, and add your local and deployed frontend origins to Supabase's allowed redirect URLs. Gmail API access is separate from Google sign-in and requires its own Gmail authorization flow.
 
 
 
@@ -78,7 +85,6 @@ This is everything you need to get the code from the small-demo app running. To 
 
 ### Other Notes that aren't really relevant yet but will be soon:
 - When you first attempt to make changes and push them to the github repo its going to ask you to authenticate with your github if you've never done it before, so watch out for that.
-
 
 
 
