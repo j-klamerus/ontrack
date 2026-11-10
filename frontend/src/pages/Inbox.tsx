@@ -75,6 +75,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
 
     let isMounted = true
 
+    // The backend owns classification and sorting; refresh its results when emails or rules change.
     evaluateEmailRules(emails, emailRules)
       .then((results) => {
         if (isMounted) {
@@ -163,6 +164,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   }, [activeFilter, emails, labelsByEmailId, priorityFilter, searchTerm, signalFilter, suggestedReplies])
 
   const sortedFilteredEmails = useMemo(() => {
+    // Preserve the order returned by the backend after applying the user's inbox filters.
     const emailOrder = new Map(
       (ruleEvaluations ?? []).map((evaluation, index) => [evaluation.emailId, index])
     )

@@ -25,6 +25,7 @@ const isEvaluationResult = (value: unknown): value is EmailRuleEvaluation =>
   typeof value.groupLabel === 'string' &&
   typeof value.groupOrder === 'number'
 
+// Keep the API response shape checked at runtime because it determines Inbox grouping.
 export async function evaluateEmailRules(
   emails: StudentEmail[],
   rules: EmailRule[]

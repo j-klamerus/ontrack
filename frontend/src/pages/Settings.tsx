@@ -167,6 +167,7 @@ function Settings({ onLogOut }: SettingsProps) {
         />
 
         <PreferenceSettingsCards settings={settings} updateSetting={updateSetting} />
+        {/* Rules have their own storage and save lifecycle, separate from general preferences. */}
         <EmailRulesCard />
       </div>
 

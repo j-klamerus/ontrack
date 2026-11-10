@@ -126,6 +126,7 @@ function EmailListPanel({
       </div>
 
       <div className="email-list">
+        {/* Groups and labels are derived from backend rule results, not written into the email records. */}
         {emailGroups.length > 0 ? emailGroups.map((group) => (
           <section className="email-group" key={group.id}>
             <h3 className="email-group-heading">{group.label}</h3>

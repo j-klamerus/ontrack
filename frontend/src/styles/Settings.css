@@ -92,6 +92,7 @@
 }
 
 .email-rule-row {
+  /* Separate the readable IF/THEN rule from its compact management controls. */
   display: flex;
   align-items: flex-start;
   justify-content: space-between;

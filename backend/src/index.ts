@@ -59,6 +59,7 @@ app.get("/auth/google/callback", async (req, res) => {
 app.post('/api/email-rules/evaluate', (req, res) => {
   const body: unknown = req.body
 
+  // Validate request data at the API boundary before compiling user-provided regexes.
   if (!isRecord(body) || !Array.isArray(body.emails) || !Array.isArray(body.rules)) {
     res.status(400).json({ error: 'Request must include email and rule arrays.' })
     return
@@ -84,7 +85,6 @@ app.post('/api/email-rules/evaluate', (req, res) => {
   }
 })
 
-//should define types insead of using any, but this works for now
 async function readEmails(auth: InstanceType<typeof google.auth.OAuth2>, res: express.Response) {
     const gmail = google.gmail({ version: 'v1', auth });
     const response = await gmail.users.messages.list({
@@ -113,6 +113,7 @@ async function getEmail(emailId: string | null | undefined, gmail: gmail_v1.Gmai
     const response = await gmail.users.messages.get({ id: emailId, userId: 'me' });
     const email = response.data;
     
+    // Gmail messages may omit the payload or standard headers.
     const headers = email.payload?.headers ?? []
     const subject = headers.find((header) => header.name?.toLowerCase() === 'subject')?.value ?? '(no subject)'
     const from = headers.find((header) => header.name?.toLowerCase() === 'from')?.value ?? '(unknown sender)'

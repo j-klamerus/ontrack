@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { getEmailRules, saveEmailRules } from '../../services/emailRules'
 import type { EmailRule, EmailRuleField, EmailRuleOperator } from '../../types/emailRule'
 
+// Presets are opt-in so a new browser session starts with no active rules.
 const demoRules: EmailRule[] = [
   {
     id: 'demo-academic',

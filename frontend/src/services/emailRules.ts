@@ -2,6 +2,7 @@ import type { EmailRule } from '../types/emailRule'
 
 const STORAGE_KEY = 'ontrack-email-rules'
 
+// Rules stay separate from general settings so they can be managed as an ordered list.
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 

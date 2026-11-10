@@ -60,6 +60,7 @@ export function evaluateEmailRules(
       regex: rule.operator === 'regex' ? new RegExp(rule.pattern, 'i') : null
     }))
 
+  // Keep every matching label, but use the first match as the sorting group.
   const orderedResults: OrderedEvaluation[] = emails.map((email, originalIndex) => {
     const matchingRules = activeRules.filter((compiledRule) => ruleMatches(email, compiledRule))
     const firstMatchingRule = matchingRules[0]?.rule
@@ -81,6 +82,7 @@ export function evaluateEmailRules(
     }
   })
 
+  // Rule order sets group order; dates sort newest-first within each group.
   return orderedResults
     .sort((left, right) =>
       left.result.groupOrder - right.result.groupOrder ||

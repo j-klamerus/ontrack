@@ -242,6 +242,7 @@ body:has(.inbox-page)::-webkit-scrollbar {
 }
 
 .email-group {
+  /* Keep each category and its messages together in the backend-provided order. */
   display: flex;
   flex-direction: column;
   gap: 12px;
