@@ -17,6 +17,7 @@ import { SETTINGS_STORAGE_KEY } from '../services/user'
 import { DEFAULT_PLANNER_KEY_DEFAULTS } from '../services/plannerKeyPreferences'
 import type { EventCategoryDefinition } from '../constants/eventCategories'
 import CategorySettingsCard from './settings/CategorySettingsCard'
+import EmailRulesCard from './settings/EmailRulesCard'
 import PreferenceSettingsCards from './settings/PreferenceSettingsCards'
 import type { SettingsState } from './settings/types'
 import '../styles/Settings.css'
@@ -166,6 +167,7 @@ function Settings({ onLogOut }: SettingsProps) {
         />
 
         <PreferenceSettingsCards settings={settings} updateSetting={updateSetting} />
+        <EmailRulesCard />
       </div>
 
       <div className="settings-actions">

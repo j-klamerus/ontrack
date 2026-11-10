@@ -241,6 +241,26 @@ body:has(.inbox-page)::-webkit-scrollbar {
   -ms-overflow-style: none;
 }
 
+.email-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.email-group-heading {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 8px 4px;
+  background: var(--color-surface);
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .email-list::-webkit-scrollbar {
   display: none;
 }
@@ -307,6 +327,26 @@ body:has(.inbox-page)::-webkit-scrollbar {
   background: #1c8afd;
   display: inline-block;
   flex-shrink: 0;
+}
+
+.email-rule-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.email-rule-label {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #d5e7f8;
+  border-radius: 999px;
+  background: #edf6ff;
+  color: #245b8f;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 4px 7px;
 }
 
 .meta-row {

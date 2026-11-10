@@ -5,6 +5,8 @@ import { filterOptions, formatDate, priorityOptions, signalOptions, type EmailFi
 type EmailListPanelProps = {
   emails: StudentEmail[]
   filteredEmails: StudentEmail[]
+  emailGroups: Array<{ id: string; label: string; emails: StudentEmail[] }>
+  labelsByEmailId: Map<number, string[]>
   selectedId: number | null
   searchTerm: string
   activeFilter: EmailFilter
@@ -23,6 +25,8 @@ type EmailListPanelProps = {
 function EmailListPanel({
   emails,
   filteredEmails,
+  emailGroups,
+  labelsByEmailId,
   selectedId,
   searchTerm,
   activeFilter,
@@ -122,35 +126,46 @@ function EmailListPanel({
       </div>
 
       <div className="email-list">
-        {filteredEmails.length > 0 ? (
-          filteredEmails.map((email) => (
-            <button
-              key={email.id}
-              type="button"
-              className={`email-item ${selectedId === email.id ? 'selected' : ''} ${!email.read ? 'unread' : ''}`}
-              onClick={() => onSelectEmail(email.id)}
-            >
-              <div className="email-topline">
-                <span className="sender-name">{email.sender}</span>
-                {email.important && <span className="important-star">★</span>}
-              </div>
+        {emailGroups.length > 0 ? emailGroups.map((group) => (
+          <section className="email-group" key={group.id}>
+            <h3 className="email-group-heading">{group.label}</h3>
+            {group.emails.map((email) => (
+              <button
+                key={email.id}
+                type="button"
+                className={`email-item ${selectedId === email.id ? 'selected' : ''} ${!email.read ? 'unread' : ''}`}
+                onClick={() => onSelectEmail(email.id)}
+              >
+                <div className="email-topline">
+                  <span className="sender-name">{email.sender}</span>
+                  {email.important && <span className="important-star">★</span>}
+                </div>
 
-              <div className="subject-row">
-                <span className="subject-text">{email.subject}</span>
-                {!email.read && <span className="unread-dot" aria-label="Unread email" />}
-              </div>
+                <div className="subject-row">
+                  <span className="subject-text">{email.subject}</span>
+                  {!email.read && <span className="unread-dot" aria-label="Unread email" />}
+                </div>
 
-              <div className="meta-row">
-                <span>{formatDate(email.date)}</span>
-                <span className={`priority-badge priority-${email.priority.toLowerCase()}`}>
-                  {email.priority}
-                </span>
-              </div>
+                {(labelsByEmailId.get(email.id) ?? []).length > 0 && (
+                  <div className="email-rule-labels">
+                    {(labelsByEmailId.get(email.id) ?? []).map((label) => (
+                      <span className="email-rule-label" key={label}>{label}</span>
+                    ))}
+                  </div>
+                )}
 
-              <p className="email-preview">{email.preview}</p>
-            </button>
-          ))
-        ) : (
+                <div className="meta-row">
+                  <span>{formatDate(email.date)}</span>
+                  <span className={`priority-badge priority-${email.priority.toLowerCase()}`}>
+                    {email.priority}
+                  </span>
+                </div>
+
+                <p className="email-preview">{email.preview}</p>
+              </button>
+            ))}
+          </section>
+        )) : (
           <div className="empty-state">
             <h3>No matching emails</h3>
             <p>Try another keyword or switch to a different inbox filter.</p>

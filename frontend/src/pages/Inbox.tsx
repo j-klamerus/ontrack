@@ -3,11 +3,17 @@ import '../styles/Inbox.css'
 import EmailListPanel from './inbox/EmailListPanel'
 import MessageDetailPanel from './inbox/MessageDetailPanel'
 import { getEmails, saveEmailReadStates, saveEmailReadState } from '../services/emails'
+import { getEmailRules } from '../services/emailRules'
+import {
+  evaluateEmailRules,
+  type EmailRuleEvaluation
+} from '../services/emailRuleEvaluation'
 import {
   generateSuggestedReply,
   getSuggestedReplies
 } from '../services/suggestedReplies'
 import type { EmailPriority, EmailSignal, StudentEmail } from '../types/email'
+import type { EmailRule } from '../types/emailRule'
 import type { EmailFilter } from './inbox/types'
 
 type InboxProps = {
@@ -16,6 +22,8 @@ type InboxProps = {
 
 function Inbox({ onUnreadCountChange }: InboxProps) {
   const [emails, setEmails] = useState<StudentEmail[]>([])
+  const [emailRules, setEmailRules] = useState<EmailRule[]>([])
+  const [ruleEvaluations, setRuleEvaluations] = useState<EmailRuleEvaluation[] | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeFilter, setActiveFilter] = useState<EmailFilter>('All')
@@ -27,25 +35,78 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   const [replyError, setReplyError] = useState<string | null>(null)
 
   useEffect(() => {
-    getEmails()
-      .then((loadedEmails) => {
+    let isMounted = true
+
+    const loadInbox = async () => {
+      try {
+        const loadedEmails = await getEmails()
+        const loadedRules = getEmailRules()
+        if (!isMounted) {
+          return
+        }
+
         setEmails(loadedEmails)
         setSelectedId(loadedEmails[0]?.id ?? null)
+        setEmailRules(loadedRules)
         try {
           setSuggestedReplies(getSuggestedReplies())
         } catch (error) {
           setReplyError(error instanceof Error ? error.message : 'Unable to load suggested replies.')
         }
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : 'Unable to load emails.')
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void loadInbox()
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isLoading) {
+      return
+    }
+
+    let isMounted = true
+
+    evaluateEmailRules(emails, emailRules)
+      .then((results) => {
+        if (isMounted) {
+          setRuleEvaluations(results)
+        }
       })
       .catch((error: unknown) => {
-        setLoadError(error instanceof Error ? error.message : 'Unable to load emails.')
+        if (isMounted) {
+          setLoadError(error instanceof Error ? error.message : 'Unable to sort emails.')
+        }
       })
-      .finally(() => setIsLoading(false))
-  }, [])
+
+    return () => {
+      isMounted = false
+    }
+  }, [emailRules, emails, isLoading])
 
   useEffect(() => {
     onUnreadCountChange(emails.filter((email) => !email.read).length)
   }, [emails, onUnreadCountChange])
+
+  const evaluationsByEmailId = useMemo(
+    () => new Map((ruleEvaluations ?? []).map((evaluation) => [evaluation.emailId, evaluation])),
+    [ruleEvaluations]
+  )
+
+  const labelsByEmailId = useMemo(
+    () => new Map(
+      (ruleEvaluations ?? []).map((evaluation) => [evaluation.emailId, evaluation.labels])
+    ),
+    [ruleEvaluations]
+  )
 
   const filteredEmails = useMemo(() => {
     return emails.filter((email) => {
@@ -96,15 +157,45 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
         .join(' ')
         .toLowerCase()
 
-      return searchableText.includes(query)
+      return searchableText.includes(query) ||
+        (labelsByEmailId.get(email.id) ?? []).some((label) => label.toLowerCase().includes(query))
     })
-  }, [activeFilter, emails, priorityFilter, searchTerm, signalFilter, suggestedReplies])
+  }, [activeFilter, emails, labelsByEmailId, priorityFilter, searchTerm, signalFilter, suggestedReplies])
 
-  const visibleSelectedId = filteredEmails.some((email) => email.id === selectedId)
+  const sortedFilteredEmails = useMemo(() => {
+    const emailOrder = new Map(
+      (ruleEvaluations ?? []).map((evaluation, index) => [evaluation.emailId, index])
+    )
+    return [...filteredEmails].sort(
+      (left, right) =>
+        (emailOrder.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
+        (emailOrder.get(right.id) ?? Number.MAX_SAFE_INTEGER)
+    )
+  }, [filteredEmails, ruleEvaluations])
+
+  const emailGroups = useMemo(() => {
+    const groups = new Map<string, { id: string; label: string; emails: StudentEmail[] }>()
+
+    sortedFilteredEmails.forEach((email) => {
+      const evaluation = evaluationsByEmailId.get(email.id)
+      const groupId = evaluation?.groupId ?? 'other'
+      const group: { id: string; label: string; emails: StudentEmail[] } = groups.get(groupId) ?? {
+        id: groupId,
+        label: evaluation?.groupLabel ?? 'Other',
+        emails: []
+      }
+      group.emails.push(email)
+      groups.set(groupId, group)
+    })
+
+    return [...groups.values()]
+  }, [evaluationsByEmailId, sortedFilteredEmails])
+
+  const visibleSelectedId = sortedFilteredEmails.some((email) => email.id === selectedId)
     ? selectedId
-    : filteredEmails[0]?.id ?? null
+    : sortedFilteredEmails[0]?.id ?? null
 
-  const selectedEmail = filteredEmails.find((email) => email.id === visibleSelectedId) ?? null
+  const selectedEmail = sortedFilteredEmails.find((email) => email.id === visibleSelectedId) ?? null
   const suggestedReply = selectedEmail ? suggestedReplies[selectedEmail.id] ?? null : null
 
   const updateEmailState = (id: number, changes: Partial<StudentEmail>) => {
@@ -224,12 +315,12 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
     setReplyError(null)
   }
 
-  if (isLoading) {
-    return <section className="inbox-page" role="status">Loading emails...</section>
-  }
-
   if (loadError) {
     return <section className="inbox-page" role="alert">{loadError}</section>
+  }
+
+  if (isLoading || ruleEvaluations === null) {
+    return <section className="inbox-page" role="status">Loading and sorting emails...</section>
   }
 
   return (
@@ -238,6 +329,8 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
         <EmailListPanel
           emails={emails}
           filteredEmails={filteredEmails}
+          emailGroups={emailGroups}
+          labelsByEmailId={labelsByEmailId}
           selectedId={visibleSelectedId}
           searchTerm={searchTerm}
           activeFilter={activeFilter}

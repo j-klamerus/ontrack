@@ -50,6 +50,12 @@ Example app listening on port 3000
 ~~~
 appear in your terminal.
 
+### Demo Email Rules
+
+The Inbox rule demo uses the backend endpoint `POST /api/email-rules/evaluate`. The frontend sends its sample emails and locally saved rules to the backend; the backend returns all matching labels and sorts emails by the first matching rule. Rule order in Settings controls group order, unmatched messages appear under `Other`, and messages within each group are newest-first. This demo only calculates results for display; it does not modify messages or apply labels in Gmail.
+
+The frontend expects the backend at `http://localhost:3000`. To use another backend URL, set `VITE_API_BASE_URL` in the frontend environment.
+
 ### Test Everything is working Properly
 
 At this point everything should be setup properly in order to run the app. Follow these steps to make sure its working as expected:
@@ -78,7 +84,6 @@ This is everything you need to get the code from the small-demo app running. To 
 
 ### Other Notes that aren't really relevant yet but will be soon:
 - When you first attempt to make changes and push them to the github repo its going to ask you to authenticate with your github if you've never done it before, so watch out for that.
-
 
 
 
