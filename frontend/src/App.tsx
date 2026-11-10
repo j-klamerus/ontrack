@@ -28,9 +28,10 @@ type SuggestionCounts = Record<PlannerPage, number>
 
 type AppProps = {
   onLogOut: () => void
+  authError: string | null
 }
 
-function App({ onLogOut }: AppProps) {
+function App({ onLogOut, authError }: AppProps) {
   const [currentPage, setCurrentPage] = useState<Page>('Dashboard')
   const [unreadEmailCount, setUnreadEmailCount] = useState(0)
   const [navigationError, setNavigationError] = useState<string | null>(null)
@@ -197,6 +198,7 @@ function App({ onLogOut }: AppProps) {
           <h1>{currentPage}</h1>
         </header>
 
+        {authError && <p className="auth-error" role="alert">{authError}</p>}
         {pages[currentPage]}
       </main>
     </div>

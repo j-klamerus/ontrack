@@ -71,6 +71,54 @@
   line-height: 1.5;
 }
 
+.login-form-success {
+  margin: 4px 0 0;
+  color: #047857;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.login-google {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-control);
+  background: #ffffff;
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.login-google:hover {
+  border-color: var(--color-primary);
+  background-color: #f8fbff;
+}
+
+.login-google:focus-visible,
+.login-switch button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 12px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.login-divider::before,
+.login-divider::after {
+  height: 1px;
+  flex: 1;
+  background-color: var(--color-border);
+  content: '';
+}
+
 .login-form {
   display: flex;
   flex-direction: column;
@@ -127,8 +175,15 @@
   filter: brightness(0.97);
 }
 
+.login-submit:disabled,
+.login-google:disabled,
+.login-switch button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .login-submit:focus-visible,
-.login-switch button:focus-visible {
+.login-google:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 3px;
 }
@@ -186,7 +241,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .login-form input,
-  .login-submit {
+  .login-submit,
+  .login-google {
     transition: none;
   }
 }
