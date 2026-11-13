@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus } from 'lucide-react'
 import CommitmentFormModal from './commitments/CommitmentFormModal'
 import CommitmentSummaryCards from './commitments/CommitmentSummaryCards'
 import CommitmentTracker from './commitments/CommitmentTracker'
@@ -27,9 +26,20 @@ import {
 import { recordPlannerPageChange } from '../services/plannerNavigation'
 import type { Commitment } from '../types/commitment'
 import type { StudentEmail } from '../types/email'
+import type { PlannerItemSelection } from '../types/plannerItemSelection'
 import '../styles/Commitments.css'
 
-function Commitments() {
+type CommitmentsProps = {
+  onViewInCalendar: (request: PlannerItemSelection) => void
+  selectionRequest: PlannerItemSelection | null
+  onSelectionHandled: () => void
+}
+
+function Commitments({
+  onViewInCalendar,
+  selectionRequest,
+  onSelectionHandled
+}: CommitmentsProps) {
   const eventCategories = getEventCategories()
   const [commitments, setCommitments] = useState<Commitment[]>([])
   const [suggestions, setSuggestions] = useState<CommitmentSuggestion[]>([])
@@ -64,6 +74,17 @@ function Commitments() {
       })
       .finally(() => setIsLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (!selectionRequest || isLoading) {
+      return
+    }
+
+    document
+      .getElementById(`commitment-card-${selectionRequest.id}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    onSelectionHandled()
+  }, [isLoading, onSelectionHandled, selectionRequest])
 
   const summary = useMemo(() => ({
     total: commitments.length,
@@ -322,10 +343,6 @@ function Commitments() {
           <h2>Your Commitments</h2>
           <p>Keep track of your tasks, deadlines, and suggested action items.</p>
         </div>
-        <button type="button" className="primary-button" onClick={openAddCommitment}>
-          <Plus size={16} aria-hidden="true" />
-          Add Commitment
-        </button>
       </header>
 
       {actionError && <p className="commitment-action-error" role="alert">{actionError}</p>}
@@ -345,6 +362,8 @@ function Commitments() {
       />
       <CommitmentTracker
         commitments={commitments}
+        onAddCommitment={openAddCommitment}
+        selectedCommitmentId={selectionRequest?.kind === 'Commitment' ? selectionRequest.id : null}
         activeCommitments={visibleActiveCommitments}
         completedCommitments={completedCommitments}
         categories={eventCategories}
@@ -362,6 +381,7 @@ function Commitments() {
         onToggleCompletion={handleToggleCompletion}
         onEdit={openEditCommitment}
         onDelete={handleDeleteCommitment}
+        onViewInCalendar={onViewInCalendar}
       />
       {editingCommitment && (
         <CommitmentFormModal

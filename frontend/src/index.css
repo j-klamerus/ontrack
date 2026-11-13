@@ -22,6 +22,7 @@
   --shadow-card: 0 8px 18px rgba(19, 48, 72, 0.04);
   --shadow-modal: 0 18px 42px rgba(15, 23, 42, 0.18);
   --page-padding: 32px;
+  --top-bar-height: 80px;
 }
 
 * {
@@ -32,6 +33,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 button {
@@ -219,7 +221,7 @@ button {
 .commitments-page,
 .calendar-page,
 .settings-page {
-  min-height: calc(100vh - 80px);
+  min-height: calc(100vh - var(--top-bar-height));
   padding: var(--page-padding);
   background-color: var(--color-page);
 }
@@ -247,6 +249,7 @@ button {
 @media (max-width: 640px) {
   :root {
     --page-padding: 16px;
+    --top-bar-height: 64px;
   }
 
   .summary-container h2 {

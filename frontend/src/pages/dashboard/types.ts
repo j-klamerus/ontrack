@@ -10,6 +10,7 @@ export type DashboardSummary = {
 
 export type DashboardUpcomingItem = {
   id: string
+  sourceId: number
   title: string
   date: string
   time: string
@@ -20,6 +21,7 @@ export type DashboardUpcomingItem = {
 
 export const toUpcomingCommitment = (commitment: Commitment): DashboardUpcomingItem => ({
   id: `commitment-${commitment.id}`,
+  sourceId: commitment.id,
   title: commitment.name,
   date: commitment.dueDate,
   time: commitment.dueTime,
@@ -30,6 +32,7 @@ export const toUpcomingCommitment = (commitment: Commitment): DashboardUpcomingI
 
 export const toUpcomingEvent = (event: CalendarEvent): DashboardUpcomingItem => ({
   id: `event-${event.id}`,
+  sourceId: event.id,
   title: event.title,
   date: event.date,
   time: event.time,

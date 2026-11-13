@@ -1,10 +1,15 @@
 #root {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
 }
 
 .app-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   background-color: var(--color-page);
   color: var(--color-text);
 }
@@ -14,7 +19,8 @@
   top: 0;
   width: 300px;
   height: 100vh;
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   align-self: flex-start;
   flex-shrink: 0;
   display: flex;
@@ -186,8 +192,14 @@
 }
 
 .main-content {
+  display: flex;
+  flex-direction: column;
   flex: 1;
   min-width: 0;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .auth-error {
@@ -199,15 +211,24 @@
 }
 
 .top-bar {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 20;
   display: flex;
+  flex: 0 0 var(--top-bar-height);
   align-items: center;
-  height: 80px;
+  height: var(--top-bar-height);
   padding: 0 32px;
   background-color: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.08);
+}
+
+.page-viewport {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
 }
 
 .top-bar h1 {
@@ -306,7 +327,6 @@
   }
 
   .top-bar {
-    height: 64px;
     padding: 0 16px;
   }
 

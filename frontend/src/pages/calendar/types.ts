@@ -6,6 +6,7 @@ export type CalendarSuggestion = Extract<DashboardSuggestion, { kind: 'Calendar 
 
 export type CalendarScheduleItem = {
   id: string
+  sourceId: number
   title: string
   date: string
   time: string

@@ -27,12 +27,18 @@ import type { Commitment } from '../types/commitment'
 import type { DashboardSuggestion } from '../types/dashboardSuggestion'
 import type { StudentEmail } from '../types/email'
 import type { UserProfile } from '../types/user'
+import type { PlannerItemSelection } from '../types/plannerItemSelection'
 import { getEventCategories } from '../constants/eventCategories'
 import '../styles/Dashboard.css'
 
 const eventPriorities: EventPriority[] = ['High', 'Medium', 'Low']
 
-function Dashboard() {
+type DashboardProps = {
+  onViewInCalendar: (request: PlannerItemSelection) => void
+  onViewInCommitments: (request: PlannerItemSelection) => void
+}
+
+function Dashboard({ onViewInCalendar, onViewInCommitments }: DashboardProps) {
   const eventCategories = getEventCategories()
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [emails, setEmails] = useState<StudentEmail[]>([])
@@ -96,6 +102,9 @@ function Dashboard() {
       )
       .slice(0, 5)
   }, [commitments, events, confirmedSuggestions])
+
+  const eventSuggestions = suggestions.filter((suggestion) => suggestion.kind === 'Calendar event')
+  const commitmentSuggestions = suggestions.filter((suggestion) => suggestion.kind === 'Commitment')
 
   const handleConfirmSuggestion = async (suggestion: DashboardSuggestion) => {
     setSavingSuggestionId(suggestion.id)
@@ -189,19 +198,43 @@ function Dashboard() {
 
         <div className="dashboard-sections">
           <PlannerKey categories={eventCategories} page="dashboard" />
-          <ReviewSuggestionsPanel
-            suggestions={suggestions}
-            emails={emails}
-            eventCategories={eventCategories}
-            eventPriorities={eventPriorities}
-            editingSuggestion={editingSuggestion}
-            savingSuggestionId={savingSuggestionId}
-            onEditingSuggestionChange={setEditingSuggestion}
-            onConfirm={handleConfirmSuggestion}
-            onDismiss={handleDismissSuggestion}
-            onSave={handleSaveSuggestion}
+          <UpcomingPanel
+            items={upcomingItems}
+            onViewInCalendar={onViewInCalendar}
+            onViewInCommitments={onViewInCommitments}
           />
-          <UpcomingPanel items={upcomingItems} />
+          <div className="dashboard-suggestion-panels">
+            <ReviewSuggestionsPanel
+              title="Suggested Events"
+              headingId="suggested-events-heading"
+              emptyMessage="No suggested events to review."
+              suggestions={eventSuggestions}
+              emails={emails}
+              eventCategories={eventCategories}
+              eventPriorities={eventPriorities}
+              editingSuggestion={editingSuggestion}
+              savingSuggestionId={savingSuggestionId}
+              onEditingSuggestionChange={setEditingSuggestion}
+              onConfirm={handleConfirmSuggestion}
+              onDismiss={handleDismissSuggestion}
+              onSave={handleSaveSuggestion}
+            />
+            <ReviewSuggestionsPanel
+              title="Suggested Commitments"
+              headingId="suggested-commitments-heading"
+              emptyMessage="No suggested commitments to review."
+              suggestions={commitmentSuggestions}
+              emails={emails}
+              eventCategories={eventCategories}
+              eventPriorities={eventPriorities}
+              editingSuggestion={editingSuggestion}
+              savingSuggestionId={savingSuggestionId}
+              onEditingSuggestionChange={setEditingSuggestion}
+              onConfirm={handleConfirmSuggestion}
+              onDismiss={handleDismissSuggestion}
+              onSave={handleSaveSuggestion}
+            />
+          </div>
         </div>
 
         <SuggestedRepliesPanel

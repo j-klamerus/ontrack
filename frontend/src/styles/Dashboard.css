@@ -119,9 +119,15 @@
 
 .dashboard-sections {
   display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   margin-top: 24px;
+}
+
+.dashboard-suggestion-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .dashboard-panel {
@@ -223,12 +229,29 @@
   text-align: center;
 }
 
+.dashboard-suggestion-empty {
+  padding: 32px;
+  border: 1px solid #e5edf5;
+  border-radius: 16px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.dashboard-suggestion-empty p {
+  margin: 0;
+  color: #64748b;
+}
+
 @media (max-width: 1000px) {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .dashboard-sections {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-suggestion-panels {
     grid-template-columns: 1fr;
   }
 }

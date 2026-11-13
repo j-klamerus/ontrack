@@ -9,40 +9,6 @@
   gap: 12px;
 }
 
-.suggested-replies-empty {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  border: 1px dashed #d7e3ed;
-  border-radius: 12px;
-  background: #f8fafc;
-}
-
-.suggested-replies-empty-icon {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: #f1f5f9;
-  color: #8293a5;
-}
-
-.suggested-replies-empty strong {
-  color: #3c5267;
-  font-size: 13px;
-}
-
-.suggested-replies-empty p {
-  margin: 4px 0 0;
-  color: #748397;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
 .suggested-replies-error {
   margin: 0 0 12px;
   color: #b91c1c;

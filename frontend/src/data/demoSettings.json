@@ -1,0 +1,23 @@
+{
+  "preferences": {
+    "priorityEmailFiltering": true,
+    "highlightAssignments": true,
+    "highlightDeadlines": true,
+    "highlightImportant": true,
+    "spamWarnings": true,
+    "deadlineReminders": true,
+    "importantEmailNotifications": true,
+    "reminderTiming": "1 hour before",
+    "aiEmailSummaries": true,
+    "aiDeadlineDetection": true,
+    "emailAnalysisEnabled": true
+  },
+  "plannerKeyDefaults": {
+    "dashboard": false,
+    "calendar": true,
+    "commitments": false
+  },
+  "categories": [
+    { "name": "Project", "color": "#0f766e" }
+  ]
+}
