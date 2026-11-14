@@ -23,6 +23,19 @@ import {
   type PlannerPageChanges
 } from './services/plannerNavigation'
 
+type Theme = 'light' | 'dark'
+
+const getInitialTheme = (): Theme => {
+  const savedTheme = window.localStorage.getItem('ontrack-theme')
+  if (savedTheme === 'light' || savedTheme === 'dark') {
+    return savedTheme
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light'
+}
+
 type Page = 'Dashboard' | 'Inbox' | 'Commitments' | 'Calendar' | 'Settings'
 type SuggestionCounts = Record<PlannerPage, number>
 
@@ -32,6 +45,7 @@ type AppProps = {
 }
 
 function App({ onLogOut, authError }: AppProps) {
+  const [theme, setTheme] = useState<Theme>(getInitialTheme)
   const [currentPage, setCurrentPage] = useState<Page>('Dashboard')
   const [unreadEmailCount, setUnreadEmailCount] = useState(0)
   const [navigationError, setNavigationError] = useState<string | null>(null)
@@ -43,6 +57,11 @@ function App({ onLogOut, authError }: AppProps) {
     calendar: 0,
     commitments: 0
   })
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    window.localStorage.setItem('ontrack-theme', theme)
+  }, [theme])
 
   useEffect(() => {
     let isMounted = true
@@ -196,6 +215,14 @@ function App({ onLogOut, authError }: AppProps) {
       <main className="main-content">
         <header className="top-bar">
           <h1>{currentPage}</h1>
+          <button
+            className="theme-toggle"
+            type="button"
+            aria-pressed={theme === 'dark'}
+            onClick={() => setTheme((currentTheme) => currentTheme === 'dark' ? 'light' : 'dark')}
+          >
+            Dark theme: {theme === 'dark' ? 'On' : 'Off'}
+          </button>
         </header>
 
         {authError && <p className="auth-error" role="alert">{authError}</p>}

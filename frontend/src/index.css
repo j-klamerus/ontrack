@@ -2,6 +2,7 @@
   font-family: Arial, sans-serif;
   color: var(--color-text);
   background: var(--color-page);
+  color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -24,6 +25,19 @@
   --page-padding: 32px;
 }
 
+:root[data-theme='dark'] {
+  --color-ink: #f3f4f6;
+  --color-text: #e5e7eb;
+  --color-muted: #9ca3af;
+  --color-page: #111827;
+  --color-surface: #1f2937;
+  --color-border: #374151;
+  --color-control-border: #4b5563;
+  --shadow-card: 0 8px 18px rgba(0, 0, 0, 0.2);
+  --shadow-modal: 0 18px 42px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -36,6 +50,14 @@ body {
 
 button {
   font: inherit;
+}
+
+button:not(:disabled):hover {
+  filter: brightness(0.9);
+}
+
+button:not(:disabled):active {
+  scale: 0.98;
 }
 
 .primary-button,
