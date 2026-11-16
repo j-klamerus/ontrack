@@ -30,6 +30,33 @@ const demoRules: EmailRule[] = [
   }
 ]
 
+const campusServicesRules: EmailRule[] = [
+  {
+    id: 'campus-services-advising',
+    enabled: true,
+    field: 'sender',
+    operator: 'contains',
+    pattern: 'Academic Advising',
+    label: 'Advising'
+  },
+  {
+    id: 'campus-services-library',
+    enabled: true,
+    field: 'sender',
+    operator: 'contains',
+    pattern: 'Library',
+    label: 'Library'
+  },
+  {
+    id: 'campus-services-career',
+    enabled: true,
+    field: 'sender',
+    operator: 'contains',
+    pattern: 'Career Center',
+    label: 'Career Center'
+  }
+]
+
 const fieldLabels: Record<EmailRuleField, string> = {
   sender: 'Sender name',
   email: 'Sender address',
@@ -108,11 +135,11 @@ function EmailRulesCard() {
     updateRules(nextRules)
   }
 
-  const loadDemoRules = () => {
-    const demoRuleIds = new Set(demoRules.map((rule) => rule.id))
+  const loadRuleSet = (presetRules: EmailRule[]) => {
+    const presetRuleIds = new Set(presetRules.map((rule) => rule.id))
     updateRules([
-      ...demoRules,
-      ...rules.filter((rule) => !demoRuleIds.has(rule.id))
+      ...presetRules,
+      ...rules.filter((rule) => !presetRuleIds.has(rule.id))
     ])
   }
 
@@ -167,16 +194,25 @@ function EmailRulesCard() {
         <button type="submit" className="primary-button">Add rule</button>
       </form>
 
-      <button
-        type="button"
-        className="secondary-button email-demo-rules-button"
-        onClick={loadDemoRules}
-      >
-        {rules.length === 0 ? 'Load demo rules' : 'Add demo rules'}
-      </button>
+      <div className="email-rule-presets">
+        <button
+          type="button"
+          className="secondary-button email-demo-rules-button"
+          onClick={() => loadRuleSet(demoRules)}
+        >
+          Load demo rules
+        </button>
+        <button
+          type="button"
+          className="secondary-button email-demo-rules-button"
+          onClick={() => loadRuleSet(campusServicesRules)}
+        >
+          Load campus services rules
+        </button>
+      </div>
 
       <p className="field-note email-rules-note">
-        Demo rules classify messages as Academic, Deadline, or Campus events. Rules are saved in this browser.
+        Load either preset on its own or both together. Loading a preset keeps your custom rules and any other preset rules. Rules are saved in this browser.
       </p>
 
       {error && <p className="email-rules-error" role="alert">{error}</p>}
@@ -184,7 +220,7 @@ function EmailRulesCard() {
       {rules.length === 0 ? (
         <div className="email-rules-empty-state">
           <strong>No email rules yet</strong>
-          <span>Add your first rule above, or load the demo rules to try classification on the sample inbox.</span>
+          <span>Add your first rule above, or load a preset to try classification on the sample inbox.</span>
         </div>
       ) : (
         <div className="email-rule-list" aria-label="Saved email rules">

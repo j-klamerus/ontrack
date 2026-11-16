@@ -84,6 +84,12 @@
   align-self: flex-start;
 }
 
+.email-rule-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .email-rule-list {
   display: flex;
   flex-direction: column;
@@ -259,6 +265,10 @@
 }
 
 .category-settings-card {
+  grid-column: 1 / -1;
+}
+
+.email-rules-card {
   grid-column: 1 / -1;
 }
 
