@@ -13,6 +13,7 @@ export type StudentEmail = {
   important: boolean
   read: boolean
   spam: boolean
+  // LEGACY: Demo records used to store these manually; Inbox now derives them after a rule scan.
   signals: EmailSignal[]
   summary: string
   warning?: string

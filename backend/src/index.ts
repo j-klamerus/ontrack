@@ -21,6 +21,7 @@ const {
 } = process.env;
 
 
+// LEGACY: Earlier OAuth prototype using CLIENT_ID names; the active client below uses GOOGLE_* variables.
 /*const oauth2Client = new google.auth.OAuth2(
     process.env.CLIENT_ID,
     process.env.CLIENT_SECRET,
