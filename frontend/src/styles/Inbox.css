@@ -58,6 +58,50 @@ body:has(.inbox-page)::-webkit-scrollbar {
   gap: 8px;
 }
 
+.inbox-toolbar-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.scan-emails-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-color: #c9def3;
+  background-color: #edf6ff;
+  color: #245b8f;
+  padding: 7px 9px;
+  font-size: 11px;
+}
+
+.scan-emails-button:hover:not(:disabled) {
+  border-color: #9dcaff;
+  background-color: #e2f0ff;
+}
+
+.scan-emails-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.inbox-scan-note,
+.inbox-scan-error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.inbox-scan-note {
+  color: #64748b;
+}
+
+.inbox-scan-error {
+  color: #b91c1c;
+}
+
 .inbox-toolbar-heading > div {
   align-items: baseline;
   gap: 8px;
@@ -645,6 +689,15 @@ body:has(.inbox-page)::-webkit-scrollbar {
   .inbox-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .inbox-toolbar-heading {
+    align-items: flex-start;
+  }
+
+  .inbox-toolbar-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .email-list-panel,

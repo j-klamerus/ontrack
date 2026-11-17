@@ -52,9 +52,9 @@ appear in your terminal.
 
 ### Demo Email Rules
 
-The Inbox rule demo uses the backend endpoint `POST /api/email-rules/evaluate`. The frontend sends its sample emails and locally saved rules to the backend; the backend returns all matching labels and sorts emails by the first matching rule. Rule order in Settings controls group order, unmatched messages appear under `Other`, and messages within each group are newest-first. This demo only calculates results for display; it does not modify messages or apply labels in Gmail.
+The Inbox rule demo uses the backend endpoint `POST /api/email-rules/evaluate` when you click **Scan emails**. Before scanning, sample email signals are empty and no rule-derived categories or labels are shown. The backend returns all matching labels and sorts emails by the first matching rule. Rule order in Settings controls group order, unmatched messages appear under `Other`, and messages within each group are newest-first. This demo only calculates results for display; it does not modify messages or apply labels in Gmail.
 
-Settings includes separate Demo and Campus Services rule presets. Load either preset on its own or load both; loading a preset keeps custom rules and rules from the other preset. Campus Services groups messages from Academic Advising, the Library, and the Career Center.
+Settings includes a Baseline Categories rule set for Assignment, Exam, Meeting, Appointment, Deadline, and Other, plus an optional Campus & Study Extras set with academic and campus-service rules. Each set can be loaded or unloaded as a group. Individual rules remain editable, reorderable, and deletable, and custom rules are preserved when unloading a set.
 
 The frontend expects the backend at `http://localhost:3000`. To use another backend URL, set `VITE_API_BASE_URL` in the frontend environment.
 

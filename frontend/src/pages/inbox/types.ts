@@ -4,7 +4,14 @@ export type EmailFilter = 'All' | 'Important' | 'Unread' | 'Spam' | 'Suggested r
 
 export const filterOptions: EmailFilter[] = ['All', 'Important', 'Unread', 'Spam', 'Suggested replies']
 export const priorityOptions: EmailPriority[] = ['High', 'Medium', 'Low']
-export const signalOptions: EmailSignal[] = ['Assignment', 'Deadline', 'Exam', 'Meeting', 'General']
+export const signalOptions: EmailSignal[] = [
+  'Assignment',
+  'Exam',
+  'Meeting',
+  'Appointment',
+  'Deadline',
+  'Other'
+]
 
 export const formatDate = (value: string) =>
   new Intl.DateTimeFormat('en-US', {

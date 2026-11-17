@@ -13,10 +13,11 @@ const isEmailPriority = (value: unknown): value is EmailPriority =>
 
 const isEmailSignal = (value: unknown): value is EmailSignal =>
   value === 'Assignment' ||
-  value === 'Deadline' ||
   value === 'Exam' ||
   value === 'Meeting' ||
-  value === 'General'
+  value === 'Appointment' ||
+  value === 'Deadline' ||
+  value === 'Other'
 
 const isStudentEmail = (value: unknown): value is StudentEmail =>
   isRecord(value) &&
@@ -59,13 +60,20 @@ const getSavedReadStates = (): Record<string, boolean> => {
 }
 
 export async function getEmails(): Promise<StudentEmail[]> {
-  if (!Array.isArray(demoEmails) || !demoEmails.every(isStudentEmail)) {
+  if (!Array.isArray(demoEmails)) {
     throw new Error('The demo email data is invalid.')
   }
 
+  const validatedEmails = demoEmails.map((email) => {
+    if (!isStudentEmail(email)) {
+      throw new Error('The demo email data is invalid.')
+    }
+    return email
+  })
+
   const savedReadStates = getSavedReadStates()
 
-  return demoEmails.map((email) => ({
+  return validatedEmails.map((email) => ({
     ...email,
     read: typeof savedReadStates[email.id] === 'boolean'
       ? savedReadStates[email.id]

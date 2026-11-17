@@ -2,8 +2,94 @@ import { useState } from 'react'
 import { getEmailRules, saveEmailRules } from '../../services/emailRules'
 import type { EmailRule, EmailRuleField, EmailRuleOperator } from '../../types/emailRule'
 
-// Presets are opt-in so a new browser session starts with no active rules.
-const demoRules: EmailRule[] = [
+const baselineRuleDefinitions: Array<{
+  id: string
+  field: EmailRuleField
+  pattern: string
+  label: string
+}> = [
+  {
+    id: 'baseline-assignment-subject',
+    field: 'subject',
+    pattern: '\\b(?:assignment|homework|coursework|lab report|essay|proposal|project milestone|prototype|practice set|worksheet|problem set|submission)\\b',
+    label: 'Assignment'
+  },
+  {
+    id: 'baseline-assignment-body',
+    field: 'body',
+    pattern: '\\b(?:assignment|homework|coursework|lab report|essay|proposal|project milestone|prototype|practice set|worksheet|problem set|submission|submit(?:ted|ting)?)\\b',
+    label: 'Assignment'
+  },
+  {
+    id: 'baseline-exam-subject',
+    field: 'subject',
+    pattern: '\\b(?:exam|midterm|quizzes?|test|lab practical|final (?:exam|assessment|test)|finals week)\\b',
+    label: 'Exam'
+  },
+  {
+    id: 'baseline-exam-body',
+    field: 'body',
+    pattern: '\\b(?:exam|midterm|quizzes?|test|lab practical|final (?:exam|assessment|test)|finals week)\\b',
+    label: 'Exam'
+  },
+  {
+    id: 'baseline-appointment-subject',
+    field: 'subject',
+    pattern: '\\b(?:appointments?|consultation|advising session|counseling session|office visit)\\b',
+    label: 'Appointment'
+  },
+  {
+    id: 'baseline-appointment-body',
+    field: 'body',
+    pattern: '\\b(?:appointments?|consultation|advising session|counseling session|office visit)\\b',
+    label: 'Appointment'
+  },
+  {
+    id: 'baseline-meeting-subject',
+    field: 'subject',
+    pattern: '\\b(?:meeting|office hours|review session|study session|workshop|seminar|group discussion|volunteer fair|career fair|orientation)\\b',
+    label: 'Meeting'
+  },
+  {
+    id: 'baseline-meeting-body',
+    field: 'body',
+    pattern: '\\b(?:meeting|office hours|review session|study session|workshop|seminar|group discussion|volunteer fair|career fair|orientation)\\b',
+    label: 'Meeting'
+  },
+  {
+    id: 'baseline-deadline-subject',
+    field: 'subject',
+    pattern: '\\b(?:deadlines?|due(?: date)?|closes?|registration window|pickup window|return by|renew by)\\b',
+    label: 'Deadline'
+  },
+  {
+    id: 'baseline-deadline-body',
+    field: 'body',
+    pattern: '\\b(?:deadlines?|due(?: date)?|closes?|registration window|pickup window|return by|renew by)\\b',
+    label: 'Deadline'
+  },
+  {
+    id: 'baseline-other-subject',
+    field: 'subject',
+    pattern: '\\b(?:general announcement|campus news|campus update|security alert|account security|flu shot clinic|student notice)\\b',
+    label: 'Other'
+  },
+  {
+    id: 'baseline-other-body',
+    field: 'body',
+    pattern: '\\b(?:general announcement|campus news|campus update|security alert|account security|flu shot clinic|student notice)\\b',
+    label: 'Other'
+  }
+]
+
+const baselineRules: EmailRule[] = baselineRuleDefinitions.map((rule) => ({
+  ...rule,
+  enabled: true,
+  operator: 'regex'
+}))
+
+// Extra examples are optional; baseline rules handle the six shared categories.
+const optionalRules: EmailRule[] = [
   {
     id: 'demo-academic',
     enabled: true,
@@ -27,10 +113,7 @@ const demoRules: EmailRule[] = [
     operator: 'regex',
     pattern: 'workshop|volunteer fair|clinic|appointment',
     label: 'Campus events'
-  }
-]
-
-const campusServicesRules: EmailRule[] = [
+  },
   {
     id: 'campus-services-advising',
     enabled: true,
@@ -57,11 +140,60 @@ const campusServicesRules: EmailRule[] = [
   }
 ]
 
+type EmailRuleSet = {
+  id: string
+  name: string
+  description: string
+  rules: EmailRule[]
+}
+
+const ruleSets: EmailRuleSet[] = [
+  {
+    id: 'baseline',
+    name: 'Baseline categories',
+    description: 'Classifies email into Assignment, Exam, Meeting, Appointment, Deadline, and Other.',
+    rules: baselineRules
+  },
+  {
+    id: 'optional',
+    name: 'Campus & study extras',
+    description: 'Adds academic and campus-service labels such as Academic, Advising, Library, and Career Center.',
+    rules: optionalRules
+  }
+]
+
 const fieldLabels: Record<EmailRuleField, string> = {
   sender: 'Sender name',
   email: 'Sender address',
   subject: 'Subject',
   body: 'Message body'
+}
+
+const escapeRegexLiteral = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const buildRegexFromPhrases = (value: string, wholeWords: boolean): string => {
+  const phrases = value
+    .split(/[,\n]+/)
+    .map((phrase) => phrase.trim())
+    .filter(Boolean)
+
+  if (phrases.length === 0) {
+    return ''
+  }
+
+  const alternatives = phrases.map((phrase) => {
+    const escapedPhrase = phrase.split(/\s+/).map(escapeRegexLiteral).join('\\s+')
+    if (!wholeWords) {
+      return escapedPhrase
+    }
+
+    const startBoundary = /^\w/.test(phrase) ? '\\b' : ''
+    const endBoundary = /\w$/.test(phrase) ? '\\b' : ''
+    return `${startBoundary}${escapedPhrase}${endBoundary}`
+  })
+
+  return `(?:${alternatives.join('|')})`
 }
 
 type EmailRulesState = {
@@ -84,6 +216,8 @@ function EmailRulesCard() {
   const [operator, setOperator] = useState<EmailRuleOperator>('contains')
   const [pattern, setPattern] = useState('')
   const [label, setLabel] = useState('')
+  const [regexPhrases, setRegexPhrases] = useState('')
+  const [wholeWordRegex, setWholeWordRegex] = useState(true)
   const { rules, error } = state
 
   const updateRules = (nextRules: EmailRule[]): boolean => {
@@ -118,6 +252,16 @@ function EmailRulesCard() {
     }
   }
 
+  const buildRegex = () => {
+    const builtPattern = buildRegexFromPhrases(regexPhrases, wholeWordRegex)
+    if (!builtPattern) {
+      return
+    }
+
+    setOperator('regex')
+    setPattern(builtPattern)
+  }
+
   const moveRule = (index: number, direction: -1 | 1) => {
     const targetIndex = index + direction
     if (targetIndex < 0 || targetIndex >= rules.length) {
@@ -135,12 +279,35 @@ function EmailRulesCard() {
     updateRules(nextRules)
   }
 
-  const loadRuleSet = (presetRules: EmailRule[]) => {
-    const presetRuleIds = new Set(presetRules.map((rule) => rule.id))
-    updateRules([
-      ...presetRules,
-      ...rules.filter((rule) => !presetRuleIds.has(rule.id))
-    ])
+  const loadRuleSet = (ruleSet: EmailRuleSet) => {
+    const existingIds = new Set(rules.map(({ id }) => id))
+    const missingRules = ruleSet.rules.filter(({ id }) => !existingIds.has(id))
+    if (missingRules.length === 0) {
+      return
+    }
+
+    const existingSetIds = new Set(ruleSet.rules.map(({ id }) => id))
+    const existingSetIndexes = rules
+      .map(({ id }, index) => existingSetIds.has(id) ? index : -1)
+      .filter((index) => index >= 0)
+    const baselineIndexes = rules
+      .map(({ id }, index) => baselineRules.some((rule) => rule.id === id) ? index : -1)
+      .filter((index) => index >= 0)
+    const insertionIndex = existingSetIndexes.length > 0
+      ? existingSetIndexes[existingSetIndexes.length - 1] + 1
+      : ruleSet.id === 'baseline'
+        ? 0
+        : baselineIndexes.length > 0
+          ? baselineIndexes[baselineIndexes.length - 1] + 1
+          : 0
+    const nextRules = [...rules]
+    nextRules.splice(insertionIndex, 0, ...missingRules)
+    updateRules(nextRules)
+  }
+
+  const unloadRuleSet = (ruleSet: EmailRuleSet) => {
+    const ruleSetIds = new Set(ruleSet.rules.map(({ id }) => id))
+    updateRules(rules.filter(({ id }) => !ruleSetIds.has(id)))
   }
 
   return (
@@ -149,7 +316,7 @@ function EmailRulesCard() {
         <h3>Email Rules</h3>
       </div>
       <p className="field-note email-rules-note">
-        No rules are active until you add one or load the demo set. Matching emails get labels; the first matching rule sets their group. Move rules to change group priority.
+        Load a rule set to classify matching emails. Matching rules add labels, and the first matching rule sets the email group. Move rules to change group priority.
       </p>
 
       <form className="email-rule-form" onSubmit={addRule}>
@@ -194,25 +361,99 @@ function EmailRulesCard() {
         <button type="submit" className="primary-button">Add rule</button>
       </form>
 
-      <div className="email-rule-presets">
-        <button
-          type="button"
-          className="secondary-button email-demo-rules-button"
-          onClick={() => loadRuleSet(demoRules)}
-        >
-          Load demo rules
-        </button>
-        <button
-          type="button"
-          className="secondary-button email-demo-rules-button"
-          onClick={() => loadRuleSet(campusServicesRules)}
-        >
-          Load campus services rules
-        </button>
+      <details className="email-regex-help">
+        <summary>Regex guide and simple pattern builder</summary>
+        <div className="email-regex-help-content">
+          <div>
+            <p className="email-rules-note">
+              Regex looks for patterns in the selected field. Matches ignore capitalization.
+            </p>
+            <ul className="email-regex-examples">
+              <li><code>quiz|exam</code> matches “quiz” or “exam”.</li>
+              <li><code>\b</code> marks a word boundary; <code>\d</code> matches a digit.</li>
+              <li><code>.*</code> matches any amount of text.</li>
+            </ul>
+          </div>
+          <div className="email-regex-builder">
+            <label htmlFor="email-regex-phrases">
+              Phrases to match (separate with commas or new lines)
+              <textarea
+                id="email-regex-phrases"
+                value={regexPhrases}
+                onChange={(event) => setRegexPhrases(event.target.value)}
+                placeholder={'quiz, exam, lab practical'}
+                rows={2}
+              />
+            </label>
+            <label className="email-regex-whole-words">
+              <input
+                type="checkbox"
+                checked={wholeWordRegex}
+                onChange={(event) => setWholeWordRegex(event.target.checked)}
+              />
+              Match whole words or phrases
+            </label>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={buildRegex}
+              disabled={!regexPhrases.trim()}
+            >
+              Build regex into pattern
+            </button>
+            <p className="email-rules-note">
+              The builder treats your phrases as literal text and safely escapes regex symbols.
+            </p>
+          </div>
+        </div>
+      </details>
+
+      <div className="email-rule-sets" aria-label="Rule sets">
+        {ruleSets.map((ruleSet) => {
+          const ruleSetIds = new Set(ruleSet.rules.map(({ id }) => id))
+          const loadedCount = rules.filter(({ id }) => ruleSetIds.has(id)).length
+          const missingCount = ruleSet.rules.length - loadedCount
+
+          return (
+            <section className="email-rule-set" key={ruleSet.id} aria-labelledby={`email-rule-set-${ruleSet.id}`}>
+              <div className="email-rule-set-copy">
+                <div className="email-rule-title-row">
+                  <strong className="email-rule-title" id={`email-rule-set-${ruleSet.id}`}>{ruleSet.name}</strong>
+                  <span className={`email-rule-status ${loadedCount > 0 ? 'enabled' : 'disabled'}`}>
+                    {loadedCount === ruleSet.rules.length
+                      ? 'Loaded'
+                      : loadedCount > 0
+                        ? `${loadedCount} of ${ruleSet.rules.length} loaded`
+                        : 'Not loaded'}
+                  </span>
+                </div>
+                <p className="field-note email-rules-note">{ruleSet.description}</p>
+              </div>
+              <div className="email-rule-set-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => loadRuleSet(ruleSet)}
+                  disabled={missingCount === 0}
+                >
+                  {loadedCount === 0 ? 'Load set' : 'Restore missing'}
+                </button>
+                <button
+                  type="button"
+                  className="email-rule-action email-rule-delete"
+                  onClick={() => unloadRuleSet(ruleSet)}
+                  disabled={loadedCount === 0}
+                >
+                  Unload set
+                </button>
+              </div>
+            </section>
+          )
+        })}
       </div>
 
       <p className="field-note email-rules-note">
-        Load either preset on its own or both together. Loading a preset keeps your custom rules and any other preset rules. Rules are saved in this browser.
+        Rule sets can be loaded or unloaded together. Individual rules can still be enabled, disabled, reordered, or deleted below; custom rules are kept when a set is unloaded. Rules are saved in this browser.
       </p>
 
       {error && <p className="email-rules-error" role="alert">{error}</p>}
@@ -220,7 +461,7 @@ function EmailRulesCard() {
       {rules.length === 0 ? (
         <div className="email-rules-empty-state">
           <strong>No email rules yet</strong>
-          <span>Add your first rule above, or load a preset to try classification on the sample inbox.</span>
+          <span>Add your first rule above, or load a rule set to try classification on the sample inbox.</span>
         </div>
       ) : (
         <div className="email-rule-list" aria-label="Saved email rules">

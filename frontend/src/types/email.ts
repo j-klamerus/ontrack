@@ -1,5 +1,5 @@
 export type EmailPriority = 'High' | 'Medium' | 'Low'
-export type EmailSignal = 'Assignment' | 'Deadline' | 'Exam' | 'Meeting' | 'General'
+export type EmailSignal = 'Assignment' | 'Exam' | 'Meeting' | 'Appointment' | 'Deadline' | 'Other'
 
 export type StudentEmail = {
   id: number

@@ -80,14 +80,157 @@
   min-height: 40px;
 }
 
-.email-demo-rules-button {
-  align-self: flex-start;
+.email-regex-help {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: #f8fafc;
 }
 
-.email-rule-presets {
+.email-regex-help summary {
+  padding: 11px 13px;
+  color: #245b8f;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.email-regex-help[open] summary {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.email-regex-help-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  padding: 14px;
+}
+
+.email-regex-help-content .email-rules-note {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.email-regex-examples {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.email-regex-examples code {
+  border-radius: 4px;
+  background: #edf2f7;
+  color: #334155;
+  padding: 1px 4px;
+  font-family: Consolas, 'Courier New', monospace;
+}
+
+.email-regex-builder {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.email-regex-builder > label:first-child {
+  grid-column: 1 / -1;
+}
+
+.settings-page .email-regex-builder > label:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #133048;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.settings-page .email-regex-builder textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  resize: vertical;
+  border: 1px solid #dbe6f0;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #133048;
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.settings-page .email-regex-builder textarea:focus {
+  outline: 2px solid rgba(28, 138, 253, 0.2);
+  border-color: #1c8afd;
+}
+
+.email-regex-whole-words {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #475569;
+  font-size: 12px;
+}
+
+.settings-page .email-regex-whole-words input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #1c8afd;
+}
+
+.email-regex-builder .secondary-button {
+  justify-self: end;
+}
+
+.email-regex-builder > .email-rules-note {
+  grid-column: 1 / -1;
+}
+
+.email-rule-sets {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+}
+
+.email-rule-set {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.email-rule-set-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.email-rule-set-copy .field-note {
+  margin: 0;
+}
+
+.email-rule-set-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.email-rule-set-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .email-rule-list {
@@ -607,12 +750,38 @@
     grid-template-columns: 1fr;
   }
 
+  .email-regex-help-content {
+    grid-template-columns: 1fr;
+  }
+
+  .email-regex-builder {
+    grid-template-columns: 1fr;
+  }
+
+  .email-regex-builder > label:first-child,
+  .email-regex-builder > .email-rules-note {
+    grid-column: 1;
+  }
+
+  .email-regex-builder .secondary-button {
+    justify-self: start;
+  }
+
   .email-rule-form .primary-button {
     width: 100%;
   }
 
   .email-rule-row {
     flex-direction: column;
+  }
+
+  .email-rule-set {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .email-rule-set-actions {
+    justify-content: flex-start;
   }
 
   .email-rule-actions {

@@ -11,10 +11,7 @@
     "important": true,
     "read": false,
     "spam": false,
-    "signals": [
-      "Assignment",
-      "Deadline"
-    ],
+    "signals": [],
     "summary": "Simulated AI summary: This message is a high-priority assignment reminder for the Capstone Proposal Draft. It includes a firm Friday deadline and gives a clear action to submit the draft before the review cutoff."
   },
   {
@@ -29,9 +26,7 @@
     "important": false,
     "read": true,
     "spam": false,
-    "signals": [
-      "General"
-    ],
+    "signals": [],
     "summary": "Simulated AI summary: This is a routine campus health notice about a flu clinic. It is informational and does not appear to contain a deadline or academic action item."
   },
   {
@@ -46,10 +41,7 @@
     "important": true,
     "read": false,
     "spam": false,
-    "signals": [
-      "Exam",
-      "Meeting"
-    ],
+    "signals": [],
     "summary": "Simulated AI summary: This message reschedules an exam and gives students a new time and location. It is important because the test date changed and students must adjust their study plan."
   },
   {
@@ -64,9 +56,7 @@
     "important": false,
     "read": true,
     "spam": false,
-    "signals": [
-      "Meeting"
-    ],
+    "signals": [],
     "summary": "Simulated AI summary: This is a campus event invitation. It mentions an upcoming meeting-style event in the Commons and does not include an assignment deadline."
   },
   {
@@ -81,9 +71,7 @@
     "important": false,
     "read": true,
     "spam": false,
-    "signals": [
-      "General"
-    ],
+    "signals": [],
     "summary": "Simulated AI summary: This message uses urgency and a suspicious verification link, which may be part of a phishing attempt. It should be treated cautiously and checked through official campus channels.",
     "warning": "Suspicious email detected: This message uses urgent language, requests immediate action, and includes a shortened or untrusted verification link. It may be a phishing or scam attempt."
   },
@@ -99,10 +87,7 @@
     "important": true,
     "read": true,
     "spam": false,
-    "signals": [
-      "Assignment",
-      "Exam"
-    ],
+    "signals": [],
     "summary": "Simulated AI summary: This email includes a study task and a quiz preparation deadline. It is relevant because students need to complete the practice set before the Friday quiz."
   },
   {
@@ -117,9 +102,7 @@
     "important": false,
     "read": false,
     "spam": false,
-    "signals": [
-      "Meeting"
-    ],
+    "signals": [],
     "summary": "Simulated AI summary: This is a career workshop invitation with a meeting time and deadline to register. It is relevant but not an academic assignment."
   },
   {
@@ -134,9 +117,7 @@
     "important": false,
     "read": true,
     "spam": false,
-    "signals": [
-      "Deadline"
-    ],
+    "signals": [],
     "summary": "Simulated AI summary: This is a library pickup reminder with a deadline for collecting a reserved textbook. It matters because it affects course materials for upcoming classes."
   },
   {
@@ -151,9 +132,7 @@
     "important": false,
     "read": true,
     "spam": true,
-    "signals": [
-      "General"
-    ],
+    "signals": [],
     "summary": "Simulated AI summary: This is a spam-like security alert that uses fear-based language and vague account locking language. It resembles a scam email and should be ignored or reported.",
     "warning": "Spam and scam warning: The sender address and message content match common scam patterns: urgency, account lock pressure, and a request for personal or payment information."
   },
@@ -169,9 +148,7 @@
     "important": true,
     "read": true,
     "spam": false,
-    "signals": [
-      "Deadline"
-    ],
+    "signals": [],
     "summary": "Simulated AI summary: This email confirms a registration clearance and includes a priority registration deadline. It is highly relevant to current enrollment tasks."
   },
   {
@@ -186,10 +163,7 @@
     "important": true,
     "read": false,
     "spam": false,
-    "signals": [
-      "Assignment",
-      "Deadline"
-    ],
+    "signals": [],
     "summary": "A team prototype and progress summary are due Wednesday evening. The message includes specific submission requirements."
   },
   {
@@ -204,9 +178,7 @@
     "important": true,
     "read": false,
     "spam": false,
-    "signals": [
-      "Meeting"
-    ],
+    "signals": [],
     "summary": "A writing consultation is scheduled for Monday afternoon. Bring the latest draft and any feedback."
   },
   {
@@ -221,9 +193,7 @@
     "important": false,
     "read": true,
     "spam": false,
-    "signals": [
-      "Deadline"
-    ],
+    "signals": [],
     "summary": "A library book is due Friday. It can be renewed online if no one else has requested it."
   },
   {
@@ -238,10 +208,7 @@
     "important": false,
     "read": true,
     "spam": false,
-    "signals": [
-      "Exam",
-      "Meeting"
-    ],
+    "signals": [],
     "summary": "An optional group review session is scheduled before the MATH 220 midterm."
   },
   {
@@ -256,10 +223,7 @@
     "important": true,
     "read": false,
     "spam": false,
-    "signals": [
-      "Meeting",
-      "Deadline"
-    ],
+    "signals": [],
     "summary": "Schedule an advising appointment before registration opens to review the spring course plan."
   }
 ]

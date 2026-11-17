@@ -12,6 +12,9 @@ type EmailListPanelProps = {
   activeFilter: EmailFilter
   priorityFilter: EmailPriority | 'All'
   signalFilter: EmailSignal | 'All'
+  isScanned: boolean
+  isScanning: boolean
+  scanError: string | null
   hasActiveSearchFilters: boolean
   onSelectEmail: (id: number) => void
   onSearchChange: (value: string) => void
@@ -20,6 +23,7 @@ type EmailListPanelProps = {
   onSignalChange: (value: EmailSignal | 'All') => void
   onClearFilters: () => void
   onMarkAllRead: () => void
+  onScanEmails: () => void
 }
 
 function EmailListPanel({
@@ -32,6 +36,9 @@ function EmailListPanel({
   activeFilter,
   priorityFilter,
   signalFilter,
+  isScanned,
+  isScanning,
+  scanError,
   hasActiveSearchFilters,
   onSelectEmail,
   onSearchChange,
@@ -39,7 +46,8 @@ function EmailListPanel({
   onPriorityChange,
   onSignalChange,
   onClearFilters,
-  onMarkAllRead
+  onMarkAllRead,
+  onScanEmails
 }: EmailListPanelProps) {
   return (
     <aside className="email-list-panel">
@@ -49,16 +57,31 @@ function EmailListPanel({
             <h2>Inbox</h2>
             <span>{filteredEmails.length} {filteredEmails.length === 1 ? 'message' : 'messages'}</span>
           </div>
-          <button
-            type="button"
-            className="action-button mark-all-read-button"
-            onClick={onMarkAllRead}
-            disabled={!emails.some((email) => !email.read)}
-          >
-            <CheckCheck size={15} strokeWidth={2.2} />
-            Mark all read
-          </button>
+          <div className="inbox-toolbar-actions">
+            <button
+              type="button"
+              className="action-button scan-emails-button"
+              onClick={onScanEmails}
+              disabled={isScanning}
+            >
+              <Search size={15} aria-hidden="true" />
+              {isScanning ? 'Scanning...' : isScanned ? 'Rescan emails' : 'Scan emails'}
+            </button>
+            <button
+              type="button"
+              className="action-button mark-all-read-button"
+              onClick={onMarkAllRead}
+              disabled={!emails.some((email) => !email.read)}
+            >
+              <CheckCheck size={15} strokeWidth={2.2} />
+              Mark all read
+            </button>
+          </div>
         </div>
+        {scanError && <p className="inbox-scan-error" role="alert">{scanError}</p>}
+        {!isScanned && !scanError && (
+          <p className="inbox-scan-note">Categories and tags are added when you scan emails.</p>
+        )}
 
         <label className="inbox-search-field" htmlFor="inbox-search">
           <Search size={17} aria-hidden="true" />
@@ -109,8 +132,9 @@ function EmailListPanel({
               aria-label="Filter by category"
               value={signalFilter}
               onChange={(event) => onSignalChange(event.target.value as EmailSignal | 'All')}
+              disabled={!isScanned}
             >
-              <option value="All">All categories</option>
+              <option value="All">{isScanned ? 'All categories' : 'Scan emails to filter categories'}</option>
               {signalOptions.map((signal) => (
                 <option key={signal} value={signal}>{signal}</option>
               ))}
@@ -126,7 +150,7 @@ function EmailListPanel({
       </div>
 
       <div className="email-list">
-        {/* Groups and labels are derived from backend rule results, not written into the email records. */}
+        {/* After scanning, groups and labels come from backend rule results. */}
         {emailGroups.length > 0 ? emailGroups.map((group) => (
           <section className="email-group" key={group.id}>
             <h3 className="email-group-heading">{group.label}</h3>

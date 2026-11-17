@@ -14,11 +14,14 @@ import {
 } from '../services/suggestedReplies'
 import type { EmailPriority, EmailSignal, StudentEmail } from '../types/email'
 import type { EmailRule } from '../types/emailRule'
-import type { EmailFilter } from './inbox/types'
+import { signalOptions, type EmailFilter } from './inbox/types'
 
 type InboxProps = {
   onUnreadCountChange: (count: number) => void
 }
+
+const isEmailSignal = (label: string): label is EmailSignal =>
+  signalOptions.some((signal) => signal === label)
 
 function Inbox({ onUnreadCountChange }: InboxProps) {
   const [emails, setEmails] = useState<StudentEmail[]>([])
@@ -30,7 +33,9 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   const [priorityFilter, setPriorityFilter] = useState<EmailPriority | 'All'>('All')
   const [signalFilter, setSignalFilter] = useState<EmailSignal | 'All'>('All')
   const [isLoading, setIsLoading] = useState(true)
+  const [isScanning, setIsScanning] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [scanError, setScanError] = useState<string | null>(null)
   const [suggestedReplies, setSuggestedReplies] = useState<Record<string, string>>({})
   const [replyError, setReplyError] = useState<string | null>(null)
 
@@ -69,37 +74,43 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   }, [])
 
   useEffect(() => {
-    if (isLoading) {
-      return
-    }
-
-    let isMounted = true
-
-    // The backend owns classification and sorting; refresh its results when emails or rules change.
-    evaluateEmailRules(emails, emailRules)
-      .then((results) => {
-        if (isMounted) {
-          setRuleEvaluations(results)
-        }
-      })
-      .catch((error: unknown) => {
-        if (isMounted) {
-          setLoadError(error instanceof Error ? error.message : 'Unable to sort emails.')
-        }
-      })
-
-    return () => {
-      isMounted = false
-    }
-  }, [emailRules, emails, isLoading])
-
-  useEffect(() => {
     onUnreadCountChange(emails.filter((email) => !email.read).length)
   }, [emails, onUnreadCountChange])
+
+  const scanEmails = async () => {
+    setIsScanning(true)
+    setScanError(null)
+    try {
+      const results = await evaluateEmailRules(emails, emailRules)
+      setRuleEvaluations(results)
+    } catch (error) {
+      setScanError(error instanceof Error ? error.message : 'Unable to scan emails.')
+    } finally {
+      setIsScanning(false)
+    }
+  }
 
   const evaluationsByEmailId = useMemo(
     () => new Map((ruleEvaluations ?? []).map((evaluation) => [evaluation.emailId, evaluation])),
     [ruleEvaluations]
+  )
+
+  const classifiedEmails = useMemo(
+    () => emails.map((email) => {
+      const evaluation = evaluationsByEmailId.get(email.id)
+      const matchedSignals = [...new Set((evaluation?.labels ?? []).filter(isEmailSignal))]
+      const signals: EmailSignal[] = matchedSignals.filter((signal) => signal !== 'Other')
+      if (signals.length === 0 && evaluation && isEmailSignal(evaluation.groupLabel)) {
+        signals.push(
+          matchedSignals.includes('Other') || evaluation.groupLabel === 'Other'
+            ? 'Other'
+            : evaluation.groupLabel
+        )
+      }
+
+      return { ...email, signals }
+    }),
+    [emails, evaluationsByEmailId]
   )
 
   const labelsByEmailId = useMemo(
@@ -110,7 +121,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   )
 
   const filteredEmails = useMemo(() => {
-    return emails.filter((email) => {
+    return classifiedEmails.filter((email) => {
       if (activeFilter === 'Important' && !email.important) {
         return false
       }
@@ -161,12 +172,16 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
       return searchableText.includes(query) ||
         (labelsByEmailId.get(email.id) ?? []).some((label) => label.toLowerCase().includes(query))
     })
-  }, [activeFilter, emails, labelsByEmailId, priorityFilter, searchTerm, signalFilter, suggestedReplies])
+  }, [activeFilter, classifiedEmails, labelsByEmailId, priorityFilter, searchTerm, signalFilter, suggestedReplies])
 
   const sortedFilteredEmails = useMemo(() => {
+    if (ruleEvaluations === null) {
+      return filteredEmails
+    }
+
     // Preserve the order returned by the backend after applying the user's inbox filters.
     const emailOrder = new Map(
-      (ruleEvaluations ?? []).map((evaluation, index) => [evaluation.emailId, index])
+      ruleEvaluations.map((evaluation, index) => [evaluation.emailId, index])
     )
     return [...filteredEmails].sort(
       (left, right) =>
@@ -176,6 +191,12 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   }, [filteredEmails, ruleEvaluations])
 
   const emailGroups = useMemo(() => {
+    if (ruleEvaluations === null) {
+      return sortedFilteredEmails.length > 0
+        ? [{ id: 'unscanned', label: 'Inbox', emails: sortedFilteredEmails }]
+        : []
+    }
+
     const groups = new Map<string, { id: string; label: string; emails: StudentEmail[] }>()
 
     sortedFilteredEmails.forEach((email) => {
@@ -191,7 +212,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
     })
 
     return [...groups.values()]
-  }, [evaluationsByEmailId, sortedFilteredEmails])
+  }, [evaluationsByEmailId, ruleEvaluations, sortedFilteredEmails])
 
   const visibleSelectedId = sortedFilteredEmails.some((email) => email.id === selectedId)
     ? selectedId
@@ -321,8 +342,8 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
     return <section className="inbox-page" role="alert">{loadError}</section>
   }
 
-  if (isLoading || ruleEvaluations === null) {
-    return <section className="inbox-page" role="status">Loading and sorting emails...</section>
+  if (isLoading) {
+    return <section className="inbox-page" role="status">Loading emails...</section>
   }
 
   return (
@@ -338,6 +359,9 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
           activeFilter={activeFilter}
           priorityFilter={priorityFilter}
           signalFilter={signalFilter}
+          isScanned={ruleEvaluations !== null}
+          isScanning={isScanning}
+          scanError={scanError}
           hasActiveSearchFilters={hasActiveSearchFilters}
           onSelectEmail={setSelectedId}
           onSearchChange={setSearchTerm}
@@ -346,6 +370,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
           onSignalChange={setSignalFilter}
           onClearFilters={clearSearchFilters}
           onMarkAllRead={markAllRead}
+          onScanEmails={scanEmails}
         />
 
         <MessageDetailPanel
