@@ -1,3 +1,4 @@
+// Shared email types; Inbox fills signals from rule results after a manual scan.
 export type EmailPriority = 'High' | 'Medium' | 'Low'
 export type EmailSignal = 'Assignment' | 'Exam' | 'Meeting' | 'Appointment' | 'Deadline' | 'Other'
 

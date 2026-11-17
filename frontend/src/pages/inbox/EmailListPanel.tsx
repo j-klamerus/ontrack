@@ -1,6 +1,14 @@
+// Inbox list UI for scanning, filtering, grouping, and selecting messages.
 import { CheckCheck, Search, X } from 'lucide-react'
 import type { EmailPriority, EmailSignal, StudentEmail } from '../../types/email'
-import { filterOptions, formatDate, priorityOptions, signalOptions, type EmailFilter } from './types'
+import {
+  filterOptions,
+  formatDate,
+  priorityOptions,
+  signalOptions,
+  type EmailFilter,
+  type EmailSort
+} from './types'
 
 type EmailListPanelProps = {
   emails: StudentEmail[]
@@ -12,6 +20,7 @@ type EmailListPanelProps = {
   activeFilter: EmailFilter
   priorityFilter: EmailPriority | 'All'
   signalFilter: EmailSignal | 'All'
+  sortBy: EmailSort
   isScanned: boolean
   isScanning: boolean
   scanError: string | null
@@ -21,11 +30,13 @@ type EmailListPanelProps = {
   onFilterChange: (value: EmailFilter) => void
   onPriorityChange: (value: EmailPriority | 'All') => void
   onSignalChange: (value: EmailSignal | 'All') => void
+  onSortChange: (value: EmailSort) => void
   onClearFilters: () => void
   onMarkAllRead: () => void
   onScanEmails: () => void
 }
 
+/** Renders scan controls and the grouped email list from Inbox's current results. */
 function EmailListPanel({
   emails,
   filteredEmails,
@@ -36,6 +47,7 @@ function EmailListPanel({
   activeFilter,
   priorityFilter,
   signalFilter,
+  sortBy,
   isScanned,
   isScanning,
   scanError,
@@ -45,6 +57,7 @@ function EmailListPanel({
   onFilterChange,
   onPriorityChange,
   onSignalChange,
+  onSortChange,
   onClearFilters,
   onMarkAllRead,
   onScanEmails
@@ -146,6 +159,18 @@ function EmailListPanel({
               Clear
             </button>
           )}
+          <label className="inbox-facet inbox-sort-facet">
+            <span>Sort order</span>
+            <select
+              aria-label="Sort inbox emails"
+              value={sortBy}
+              onChange={(event) => onSortChange(event.target.value as EmailSort)}
+            >
+              <option value="priority">Sort by priority</option>
+              <option value="category">Sort by category</option>
+              <option value="date">Sort by date</option>
+            </select>
+          </label>
         </div>
       </div>
 

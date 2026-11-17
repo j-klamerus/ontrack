@@ -5,8 +5,8 @@
 	- https://nodejs.org/en/download
 - Git
 	- https://git-scm.com/install/
-- Gemini API Key
-	- https://ai.google.dev/gemini-api/docs/api-key
+- Gemini API key
+  - https://ai.google.dev/gemini-api/docs/api-key
 
 ## Steps:
 ### Clone the project:
@@ -50,25 +50,54 @@ Example app listening on port 3000
 ~~~
 appear in your terminal.
 
+### Run the Frontend Linter
+
+From the project root, run:
+
+```sh
+cd frontend
+npm run lint
+```
+
+This runs ESLint on the frontend code and can help catch common issues while developing. The backend does not currently have a lint script.
+
 ### Demo Email Rules
 
-The Inbox rule demo uses the backend endpoint `POST /api/email-rules/evaluate` when you click **Scan emails**. Before scanning, sample email signals are empty and no rule-derived categories or labels are shown. The backend returns all matching labels and sorts emails by the first matching rule. Rule order in Settings controls group order, unmatched messages appear under `Other`, and messages within each group are newest-first. This demo only calculates results for display; it does not modify messages or apply labels in Gmail.
+The Inbox rule demo uses the backend endpoint `POST /api/email-rules/evaluate` when you click **Scan emails**. It sends the bundled sample emails from `frontend/src/data/demoEmails.json` and your locally saved rules to the backend; it does not fetch real Gmail messages. The Gmail connection card is a placeholder, and the backend's separate OAuth prototype routes are not used by the Inbox scan.
 
-Settings includes a Baseline Categories rule set for Assignment, Exam, Meeting, Appointment, Deadline, and Other, plus an optional Campus & Study Extras set with academic and campus-service rules. Each set can be loaded or unloaded as a group. Individual rules remain editable, reorderable, and deletable, and custom rules are preserved when unloading a set.
+Before scanning, sample email signals are empty and no rule-derived categories or labels are shown. After scanning, the backend returns all matching labels and sorts emails by the first matching rule. Rule order in Settings controls group order, unmatched messages appear under `Other`, and messages within each group are newest-first. Signals and the Inbox category filter are populated only after scanning. Results are for display only; the app does not modify or label messages in Gmail.
+
+Settings includes a Baseline Categories rule set for Assignment, Exam, Meeting, Appointment, Deadline, and Other, plus an optional Campus & Study Extras set with academic and campus-service rules. Each set can be loaded or unloaded as a group. Individual rules remain editable, reorderable, and deletable, and custom rules are preserved when unloading a set. Rules are saved in your browser.
+
+For regex rules, Settings includes a guide and a phrase builder. Enter comma- or line-separated phrases to create a pattern that matches any of them; the builder escapes regex symbols and can add whole-word boundaries. Regex matching ignores capitalization.
 
 The frontend expects the backend at `http://localhost:3000`. To use another backend URL, set `VITE_API_BASE_URL` in the frontend environment.
 
-### Test Everything is working Properly
+### Test the Backend
 
-At this point everything should be setup properly in order to run the app. Follow these steps to make sure its working as expected:
-1. Right click on the webpage that opened with the frontend and click the "inspect" option.
-2. With the inspect element window open click the "console" tab.
-3. Click the big purple "Test Backend" button on the webpage.
+With the backend running, open `http://localhost:3000/` in a browser or run:
 
-If everything is working properly within a few seconds you should see an object appear in the console that contains a message that reads "Hello World!"
+```powershell
+Invoke-RestMethod http://localhost:3000/
+```
 
-### API Keys
-Note: the code that exists on the main branch doesn't utilize the gemini api so this part is only if you want to get the demo app running. To switch to the main branch navigate back to the root directory of the project i.e. the folder "ontrack" and enter "git switch small-demo" to change branches from the main branch to the demo branch. You will also need to "npm install" again in both the frontend and backend directories since the code on the small-demo branch uses additional libraries that weren't installed along with the code on the main branch. Make sure to stop the frontend and backend server before attempting to npm install again, you can stop them by clicking on the terminal window and pressing "CTRL+C".
+The response should contain `message: "Hello World!"`. This checks that the backend is reachable; the demo email scan is tested separately below.
+
+### Verify the Demo Email Scan
+
+1. Start both the frontend and backend using the steps above.
+2. In the app, enter a valid email address and any password on the demo sign-in screen. Sign-in is simulated; no account is created or checked.
+3. Open **Settings** and load the **Baseline Categories** rule set. You can also load **Campus & Study Extras** to try the optional rules.
+4. Open **Inbox** and click **Scan emails**. The emails should be grouped and labeled according to the loaded rules, and the category filter becomes available.
+5. To try the scan again after changing rules, return to **Inbox** and click **Rescan emails**.
+
+The scan uses the bundled sample emails and requires the backend to be running. It does not connect to Gmail.
+
+### LEGACY: Gemini Setup for the Separate `small-demo` Branch
+
+> These instructions are for the separate `small-demo` branch only. The current OnTrack app does not require a Gemini API key.
+
+To switch to the small-demo branch, navigate back to the root directory of the project (the `ontrack` folder) and enter `git switch small-demo`. You will also need to run `npm install` in both the frontend and backend directories because that branch uses additional libraries. Stop the frontend and backend servers before installing dependencies again by pressing `Ctrl+C` in each terminal.
 
 Another Note: After stopping the frontend and backend servers you will need to restart them again if you want to view the app again. You can do this the same as before by entering "npm run dev" while within the corresponding directory.
 

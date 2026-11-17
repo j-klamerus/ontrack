@@ -1,3 +1,4 @@
+// API entry point for email-rule evaluation and the separate Gmail OAuth prototype.
 import express from "express";
 import cors from "cors";
 import "dotenv/config"
@@ -57,6 +58,7 @@ app.get("/auth/google/callback", async (req, res) => {
   await readEmails(oauth2, res);
 })
 
+// Validate the scan payload, evaluate its rules, and return backend-defined group ordering.
 app.post('/api/email-rules/evaluate', (req, res) => {
   const body: unknown = req.body
 
@@ -130,9 +132,11 @@ const oauth2 = generateOAuthClient();
 
 type JsonRecord = Record<string, unknown>
 
+// Narrow arbitrary request values to plain JSON objects before inspecting their fields.
 const isRecord = (value: unknown): value is JsonRecord =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
+// Check each untrusted rule before it reaches the regex evaluator.
 const isEmailRule = (value: unknown): value is EmailRule =>
   isRecord(value) &&
   typeof value.id === 'string' &&
@@ -148,6 +152,7 @@ const isEmailRule = (value: unknown): value is EmailRule =>
   value.label.trim().length > 0 &&
   value.label.length <= 60
 
+// Restrict scan email fields and sizes at the API boundary.
 const isRuleEvaluationEmail = (value: unknown): value is RuleEvaluationEmail =>
   isRecord(value) &&
   typeof value.id === 'number' &&

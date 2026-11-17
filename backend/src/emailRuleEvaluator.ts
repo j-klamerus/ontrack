@@ -1,3 +1,4 @@
+// Backend matching and ordering for enabled email rules.
 export type EmailRuleField = 'sender' | 'email' | 'subject' | 'body'
 export type EmailRuleOperator = 'contains' | 'regex'
 
@@ -38,6 +39,7 @@ type OrderedEvaluation = {
   originalIndex: number
 }
 
+// Match either case-insensitive text or the rule's already-compiled regex against its chosen field.
 const ruleMatches = (email: RuleEvaluationEmail, compiledRule: CompiledRule): boolean => {
   const { rule, regex } = compiledRule
   const fieldValue = email[rule.field]
@@ -49,6 +51,7 @@ const ruleMatches = (email: RuleEvaluationEmail, compiledRule: CompiledRule): bo
   return regex?.test(fieldValue) ?? false
 }
 
+/** Applies enabled rules, preserving every matching label and grouping by the first match. */
 export function evaluateEmailRules(
   emails: RuleEvaluationEmail[],
   rules: EmailRule[]

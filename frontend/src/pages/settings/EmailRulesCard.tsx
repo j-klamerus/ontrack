@@ -1,3 +1,4 @@
+// Settings UI for building, loading, ordering, and saving email classification rules.
 import { useState } from 'react'
 import { getEmailRules, saveEmailRules } from '../../services/emailRules'
 import type { EmailRule, EmailRuleField, EmailRuleOperator } from '../../types/emailRule'
@@ -169,9 +170,11 @@ const fieldLabels: Record<EmailRuleField, string> = {
   body: 'Message body'
 }
 
+/** Escapes user-entered phrase text so it is matched literally in a generated regex. */
 const escapeRegexLiteral = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
+/** Builds an alternation from comma/newline-separated phrases, optionally word-bounded. */
 const buildRegexFromPhrases = (value: string, wholeWords: boolean): string => {
   const phrases = value
     .split(/[,\n]+/)
@@ -201,6 +204,7 @@ type EmailRulesState = {
   error: string
 }
 
+/** Provides rule-set controls and individual rule editing backed by local browser storage. */
 function EmailRulesCard() {
   const [state, setState] = useState<EmailRulesState>(() => {
     try {
@@ -220,6 +224,7 @@ function EmailRulesCard() {
   const [wholeWordRegex, setWholeWordRegex] = useState(true)
   const { rules, error } = state
 
+  // Persist first so failed validation/storage never leaves the UI showing unsaved rules.
   const updateRules = (nextRules: EmailRule[]): boolean => {
     try {
       saveEmailRules(nextRules)
@@ -234,6 +239,7 @@ function EmailRulesCard() {
     }
   }
 
+  // Append custom rules so their default priority follows the currently loaded rules.
   const addRule = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
@@ -252,6 +258,7 @@ function EmailRulesCard() {
     }
   }
 
+  // Transfer the generated phrase pattern into the normal regex rule form.
   const buildRegex = () => {
     const builtPattern = buildRegexFromPhrases(regexPhrases, wholeWordRegex)
     if (!builtPattern) {
@@ -262,6 +269,7 @@ function EmailRulesCard() {
     setPattern(builtPattern)
   }
 
+  // Rule order controls which matching rule determines an email's display group.
   const moveRule = (index: number, direction: -1 | 1) => {
     const targetIndex = index + direction
     if (targetIndex < 0 || targetIndex >= rules.length) {
@@ -279,6 +287,7 @@ function EmailRulesCard() {
     updateRules(nextRules)
   }
 
+  // Restore only missing preset rules, preserving custom rules and current rule order.
   const loadRuleSet = (ruleSet: EmailRuleSet) => {
     const existingIds = new Set(rules.map(({ id }) => id))
     const missingRules = ruleSet.rules.filter(({ id }) => !existingIds.has(id))
@@ -305,6 +314,7 @@ function EmailRulesCard() {
     updateRules(nextRules)
   }
 
+  // Remove preset-owned rules as a group without affecting custom rules.
   const unloadRuleSet = (ruleSet: EmailRuleSet) => {
     const ruleSetIds = new Set(ruleSet.rules.map(({ id }) => id))
     updateRules(rules.filter(({ id }) => !ruleSetIds.has(id)))

@@ -1,3 +1,4 @@
+// Shared rule contract for browser rule management and backend matching.
 export type EmailRuleField = 'sender' | 'email' | 'subject' | 'body'
 export type EmailRuleOperator = 'contains' | 'regex'
 

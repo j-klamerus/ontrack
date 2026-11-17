@@ -1,3 +1,4 @@
+// Detail view for a selected email, including category signals derived by an Inbox scan.
 import SuggestedReplyCard from '../../components/SuggestedReplyCard'
 import type { StudentEmail } from '../../types/email'
 import { formatDate } from './types'
@@ -14,6 +15,7 @@ type MessageDetailPanelProps = {
   onSaveReply: (emailId: number, reply: string) => void
 }
 
+/** Displays the selected message and its current scan-derived signal tags. */
 function MessageDetailPanel({
   email,
   suggestedReply,

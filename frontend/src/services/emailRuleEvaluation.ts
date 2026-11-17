@@ -1,3 +1,4 @@
+// Frontend API client for the backend evaluation results used to classify and group Inbox emails.
 import type { StudentEmail } from '../types/email'
 import type { EmailRule } from '../types/emailRule'
 
@@ -13,9 +14,11 @@ type JsonRecord = Record<string, unknown>
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000').replace(/\/+$/, '')
 
+// Narrow service responses to objects before validating their fields.
 const isRecord = (value: unknown): value is JsonRecord =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
+// Accept only results with the fields Inbox needs to derive signals and groups.
 const isEvaluationResult = (value: unknown): value is EmailRuleEvaluation =>
   isRecord(value) &&
   typeof value.emailId === 'number' &&
@@ -25,7 +28,7 @@ const isEvaluationResult = (value: unknown): value is EmailRuleEvaluation =>
   typeof value.groupLabel === 'string' &&
   typeof value.groupOrder === 'number'
 
-// Keep the API response shape checked at runtime because it determines Inbox grouping.
+/** Sends the current emails and rules to the backend and validates the results used by Inbox. */
 export async function evaluateEmailRules(
   emails: StudentEmail[],
   rules: EmailRule[]

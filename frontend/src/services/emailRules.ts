@@ -1,3 +1,4 @@
+// Browser persistence and validation for the ordered rules used by Inbox scans.
 import type { EmailRule } from '../types/emailRule'
 
 const STORAGE_KEY = 'ontrack-email-rules'
@@ -15,6 +16,7 @@ const isEmailRule = (value: unknown): value is EmailRule =>
   typeof value.pattern === 'string' &&
   typeof value.label === 'string'
 
+// Enforce rule requirements shared by loading and saving, including regex syntax.
 function validateRule(rule: unknown): asserts rule is EmailRule {
   if (!isEmailRule(rule)) {
     throw new Error('An email rule has an invalid format.')
@@ -37,6 +39,7 @@ function validateRule(rule: unknown): asserts rule is EmailRule {
   }
 }
 
+/** Loads and validates saved rules; a browser with no saved rules starts empty. */
 export function getEmailRules(): EmailRule[] {
   const savedRules = localStorage.getItem(STORAGE_KEY)
 
@@ -59,6 +62,7 @@ export function getEmailRules(): EmailRule[] {
   return parsedRules
 }
 
+/** Validates the full rule list before storing its order in browser storage. */
 export function saveEmailRules(rules: EmailRule[]): void {
   rules.forEach(validateRule)
   localStorage.setItem(STORAGE_KEY, JSON.stringify(rules))

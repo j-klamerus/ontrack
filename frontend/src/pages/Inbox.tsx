@@ -1,3 +1,4 @@
+// Coordinates demo email loading, manual rule scans, derived signals, and Inbox filtering.
 import { useEffect, useMemo, useState } from 'react'
 import '../styles/Inbox.css'
 import EmailListPanel from './inbox/EmailListPanel'
@@ -14,15 +15,23 @@ import {
 } from '../services/suggestedReplies'
 import type { EmailPriority, EmailSignal, StudentEmail } from '../types/email'
 import type { EmailRule } from '../types/emailRule'
-import { signalOptions, type EmailFilter } from './inbox/types'
+import { signalOptions, type EmailFilter, type EmailSort } from './inbox/types'
 
 type InboxProps = {
   onUnreadCountChange: (count: number) => void
 }
 
+// Ignore optional/custom rule labels when converting backend labels to baseline categories.
 const isEmailSignal = (label: string): label is EmailSignal =>
   signalOptions.some((signal) => signal === label)
 
+const prioritySortOrder: Record<EmailPriority, number> = {
+  High: 0,
+  Medium: 1,
+  Low: 2
+}
+
+/** Owns Inbox scan state and turns backend rule results into visible categories and groups. */
 function Inbox({ onUnreadCountChange }: InboxProps) {
   const [emails, setEmails] = useState<StudentEmail[]>([])
   const [emailRules, setEmailRules] = useState<EmailRule[]>([])
@@ -32,6 +41,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   const [activeFilter, setActiveFilter] = useState<EmailFilter>('All')
   const [priorityFilter, setPriorityFilter] = useState<EmailPriority | 'All'>('All')
   const [signalFilter, setSignalFilter] = useState<EmailSignal | 'All'>('All')
+  const [sortBy, setSortBy] = useState<EmailSort>('category')
   const [isLoading, setIsLoading] = useState(true)
   const [isScanning, setIsScanning] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -42,6 +52,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   useEffect(() => {
     let isMounted = true
 
+    // Load the bundled messages and browser-saved rules; do not classify until the user scans.
     const loadInbox = async () => {
       try {
         const loadedEmails = await getEmails()
@@ -77,6 +88,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
     onUnreadCountChange(emails.filter((email) => !email.read).length)
   }, [emails, onUnreadCountChange])
 
+  // Classification is user-triggered so emails remain untagged until a scan succeeds.
   const scanEmails = async () => {
     setIsScanning(true)
     setScanError(null)
@@ -95,6 +107,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
     [ruleEvaluations]
   )
 
+  // Only baseline category labels become signals; preserve Other as the no-specific-match fallback.
   const classifiedEmails = useMemo(
     () => emails.map((email) => {
       const evaluation = evaluationsByEmailId.get(email.id)
@@ -120,6 +133,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
     [ruleEvaluations]
   )
 
+  // Apply UI filters and search after scan-derived signals and rule labels are available.
   const filteredEmails = useMemo(() => {
     return classifiedEmails.filter((email) => {
       if (activeFilter === 'Important' && !email.important) {
@@ -175,23 +189,44 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   }, [activeFilter, classifiedEmails, labelsByEmailId, priorityFilter, searchTerm, signalFilter, suggestedReplies])
 
   const sortedFilteredEmails = useMemo(() => {
+    const scanOrder = new Map(
+      (ruleEvaluations ?? []).map((evaluation, index) => [evaluation.emailId, index])
+    )
+    const originalOrder = new Map(emails.map((email, index) => [email.id, index]))
+    const getOrder = (id: number) =>
+      scanOrder.get(id) ?? originalOrder.get(id) ?? Number.MAX_SAFE_INTEGER
+    const getDate = (email: StudentEmail) => Date.parse(email.date) || 0
+
+    if (sortBy === 'priority') {
+      return [...filteredEmails].sort(
+        (left, right) =>
+          prioritySortOrder[left.priority] - prioritySortOrder[right.priority] ||
+          getDate(right) - getDate(left) ||
+          getOrder(left.id) - getOrder(right.id)
+      )
+    }
+
+    if (sortBy === 'date') {
+      return [...filteredEmails].sort(
+        (left, right) =>
+          getDate(right) - getDate(left) ||
+          getOrder(left.id) - getOrder(right.id)
+      )
+    }
+
     if (ruleEvaluations === null) {
       return filteredEmails
     }
 
     // Preserve the order returned by the backend after applying the user's inbox filters.
-    const emailOrder = new Map(
-      ruleEvaluations.map((evaluation, index) => [evaluation.emailId, index])
-    )
     return [...filteredEmails].sort(
       (left, right) =>
-        (emailOrder.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
-        (emailOrder.get(right.id) ?? Number.MAX_SAFE_INTEGER)
+        getOrder(left.id) - getOrder(right.id)
     )
-  }, [filteredEmails, ruleEvaluations])
+  }, [emails, filteredEmails, ruleEvaluations, sortBy])
 
   const emailGroups = useMemo(() => {
-    if (ruleEvaluations === null) {
+    if (ruleEvaluations === null || sortBy !== 'category') {
       return sortedFilteredEmails.length > 0
         ? [{ id: 'unscanned', label: 'Inbox', emails: sortedFilteredEmails }]
         : []
@@ -212,7 +247,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
     })
 
     return [...groups.values()]
-  }, [evaluationsByEmailId, ruleEvaluations, sortedFilteredEmails])
+  }, [evaluationsByEmailId, ruleEvaluations, sortedFilteredEmails, sortBy])
 
   const visibleSelectedId = sortedFilteredEmails.some((email) => email.id === selectedId)
     ? selectedId
@@ -359,6 +394,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
           activeFilter={activeFilter}
           priorityFilter={priorityFilter}
           signalFilter={signalFilter}
+          sortBy={sortBy}
           isScanned={ruleEvaluations !== null}
           isScanning={isScanning}
           scanError={scanError}
@@ -368,6 +404,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
           onFilterChange={setActiveFilter}
           onPriorityChange={setPriorityFilter}
           onSignalChange={setSignalFilter}
+          onSortChange={setSortBy}
           onClearFilters={clearSearchFilters}
           onMarkAllRead={markAllRead}
           onScanEmails={scanEmails}
