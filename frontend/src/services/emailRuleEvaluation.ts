@@ -1,6 +1,6 @@
-// Frontend API client for the backend evaluation results used to classify and group Inbox emails.
-import type { StudentEmail } from '../types/email'
-import type { EmailRule } from '../types/emailRule'
+// Frontend API client for the category and priority results used by Inbox.
+import type { EmailPriority, StudentEmail } from '../types/email'
+import type { EmailPriorityRule, EmailRule } from '../types/emailRule'
 
 export type EmailRuleEvaluation = {
   emailId: number
@@ -8,6 +8,7 @@ export type EmailRuleEvaluation = {
   groupId: string
   groupLabel: string
   groupOrder: number
+  priority: EmailPriority | null
 }
 
 type JsonRecord = Record<string, unknown>
@@ -18,6 +19,9 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:300
 const isRecord = (value: unknown): value is JsonRecord =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
+const isEmailPriority = (value: unknown): value is EmailPriority =>
+  value === 'High' || value === 'Medium' || value === 'Low'
+
 // Accept only results with the fields Inbox needs to derive signals and groups.
 const isEvaluationResult = (value: unknown): value is EmailRuleEvaluation =>
   isRecord(value) &&
@@ -26,19 +30,21 @@ const isEvaluationResult = (value: unknown): value is EmailRuleEvaluation =>
   value.labels.every((label) => typeof label === 'string') &&
   typeof value.groupId === 'string' &&
   typeof value.groupLabel === 'string' &&
-  typeof value.groupOrder === 'number'
+  typeof value.groupOrder === 'number' &&
+  (value.priority === null || isEmailPriority(value.priority))
 
-/** Sends the current emails and rules to the backend and validates the results used by Inbox. */
+/** Sends both rule sets to the backend and validates its classification and priority results. */
 export async function evaluateEmailRules(
   emails: StudentEmail[],
-  rules: EmailRule[]
+  rules: EmailRule[],
+  priorityRules: EmailPriorityRule[]
 ): Promise<EmailRuleEvaluation[]> {
   let response: Response
   try {
     response = await fetch(`${API_BASE_URL}/api/email-rules/evaluate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emails, rules })
+      body: JSON.stringify({ emails, rules, priorityRules })
     })
   } catch {
     throw new Error(

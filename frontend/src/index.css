@@ -201,6 +201,11 @@ button {
   color: #047857;
 }
 
+.priority-none {
+  background-color: rgba(100, 116, 139, 0.12);
+  color: #475569;
+}
+
 .type-marker {
   display: inline-block;
   width: 10px;

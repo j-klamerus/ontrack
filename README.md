@@ -65,11 +65,11 @@ This runs ESLint on the frontend code and can help catch common issues while dev
 
 The Inbox rule demo uses the backend endpoint `POST /api/email-rules/evaluate` when you click **Scan emails**. It sends the bundled sample emails from `frontend/src/data/demoEmails.json` and your locally saved rules to the backend; it does not fetch real Gmail messages. The Gmail connection card is a placeholder, and the backend's separate OAuth prototype routes are not used by the Inbox scan.
 
-Before scanning, sample email signals are empty and no rule-derived categories or labels are shown. After scanning, the backend returns all matching labels and sorts emails by the first matching rule. Rule order in Settings controls group order, unmatched messages appear under `Other`, and messages within each group are newest-first. Signals and the Inbox category filter are populated only after scanning. Results are for display only; the app does not modify or label messages in Gmail.
+Before scanning, the Inbox doesn't show rule-derived categories, labels, or priorities. After scanning, the backend returns matching labels and sorts emails by the first matching category rule. Rule order in Settings controls group order, unmatched messages appear under `Other`, and messages within each group are newest-first. Priority rules are checked separately: the first match sets High, Medium, or Low, and emails with no matching priority rule stay unprioritized. Signals and the category and priority filters are populated only after scanning; the priority filter also has a **No priority** option for unmatched emails. Results are for display only; the app does not modify or label messages in Gmail.
 
-Settings includes a Baseline Categories rule set for Assignment, Exam, Meeting, Appointment, Deadline, and Other, plus an optional Campus & Study Extras set with academic and campus-service rules. Each set can be loaded or unloaded as a group. Individual rules remain editable, reorderable, and deletable, and custom rules are preserved when unloading a set. Rules are saved in your browser.
+Settings includes a Baseline Categories rule set for Assignment, Exam, Meeting, Appointment, Deadline, and Other, plus an optional Campus & Study Extras set with academic and campus-service rules. There's also a Baseline Priorities set for matching urgent messages, common school tasks, and general notices. Each set can be loaded or unloaded as a group. Individual rules remain editable, reorderable, and deletable, and custom rules are preserved when unloading a set. Both kinds of rules are saved in your browser.
 
-For regex rules, Settings includes a guide and a phrase builder. Enter comma- or line-separated phrases to create a pattern that matches any of them; the builder escapes regex symbols and can add whole-word boundaries. Regex matching ignores capitalization.
+For category and priority regex rules, Settings includes a guide and a phrase builder. Enter comma- or line-separated phrases to create a pattern that matches any of them; the builder escapes regex symbols and can add whole-word boundaries. Regex matching ignores capitalization.
 
 The frontend expects the backend at `http://localhost:3000`. To use another backend URL, set `VITE_API_BASE_URL` in the frontend environment.
 
@@ -87,8 +87,8 @@ The response should contain `message: "Hello World!"`. This checks that the back
 
 1. Start both the frontend and backend using the steps above.
 2. In the app, enter a valid email address and any password on the demo sign-in screen. Sign-in is simulated; no account is created or checked.
-3. Open **Settings** and load the **Baseline Categories** rule set. You can also load **Campus & Study Extras** to try the optional rules.
-4. Open **Inbox** and click **Scan emails**. The emails should be grouped and labeled according to the loaded rules, and the category filter becomes available.
+3. Open **Settings** and load **Baseline Categories** and **Baseline Priorities**. You can also load **Campus & Study Extras** to try the optional category rules.
+4. Open **Inbox** and click **Scan emails**. The emails should be grouped and labeled by the category rules, and get a priority when they match a priority rule. Emails without a priority match stay unprioritized.
 5. To try the scan again after changing rules, return to **Inbox** and click **Rescan emails**.
 
 The scan uses the bundled sample emails and requires the backend to be running. It does not connect to Gmail.

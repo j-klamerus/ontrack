@@ -5,6 +5,7 @@ import { formatDate } from './types'
 
 type MessageDetailPanelProps = {
   email: StudentEmail | null
+  isScanned: boolean
   suggestedReply: string | null
   replyError: string | null
   onToggleRead: (id: number) => void
@@ -18,6 +19,7 @@ type MessageDetailPanelProps = {
 /** Displays the selected message and its current scan-derived signal tags. */
 function MessageDetailPanel({
   email,
+  isScanned,
   suggestedReply,
   replyError,
   onToggleRead,
@@ -57,9 +59,13 @@ function MessageDetailPanel({
 
           <div className="message-meta-row">
             <span>{formatDate(email.date)}</span>
-            <span className={`priority-badge priority-${email.priority.toLowerCase()}`}>
-              {email.priority}
-            </span>
+            {email.priority ? (
+              <span className={`priority-badge priority-${email.priority.toLowerCase()}`}>
+                {email.priority}
+              </span>
+            ) : isScanned ? (
+              <span className="priority-badge priority-none">No priority detected</span>
+            ) : null}
             {email.important && <span className="detail-chip">Important</span>}
             {email.spam && <span className="detail-chip spam-chip">Spam</span>}
           </div>

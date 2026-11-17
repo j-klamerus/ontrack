@@ -18,6 +18,7 @@ import { DEFAULT_PLANNER_KEY_DEFAULTS } from '../services/plannerKeyPreferences'
 import type { EventCategoryDefinition } from '../constants/eventCategories'
 import CategorySettingsCard from './settings/CategorySettingsCard'
 import EmailRulesCard from './settings/EmailRulesCard'
+import EmailPriorityRulesCard from './settings/EmailPriorityRulesCard'
 import PreferenceSettingsCards from './settings/PreferenceSettingsCards'
 import type { SettingsState } from './settings/types'
 import '../styles/Settings.css'
@@ -169,6 +170,7 @@ function Settings({ onLogOut }: SettingsProps) {
         <PreferenceSettingsCards settings={settings} updateSetting={updateSetting} />
         {/* Rules have their own storage and save lifecycle, separate from general preferences. */}
         <EmailRulesCard />
+        <EmailPriorityRulesCard />
       </div>
 
       <div className="settings-actions">

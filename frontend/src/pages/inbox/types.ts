@@ -3,6 +3,7 @@ import type { EmailPriority, EmailSignal } from '../../types/email'
 
 export type EmailFilter = 'All' | 'Important' | 'Unread' | 'Spam' | 'Suggested replies'
 export type EmailSort = 'priority' | 'category' | 'date'
+export type PriorityFilter = 'All' | 'None' | EmailPriority
 
 export const filterOptions: EmailFilter[] = ['All', 'Important', 'Unread', 'Spam', 'Suggested replies']
 export const priorityOptions: EmailPriority[] = ['High', 'Medium', 'Low']

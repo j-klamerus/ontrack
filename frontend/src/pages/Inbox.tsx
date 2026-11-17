@@ -5,6 +5,7 @@ import EmailListPanel from './inbox/EmailListPanel'
 import MessageDetailPanel from './inbox/MessageDetailPanel'
 import { getEmails, saveEmailReadStates, saveEmailReadState } from '../services/emails'
 import { getEmailRules } from '../services/emailRules'
+import { getEmailPriorityRules } from '../services/emailPriorityRules'
 import {
   evaluateEmailRules,
   type EmailRuleEvaluation
@@ -14,8 +15,13 @@ import {
   getSuggestedReplies
 } from '../services/suggestedReplies'
 import type { EmailPriority, EmailSignal, StudentEmail } from '../types/email'
-import type { EmailRule } from '../types/emailRule'
-import { signalOptions, type EmailFilter, type EmailSort } from './inbox/types'
+import type { EmailPriorityRule, EmailRule } from '../types/emailRule'
+import {
+  signalOptions,
+  type EmailFilter,
+  type EmailSort,
+  type PriorityFilter
+} from './inbox/types'
 
 type InboxProps = {
   onUnreadCountChange: (count: number) => void
@@ -35,11 +41,12 @@ const prioritySortOrder: Record<EmailPriority, number> = {
 function Inbox({ onUnreadCountChange }: InboxProps) {
   const [emails, setEmails] = useState<StudentEmail[]>([])
   const [emailRules, setEmailRules] = useState<EmailRule[]>([])
+  const [priorityRules, setPriorityRules] = useState<EmailPriorityRule[]>([])
   const [ruleEvaluations, setRuleEvaluations] = useState<EmailRuleEvaluation[] | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeFilter, setActiveFilter] = useState<EmailFilter>('All')
-  const [priorityFilter, setPriorityFilter] = useState<EmailPriority | 'All'>('All')
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('All')
   const [signalFilter, setSignalFilter] = useState<EmailSignal | 'All'>('All')
   const [sortBy, setSortBy] = useState<EmailSort>('category')
   const [isLoading, setIsLoading] = useState(true)
@@ -57,6 +64,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
       try {
         const loadedEmails = await getEmails()
         const loadedRules = getEmailRules()
+        const loadedPriorityRules = getEmailPriorityRules()
         if (!isMounted) {
           return
         }
@@ -64,6 +72,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
         setEmails(loadedEmails)
         setSelectedId(loadedEmails[0]?.id ?? null)
         setEmailRules(loadedRules)
+        setPriorityRules(loadedPriorityRules)
         try {
           setSuggestedReplies(getSuggestedReplies())
         } catch (error) {
@@ -93,7 +102,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
     setIsScanning(true)
     setScanError(null)
     try {
-      const results = await evaluateEmailRules(emails, emailRules)
+      const results = await evaluateEmailRules(emails, emailRules, priorityRules)
       setRuleEvaluations(results)
     } catch (error) {
       setScanError(error instanceof Error ? error.message : 'Unable to scan emails.')
@@ -121,9 +130,13 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
         )
       }
 
-      return { ...email, signals }
+      return {
+        ...email,
+        priority: ruleEvaluations === null ? null : evaluation?.priority ?? null,
+        signals
+      }
     }),
-    [emails, evaluationsByEmailId]
+    [emails, evaluationsByEmailId, ruleEvaluations]
   )
 
   const labelsByEmailId = useMemo(
@@ -152,7 +165,11 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
         return false
       }
 
-      if (priorityFilter !== 'All' && email.priority !== priorityFilter) {
+      if (priorityFilter === 'None' && email.priority !== null) {
+        return false
+      }
+
+      if (priorityFilter !== 'All' && priorityFilter !== 'None' && email.priority !== priorityFilter) {
         return false
       }
 
@@ -172,7 +189,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
         email.preview,
         email.body,
         email.date,
-        email.priority,
+        email.priority ?? '',
         email.signals.join(' '),
         email.summary,
         email.warning ?? '',
@@ -196,11 +213,13 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
     const getOrder = (id: number) =>
       scanOrder.get(id) ?? originalOrder.get(id) ?? Number.MAX_SAFE_INTEGER
     const getDate = (email: StudentEmail) => Date.parse(email.date) || 0
+    const getPriorityRank = (email: StudentEmail) =>
+      email.priority === null ? 3 : prioritySortOrder[email.priority]
 
     if (sortBy === 'priority') {
       return [...filteredEmails].sort(
         (left, right) =>
-          prioritySortOrder[left.priority] - prioritySortOrder[right.priority] ||
+          getPriorityRank(left) - getPriorityRank(right) ||
           getDate(right) - getDate(left) ||
           getOrder(left.id) - getOrder(right.id)
       )
@@ -412,6 +431,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
 
         <MessageDetailPanel
           email={selectedEmail}
+          isScanned={ruleEvaluations !== null}
           suggestedReply={suggestedReply}
           replyError={replyError}
           onToggleRead={toggleRead}

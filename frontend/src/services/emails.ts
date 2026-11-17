@@ -31,7 +31,7 @@ const isStudentEmail = (value: unknown): value is StudentEmail =>
   typeof value.preview === 'string' &&
   typeof value.body === 'string' &&
   typeof value.date === 'string' &&
-  isEmailPriority(value.priority) &&
+  (value.priority === null || isEmailPriority(value.priority)) &&
   typeof value.important === 'boolean' &&
   typeof value.read === 'boolean' &&
   typeof value.spam === 'boolean' &&

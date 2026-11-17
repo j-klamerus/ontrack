@@ -1,4 +1,4 @@
-// Shared email types; Inbox fills signals from rule results after a manual scan.
+// Shared email types; Inbox derives signals and priority from rules after a manual scan.
 export type EmailPriority = 'High' | 'Medium' | 'Low'
 export type EmailSignal = 'Assignment' | 'Exam' | 'Meeting' | 'Appointment' | 'Deadline' | 'Other'
 
@@ -10,7 +10,8 @@ export type StudentEmail = {
   preview: string
   body: string
   date: string
-  priority: EmailPriority
+  // Null means the email has not received a priority from the current scan.
+  priority: EmailPriority | null
   important: boolean
   read: boolean
   spam: boolean

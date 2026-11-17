@@ -1,6 +1,7 @@
-// Backend matching and ordering for enabled email rules.
+// Backend matching and ordering for category rules and separate priority rules.
 export type EmailRuleField = 'sender' | 'email' | 'subject' | 'body'
 export type EmailRuleOperator = 'contains' | 'regex'
+export type EmailPriority = 'High' | 'Medium' | 'Low'
 
 export type EmailRule = {
   id: string
@@ -9,6 +10,16 @@ export type EmailRule = {
   operator: EmailRuleOperator
   pattern: string
   label: string
+}
+
+// Rule order is meaningful: the first enabled match sets the email's priority.
+export type EmailPriorityRule = {
+  id: string
+  enabled: boolean
+  field: EmailRuleField
+  operator: EmailRuleOperator
+  pattern: string
+  priority: EmailPriority
 }
 
 export type RuleEvaluationEmail = {
@@ -26,10 +37,13 @@ export type EmailRuleEvaluation = {
   groupId: string
   groupLabel: string
   groupOrder: number
+  priority: EmailPriority | null
 }
 
-type CompiledRule = {
-  rule: EmailRule
+type RuleMatcher = Pick<EmailRule, 'field' | 'operator' | 'pattern'>
+
+type CompiledRule<TRule extends RuleMatcher> = {
+  rule: TRule
   regex: RegExp | null
 }
 
@@ -40,7 +54,10 @@ type OrderedEvaluation = {
 }
 
 // Match either case-insensitive text or the rule's already-compiled regex against its chosen field.
-const ruleMatches = (email: RuleEvaluationEmail, compiledRule: CompiledRule): boolean => {
+const ruleMatches = <TRule extends RuleMatcher>(
+  email: RuleEvaluationEmail,
+  compiledRule: CompiledRule<TRule>
+): boolean => {
   const { rule, regex } = compiledRule
   const fieldValue = email[rule.field]
 
@@ -51,12 +68,19 @@ const ruleMatches = (email: RuleEvaluationEmail, compiledRule: CompiledRule): bo
   return regex?.test(fieldValue) ?? false
 }
 
-/** Applies enabled rules, preserving every matching label and grouping by the first match. */
+/** Applies category and priority rules, returning null priority when none match. */
 export function evaluateEmailRules(
   emails: RuleEvaluationEmail[],
-  rules: EmailRule[]
+  rules: EmailRule[],
+  priorityRules: EmailPriorityRule[] = []
 ): EmailRuleEvaluation[] {
-  const activeRules: CompiledRule[] = rules
+  const activeRules: CompiledRule<EmailRule>[] = rules
+    .filter((rule) => rule.enabled)
+    .map((rule) => ({
+      rule,
+      regex: rule.operator === 'regex' ? new RegExp(rule.pattern, 'i') : null
+    }))
+  const activePriorityRules: CompiledRule<EmailPriorityRule>[] = priorityRules
     .filter((rule) => rule.enabled)
     .map((rule) => ({
       rule,
@@ -67,6 +91,9 @@ export function evaluateEmailRules(
   const orderedResults: OrderedEvaluation[] = emails.map((email, originalIndex) => {
     const matchingRules = activeRules.filter((compiledRule) => ruleMatches(email, compiledRule))
     const firstMatchingRule = matchingRules[0]?.rule
+    const firstMatchingPriorityRule = activePriorityRules.find((compiledRule) =>
+      ruleMatches(email, compiledRule)
+    )
     const labels = [...new Set(matchingRules.map(({ rule }) => rule.label.trim()))]
     const groupOrder = firstMatchingRule
       ? activeRules.findIndex(({ rule }) => rule === firstMatchingRule)
@@ -78,7 +105,8 @@ export function evaluateEmailRules(
         labels,
         groupId: firstMatchingRule?.id ?? 'other',
         groupLabel: firstMatchingRule?.label.trim() ?? 'Other',
-        groupOrder
+        groupOrder,
+        priority: firstMatchingPriorityRule?.rule.priority ?? null
       },
       dateTime: Date.parse(email.date) || 0,
       originalIndex

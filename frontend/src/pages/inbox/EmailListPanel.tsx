@@ -1,13 +1,14 @@
 // Inbox list UI for scanning, filtering, grouping, and selecting messages.
 import { CheckCheck, Search, X } from 'lucide-react'
-import type { EmailPriority, EmailSignal, StudentEmail } from '../../types/email'
+import type { EmailSignal, StudentEmail } from '../../types/email'
 import {
   filterOptions,
   formatDate,
   priorityOptions,
   signalOptions,
   type EmailFilter,
-  type EmailSort
+  type EmailSort,
+  type PriorityFilter
 } from './types'
 
 type EmailListPanelProps = {
@@ -18,7 +19,7 @@ type EmailListPanelProps = {
   selectedId: number | null
   searchTerm: string
   activeFilter: EmailFilter
-  priorityFilter: EmailPriority | 'All'
+  priorityFilter: PriorityFilter
   signalFilter: EmailSignal | 'All'
   sortBy: EmailSort
   isScanned: boolean
@@ -28,7 +29,7 @@ type EmailListPanelProps = {
   onSelectEmail: (id: number) => void
   onSearchChange: (value: string) => void
   onFilterChange: (value: EmailFilter) => void
-  onPriorityChange: (value: EmailPriority | 'All') => void
+  onPriorityChange: (value: PriorityFilter) => void
   onSignalChange: (value: EmailSignal | 'All') => void
   onSortChange: (value: EmailSort) => void
   onClearFilters: () => void
@@ -93,7 +94,7 @@ function EmailListPanel({
         </div>
         {scanError && <p className="inbox-scan-error" role="alert">{scanError}</p>}
         {!isScanned && !scanError && (
-          <p className="inbox-scan-note">Categories and tags are added when you scan emails.</p>
+          <p className="inbox-scan-note">Categories, tags, and priorities are added when you scan emails.</p>
         )}
 
         <label className="inbox-search-field" htmlFor="inbox-search">
@@ -131,12 +132,14 @@ function EmailListPanel({
             <select
               aria-label="Filter by priority"
               value={priorityFilter}
-              onChange={(event) => onPriorityChange(event.target.value as EmailPriority | 'All')}
+              onChange={(event) => onPriorityChange(event.target.value as PriorityFilter)}
+              disabled={!isScanned}
             >
-              <option value="All">All priorities</option>
+              <option value="All">{isScanned ? 'All priorities' : 'Scan emails to filter priorities'}</option>
               {priorityOptions.map((priority) => (
                 <option key={priority} value={priority}>{priority}</option>
               ))}
+              <option value="None">No priority</option>
             </select>
           </label>
           <label className="inbox-facet">
@@ -206,9 +209,13 @@ function EmailListPanel({
 
                 <div className="meta-row">
                   <span>{formatDate(email.date)}</span>
-                  <span className={`priority-badge priority-${email.priority.toLowerCase()}`}>
-                    {email.priority}
-                  </span>
+                  {email.priority ? (
+                    <span className={`priority-badge priority-${email.priority.toLowerCase()}`}>
+                      {email.priority}
+                    </span>
+                  ) : isScanned ? (
+                    <span className="priority-badge priority-none">No priority detected</span>
+                  ) : null}
                 </div>
 
                 <p className="email-preview">{email.preview}</p>

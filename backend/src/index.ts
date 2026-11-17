@@ -7,6 +7,7 @@ import { google, type gmail_v1 } from "googleapis";
 import {
   evaluateEmailRules,
   type EmailRule,
+  type EmailPriorityRule,
   type RuleEvaluationEmail
 } from "./emailRuleEvaluator.js";
 
@@ -63,23 +64,33 @@ app.post('/api/email-rules/evaluate', (req, res) => {
   const body: unknown = req.body
 
   // Validate request data at the API boundary before compiling user-provided regexes.
-  if (!isRecord(body) || !Array.isArray(body.emails) || !Array.isArray(body.rules)) {
-    res.status(400).json({ error: 'Request must include email and rule arrays.' })
+  if (
+    !isRecord(body) ||
+    !Array.isArray(body.emails) ||
+    !Array.isArray(body.rules) ||
+    (body.priorityRules !== undefined && !Array.isArray(body.priorityRules))
+  ) {
+    res.status(400).json({ error: 'Request must include email and category rule arrays, with an optional priority rule array.' })
     return
   }
 
-  if (body.emails.length > 100 || body.rules.length > 50) {
-    res.status(400).json({ error: 'Evaluation supports up to 100 emails and 50 rules.' })
+  const priorityRules = Array.isArray(body.priorityRules) ? body.priorityRules : []
+  if (body.emails.length > 100 || body.rules.length > 50 || priorityRules.length > 50) {
+    res.status(400).json({ error: 'Evaluation supports up to 100 emails, 50 category rules, and 50 priority rules.' })
     return
   }
 
-  if (!body.emails.every(isRuleEvaluationEmail) || !body.rules.every(isEmailRule)) {
+  if (
+    !body.emails.every(isRuleEvaluationEmail) ||
+    !body.rules.every(isEmailRule) ||
+    !priorityRules.every(isEmailPriorityRule)
+  ) {
     res.status(400).json({ error: 'Email or rule data has an invalid format.' })
     return
   }
 
   try {
-    const results = evaluateEmailRules(body.emails, body.rules)
+    const results = evaluateEmailRules(body.emails, body.rules, priorityRules)
     res.json({ results })
   } catch (error) {
     res.status(400).json({
@@ -151,6 +162,20 @@ const isEmailRule = (value: unknown): value is EmailRule =>
   typeof value.label === 'string' &&
   value.label.trim().length > 0 &&
   value.label.length <= 60
+
+// Validate priority rules separately so they cannot be mistaken for category labels.
+const isEmailPriorityRule = (value: unknown): value is EmailPriorityRule =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  value.id.length > 0 &&
+  value.id.length <= 100 &&
+  typeof value.enabled === 'boolean' &&
+  (value.field === 'sender' || value.field === 'email' || value.field === 'subject' || value.field === 'body') &&
+  (value.operator === 'contains' || value.operator === 'regex') &&
+  typeof value.pattern === 'string' &&
+  value.pattern.trim().length > 0 &&
+  value.pattern.length <= 200 &&
+  (value.priority === 'High' || value.priority === 'Medium' || value.priority === 'Low')
 
 // Restrict scan email fields and sizes at the API boundary.
 const isRuleEvaluationEmail = (value: unknown): value is RuleEvaluationEmail =>
