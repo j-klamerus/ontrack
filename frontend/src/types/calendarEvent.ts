@@ -2,7 +2,7 @@ export type EventCategory = string
 export type EventPriority = 'High' | 'Medium' | 'Low'
 
 export type CalendarEvent = {
-  id: number
+  id: number | string
   title: string
   course: string
   date: string
@@ -10,6 +10,12 @@ export type CalendarEvent = {
   category: EventCategory
   priority: EventPriority
   description: string
+  googleEventId?: string
+  googleCalendarId?: string
+  googleDurationMinutes?: number
 }
 
-export type EventFormState = Omit<CalendarEvent, 'id'>
+export type EventFormState = Omit<
+  CalendarEvent,
+  'id' | 'googleEventId' | 'googleCalendarId' | 'googleDurationMinutes'
+>

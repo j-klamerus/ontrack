@@ -13,7 +13,7 @@ type StoredCategory = {
 
 type CategoryOverride = {
   kind: 'event' | 'commitment'
-  id: number
+  id: number | string
   category: EventCategory
 }
 
@@ -91,7 +91,7 @@ const readCategoryOverrides = (): CategoryOverride[] => {
     !parsed.every((item) =>
       isRecord(item) &&
       (item.kind === 'event' || item.kind === 'commitment') &&
-      typeof item.id === 'number' &&
+      (typeof item.id === 'number' || (item.kind === 'event' && typeof item.id === 'string')) &&
       typeof item.category === 'string'
     )
   ) {
@@ -153,13 +153,13 @@ export function removeCustomEventCategory(name: string): void {
 
 export const getItemCategoryOverride = (
   kind: CategoryOverride['kind'],
-  id: number
+  id: CategoryOverride['id']
 ): EventCategory | undefined =>
   readCategoryOverrides().find((item) => item.kind === kind && item.id === id)?.category
 
 export function saveItemCategoryOverride(
   kind: CategoryOverride['kind'],
-  id: number,
+  id: CategoryOverride['id'],
   category: EventCategory
 ): void {
   const overrides = readCategoryOverrides()

@@ -20,7 +20,7 @@ type CalendarSidebarProps = {
   onEditingSuggestionChange: Dispatch<SetStateAction<CalendarSuggestion | null>>
   onAddEvent: () => void
   onEditEvent: (event: CalendarEvent) => void
-  onDeleteEvent: (id: number) => void
+  onDeleteEvent: (id: number | string) => void
   onEditCommitment: (commitment: Commitment) => void
   onDeleteCommitment: (id: number) => void
   onConfirmSuggestion: (suggestion: CalendarSuggestion) => void

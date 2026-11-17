@@ -179,6 +179,11 @@
   color: #475569;
 }
 
+.status-pill.connected {
+  background: #e8f9f0;
+  color: #166534;
+}
+
 .field-group {
   display: flex;
   flex-direction: column;

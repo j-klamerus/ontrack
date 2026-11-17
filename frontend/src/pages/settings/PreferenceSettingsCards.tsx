@@ -1,5 +1,6 @@
 import type { SettingsState } from './types'
 import ToggleRow from './ToggleRow'
+import GoogleCalendarConnectionCard from './GoogleCalendarConnectionCard'
 
 type PreferenceSettingsCardsProps = {
   settings: SettingsState
@@ -92,18 +93,7 @@ function PreferenceSettingsCards({ settings, updateSetting }: PreferenceSettings
         </button>
       </div>
 
-      <div className="settings-card">
-        <div className="card-header-row">
-          <h3>Google Calendar Connection</h3>
-          <span className="status-pill disconnected">Not connected</span>
-        </div>
-        <p className="field-note">
-          Calendar integration is not active yet. This area is reserved for future Google Calendar sync.
-        </p>
-        <button type="button" className="secondary-button">
-          Connect Calendar (demo placeholder)
-        </button>
-      </div>
+      <GoogleCalendarConnectionCard />
 
       <div className="settings-card">
         <div className="card-header-row">

@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from 'react'
 import type { EventCategory, EventFormState, EventPriority } from '../../types/calendarEvent'
 
 type CalendarEventFormModalProps = {
-  editingId: number | null
+  editingId: number | string | null
   formKind: 'Calendar event' | 'Commitment'
   formData: EventFormState
   formError: string | null
@@ -11,7 +11,7 @@ type CalendarEventFormModalProps = {
   setFormKind: (kind: 'Calendar event' | 'Commitment') => void
   setFormData: Dispatch<SetStateAction<EventFormState>>
   onClose: () => void
-  onDelete: (eventId: number) => void
+  onDelete: (eventId: number | string) => void
   onSubmit: () => void
 }
 

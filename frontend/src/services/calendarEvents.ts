@@ -38,14 +38,19 @@ const getIsoDate = (date: Date) => {
 }
 
 export async function getCalendarEvents(): Promise<CalendarEvent[]> {
-  if (!Array.isArray(demoCalendarEvents) || !demoCalendarEvents.every(isDemoCalendarEvent)) {
+  if (!Array.isArray(demoCalendarEvents)) {
     throw new Error('The demo calendar event data is invalid.')
   }
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const fixtureEvents = demoCalendarEvents.map(({ dateOffsetDays, ...event }) => {
+  const fixtureEvents = demoCalendarEvents.map((value) => {
+    if (!isDemoCalendarEvent(value)) {
+      throw new Error('The demo calendar event data is invalid.')
+    }
+
+    const { dateOffsetDays, ...event } = value
     const date = new Date(today)
     date.setDate(date.getDate() + dateOffsetDays)
 

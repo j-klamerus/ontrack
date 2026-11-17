@@ -21,6 +21,17 @@ import { getCalendarEvents } from '../services/calendarEvents'
 import { getDashboardSuggestions } from '../services/dashboardSuggestions'
 import { getEmails } from '../services/emails'
 import {
+  canWriteGoogleCalendar,
+  createGoogleCalendarEvent,
+  deleteGoogleCalendarEvent,
+  getGoogleCalendarEvents,
+  getGoogleCalendars,
+  getGoogleCalendarStatus,
+  getSelectedGoogleCalendarId,
+  updateGoogleCalendarEvent,
+  type GoogleCalendarEventInput
+} from '../services/googleCalendar'
+import {
   confirmDashboardSuggestion,
   dismissDashboardSuggestion
 } from '../services/reviewedSuggestions'
@@ -62,12 +73,16 @@ function Calendar() {
   const [suggestions, setSuggestions] = useState<CalendarSuggestion[]>([])
   const [emails, setEmails] = useState<StudentEmail[]>([])
   const [showEventForm, setShowEventForm] = useState(false)
-  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<number | string | null>(null)
   const [formKind, setFormKind] = useState<'Calendar event' | 'Commitment'>('Calendar event')
   const [formData, setFormData] = useState<EventFormState>(() => createEmptyForm(new Date()))
   const [formError, setFormError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [googleCalendarError, setGoogleCalendarError] = useState<string | null>(null)
+  const [googleCalendarConnected, setGoogleCalendarConnected] = useState(false)
+  const [selectedGoogleCalendarId, setSelectedGoogleCalendarId] = useState<string | null>(null)
+  const [selectedGoogleCalendarCanWrite, setSelectedGoogleCalendarCanWrite] = useState(false)
   const [suggestionError, setSuggestionError] = useState<string | null>(null)
   const [savingSuggestionId, setSavingSuggestionId] = useState<number | null>(null)
   const [editingSuggestion, setEditingSuggestion] = useState<CalendarSuggestion | null>(null)
@@ -75,8 +90,22 @@ function Calendar() {
   const [commitmentFormError, setCommitmentFormError] = useState<string | null>(null)
 
   useEffect(() => {
-    Promise.all([getCalendarEvents(), getCommitments(), getDashboardSuggestions(), getEmails()])
-      .then(([loadedEvents, loadedCommitments, loadedSuggestions, loadedEmails]) => {
+    let isMounted = true
+    const loadCalendar = async () => {
+      setLoadError(null)
+      setGoogleCalendarError(null)
+
+      try {
+        const [loadedEvents, loadedCommitments, loadedSuggestions, loadedEmails] = await Promise.all([
+          getCalendarEvents(),
+          getCommitments(),
+          getDashboardSuggestions(),
+          getEmails()
+        ])
+        if (!isMounted) {
+          return
+        }
+
         setEvents(loadedEvents)
         setCommitments(loadedCommitments)
         setSuggestions(
@@ -85,12 +114,75 @@ function Calendar() {
           )
         )
         setEmails(loadedEmails)
-      })
-      .catch((error: unknown) => {
-        setLoadError(error instanceof Error ? error.message : 'Unable to load calendar events.')
-      })
-      .finally(() => setIsLoading(false))
-  }, [])
+      } catch (error) {
+        if (isMounted) {
+          setLoadError(error instanceof Error ? error.message : 'Unable to load calendar events.')
+          setIsLoading(false)
+        }
+        return
+      }
+
+      try {
+        const isConnected = await getGoogleCalendarStatus()
+        if (!isMounted) {
+          return
+        }
+        setGoogleCalendarConnected(isConnected)
+        if (!isConnected) {
+          setSelectedGoogleCalendarId(null)
+          setSelectedGoogleCalendarCanWrite(false)
+          return
+        }
+
+        const calendars = await getGoogleCalendars()
+        const savedCalendarId = getSelectedGoogleCalendarId()
+        const selectedCalendar = calendars.find(
+          (calendar) => calendar.id === savedCalendarId && canWriteGoogleCalendar(calendar)
+        )
+          ?? calendars.find((calendar) => calendar.primary && canWriteGoogleCalendar(calendar))
+          ?? calendars.find(canWriteGoogleCalendar)
+          ?? calendars.find((calendar) => calendar.primary)
+          ?? calendars[0]
+        if (!selectedCalendar) {
+          return
+        }
+
+        setSelectedGoogleCalendarId(selectedCalendar.id)
+        setSelectedGoogleCalendarCanWrite(canWriteGoogleCalendar(selectedCalendar))
+
+        const rangeStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
+        rangeStart.setDate(rangeStart.getDate() - rangeStart.getDay())
+        const rangeEnd = new Date(rangeStart)
+        rangeEnd.setDate(rangeEnd.getDate() + 42)
+        const googleEvents = await getGoogleCalendarEvents(
+          selectedCalendar.id,
+          rangeStart.toISOString(),
+          rangeEnd.toISOString()
+        )
+        if (isMounted) {
+          setEvents((currentEvents) => [
+            ...currentEvents.filter((event) => !event.googleEventId),
+            ...googleEvents
+          ])
+        }
+      } catch (error) {
+        if (isMounted) {
+          setGoogleCalendarError(
+            error instanceof Error ? error.message : 'Unable to load Google Calendar events.'
+          )
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void loadCalendar()
+    return () => {
+      isMounted = false
+    }
+  }, [currentMonth])
 
   const selectedDateIso = getIsoDate(selectedDate)
 
@@ -190,11 +282,23 @@ function Calendar() {
     setShowEventForm(true)
   }
 
-  const handleDeleteEvent = (eventId: number) => {
-    setEvents((currentEvents) => currentEvents.filter((event) => event.id !== eventId))
-    recordPlannerPageChange('calendar')
-    setShowEventForm(false)
-    setEditingId(null)
+  const handleDeleteEvent = async (eventId: number | string) => {
+    const event = events.find((item) => item.id === eventId)
+    try {
+      if (event?.googleEventId && event.googleCalendarId) {
+        await deleteGoogleCalendarEvent(event.googleCalendarId, event.googleEventId)
+      }
+      setEvents((currentEvents) => currentEvents.filter((item) => item.id !== eventId))
+      recordPlannerPageChange('calendar')
+      setShowEventForm(false)
+      setEditingId(null)
+      setFormError(null)
+      setGoogleCalendarError(null)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to delete the calendar event.'
+      setGoogleCalendarError(message)
+      setFormError(message)
+    }
   }
 
   const openEditCommitment = (commitment: Commitment) => {
@@ -315,7 +419,7 @@ function Calendar() {
     setEditingSuggestion(null)
   }
 
-  const handleFormSubmit = () => {
+  const handleFormSubmit = async () => {
     const trimmedTitle = formData.title.trim()
     const trimmedCourse = formData.course.trim()
     const trimmedDescription = formData.description.trim()
@@ -327,7 +431,11 @@ function Calendar() {
 
     if (formKind === 'Commitment' && editingId === null) {
       const commitment: Commitment = {
-        id: Math.max(Date.now(), ...commitments.map((item) => item.id), ...events.map((item) => item.id)) + 1,
+        id: Math.max(
+          Date.now(),
+          ...commitments.map((item) => item.id),
+          ...events.map((item) => typeof item.id === 'number' ? item.id : 0)
+        ) + 1,
         name: trimmedTitle,
         course: trimmedCourse,
         dueDate: formData.date,
@@ -353,6 +461,9 @@ function Calendar() {
       return
     }
 
+    const existingEvent = editingId === null
+      ? undefined
+      : events.find((event) => event.id === editingId)
     const preparedEvent: CalendarEvent = {
       id: editingId ?? Date.now(),
       title: trimmedTitle,
@@ -361,7 +472,12 @@ function Calendar() {
       time: formData.time,
       category: formData.category,
       priority: formData.priority,
-      description: trimmedDescription || 'No additional notes provided.'
+      description: trimmedDescription || 'No additional notes provided.',
+      ...(existingEvent?.googleEventId ? { googleEventId: existingEvent.googleEventId } : {}),
+      ...(existingEvent?.googleCalendarId ? { googleCalendarId: existingEvent.googleCalendarId } : {}),
+      ...(existingEvent?.googleDurationMinutes
+        ? { googleDurationMinutes: existingEvent.googleDurationMinutes }
+        : {})
     }
 
     if (editingId !== null) {
@@ -373,15 +489,79 @@ function Calendar() {
       }
     }
 
-    setEvents((currentEvents) => {
-      if (editingId === null) {
-        return [...currentEvents, preparedEvent]
+    if (existingEvent?.googleEventId && existingEvent.googleCalendarId) {
+      try {
+        const start = new Date(`${preparedEvent.date}T${preparedEvent.time}:00`)
+        if (Number.isNaN(start.getTime())) {
+          throw new Error('Enter a valid event date and time.')
+        }
+        const end = new Date(start.getTime() + (existingEvent.googleDurationMinutes ?? 60) * 60000)
+        const eventInput: GoogleCalendarEventInput = {
+          title: preparedEvent.title,
+          course: preparedEvent.course,
+          description: preparedEvent.description,
+          category: preparedEvent.category,
+          priority: preparedEvent.priority,
+          startDateTime: start.toISOString(),
+          endDateTime: end.toISOString(),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+        }
+        const savedEvent = await updateGoogleCalendarEvent(
+          existingEvent.googleCalendarId,
+          existingEvent.googleEventId,
+          eventInput
+        )
+        setEvents((currentEvents) =>
+          currentEvents.map((event) => event.id === editingId ? savedEvent : event)
+        )
+      } catch (error) {
+        setFormError(error instanceof Error ? error.message : 'Unable to update the Google Calendar event.')
+        return
+      }
+    } else if (editingId === null && googleCalendarConnected) {
+      if (!selectedGoogleCalendarId) {
+        setFormError('Choose a Google Calendar in Settings before adding events.')
+        return
+      }
+      if (!selectedGoogleCalendarCanWrite) {
+        setFormError('The selected Google Calendar is read-only. Choose a calendar with write access in Settings.')
+        return
       }
 
-      return currentEvents.map((event) =>
-        event.id === editingId ? preparedEvent : event
-      )
-    })
+      try {
+        const start = new Date(`${preparedEvent.date}T${preparedEvent.time}:00`)
+        if (Number.isNaN(start.getTime())) {
+          throw new Error('Enter a valid event date and time.')
+        }
+        const end = new Date(start.getTime() + 60 * 60000)
+        const eventInput: GoogleCalendarEventInput = {
+          title: preparedEvent.title,
+          course: preparedEvent.course,
+          description: preparedEvent.description,
+          category: preparedEvent.category,
+          priority: preparedEvent.priority,
+          startDateTime: start.toISOString(),
+          endDateTime: end.toISOString(),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+        }
+        const savedEvent = await createGoogleCalendarEvent(selectedGoogleCalendarId, eventInput)
+        setEvents((currentEvents) => [...currentEvents, savedEvent])
+      } catch (error) {
+        setFormError(error instanceof Error ? error.message : 'Unable to add the Google Calendar event.')
+        return
+      }
+    } else {
+      setEvents((currentEvents) => {
+        if (editingId === null) {
+          return [...currentEvents, preparedEvent]
+        }
+
+        return currentEvents.map((event) =>
+          event.id === editingId ? preparedEvent : event
+        )
+      })
+    }
+
     recordPlannerPageChange('calendar')
 
     setSelectedDate(getDateFromIso(formData.date))
@@ -443,6 +623,9 @@ function Calendar() {
 
   return (
     <section className="calendar-page">
+      {googleCalendarError && (
+        <p className="calendar-integration-error" role="alert">{googleCalendarError}</p>
+      )}
       <div className={`calendar-layout ${viewMode === 'week' ? 'week-layout' : ''}`}>
         <div className="calendar-panel">
           <CalendarToolbar

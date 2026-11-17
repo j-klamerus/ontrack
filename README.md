@@ -57,6 +57,18 @@ Example app listening on port 3000
 ~~~
 appear in your terminal.
 
+For the local Google Calendar prototype, add the following settings to `backend/.env`. Copy the Supabase URL and publishable/anon key from `frontend/.env`; do not use a Supabase service-role key:
+~~~
+GOOGLE_CALENDAR_CLIENT_ID=your-calendar-oauth-client-id
+GOOGLE_CALENDAR_CLIENT_SECRET=your-calendar-oauth-client-secret
+GOOGLE_CALENDAR_REDIRECT_URI=http://localhost:3000/auth/google/calendar/callback
+SUPABASE_URL=your-supabase-project-url
+SUPABASE_ANON_KEY=your-supabase-publishable-key
+FRONTEND_ORIGIN=http://localhost:5173
+PORT=3000
+~~~
+The OAuth client must be a Web application with the redirect URI above. The prototype keeps Google tokens in backend memory, so reconnect after restarting the backend. `backend/.env` is ignored by Git; never commit or share its secrets.
+
 ### Test Everything is working Properly
 
 At this point everything should be setup properly in order to run the app. Follow these steps to make sure its working as expected:
