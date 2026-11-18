@@ -45,6 +45,7 @@ type SettingsProps = {
   onLogOut: () => void
 }
 
+/** Saves general preferences here; categories and email rules manage their own storage. */
 function Settings({ onLogOut }: SettingsProps) {
   const [settings, setSettings] = useState<SettingsState>(() => {
     try {

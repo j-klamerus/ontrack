@@ -4,6 +4,7 @@ import AppStart from './App.tsx';
 
 function App() {
     //*******************************************/
+    // This demo gate only switches screens; it does not validate credentials.
     //
     // CHANGE THE CONST STATEMENT BELOW TO ACCESS DASHBOARD
     // 

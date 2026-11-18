@@ -1,3 +1,4 @@
+// Uses the demo profile as defaults and stores editable fields with app preferences.
 import demoUser from '../data/demoUser.json'
 import type { UserProfile } from '../types/user'
 
@@ -13,6 +14,7 @@ const isUserProfile = (value: unknown): value is UserProfile =>
   typeof value.name === 'string' &&
   typeof value.email === 'string'
 
+/** Loads the validated demo profile with locally saved name and email overrides. */
 export async function getUserProfile(): Promise<UserProfile> {
   if (!isUserProfile(demoUser)) {
     throw new Error('The demo user profile is invalid.')

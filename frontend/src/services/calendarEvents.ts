@@ -37,6 +37,7 @@ const getIsoDate = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
+/** Builds the event list from relative-date fixtures and confirmed suggestions. */
 export async function getCalendarEvents(): Promise<CalendarEvent[]> {
   if (!Array.isArray(demoCalendarEvents) || !demoCalendarEvents.every(isDemoCalendarEvent)) {
     throw new Error('The demo calendar event data is invalid.')

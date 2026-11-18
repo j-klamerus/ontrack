@@ -1,3 +1,4 @@
+// Combines bundled reply examples with local edits and review decisions.
 import demoSuggestedReplies from '../data/demoSuggestedReplies.json'
 import type { StudentEmail } from '../types/email'
 
@@ -48,6 +49,7 @@ const getSavedReplies = (): Record<string, string> => {
   )
 }
 
+/** Returns unreviewed demo replies with any saved user edits applied. */
 export function getSuggestedReplies(): Record<string, string> {
   const demoReplies = Object.fromEntries(
     getDemoReplies().map(({ emailId, reply }) => [emailId, reply])
@@ -59,6 +61,7 @@ export function getSuggestedReplies(): Record<string, string> {
   )
 }
 
+/** Saves edited reply text and makes a previously reviewed reply visible again. */
 export function saveSuggestedReply(emailId: number, reply: string): void {
   const savedReplies = getSavedReplies()
   const savedReviews = readReviewedReplies()
@@ -95,6 +98,7 @@ const readReviewedReplies = (): Record<string, 'confirmed' | 'dismissed'> => {
   )
 }
 
+/** Hides a reply card after the user confirms or dismisses it. */
 export function resolveSuggestedReply(emailId: number, status: 'confirmed' | 'dismissed'): void {
   const reviews = readReviewedReplies()
   localStorage.setItem(
@@ -123,6 +127,7 @@ const getReplyBody = (email: StudentEmail): string => {
   return `Hello ${email.sender},\n\nThank you for your message. I appreciate the information and will follow up if I have any questions.\n\nBest,\n[Your name]`
 }
 
+/** Builds and saves a demo reply using the email's current warning and signals. */
 export function generateSuggestedReply(email: StudentEmail): string {
   const reply = getReplyBody(email)
   saveSuggestedReply(email.id, reply)

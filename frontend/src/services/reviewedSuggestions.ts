@@ -1,3 +1,4 @@
+// Persists suggestion decisions and materializes confirmed suggestions as planner items.
 import type { CalendarEvent } from '../types/calendarEvent'
 import { getEventCategories } from '../constants/eventCategories'
 import type { Commitment, Priority } from '../types/commitment'
@@ -16,6 +17,7 @@ type ReviewedSuggestion =
 const STORAGE_KEY = 'ontrack-reviewed-suggestions'
 type JsonRecord = Record<string, unknown>
 
+/** Clears saved decisions so dismissed and confirmed demo suggestions reappear. */
 export function resetDashboardSuggestionReviews(): void {
   localStorage.removeItem(STORAGE_KEY)
   recordPlannerPageChange('calendar')
@@ -112,9 +114,11 @@ const readReviewedSuggestions = (): ReviewedSuggestion[] => {
   return migratedRecords
 }
 
+/** Returns IDs of suggestions already confirmed or dismissed. */
 export const getReviewedSuggestionIds = (): Set<number> =>
   new Set(readReviewedSuggestions().map((record) => record.suggestionId))
 
+/** Returns confirmed suggestions that were saved as commitments. */
 export const getConfirmedCommitments = (): Commitment[] =>
   readReviewedSuggestions().flatMap((record) =>
     record.status === 'confirmed' && record.kind === 'Commitment'
@@ -122,6 +126,7 @@ export const getConfirmedCommitments = (): Commitment[] =>
       : []
   )
 
+/** Returns confirmed suggestions that were saved as calendar events. */
 export const getConfirmedCalendarEvents = (): CalendarEvent[] =>
   readReviewedSuggestions().flatMap((record) =>
     record.status === 'confirmed' && record.kind === 'Calendar event'
@@ -129,6 +134,7 @@ export const getConfirmedCalendarEvents = (): CalendarEvent[] =>
       : []
   )
 
+/** Reassigns confirmed planner items from a deleted category to `Other`. */
 export function moveReviewedSuggestionCategoryToOther(category: EventCategory): void {
   const records = readReviewedSuggestions().map((record) => {
     if (record.status !== 'confirmed') {
@@ -145,6 +151,10 @@ export function moveReviewedSuggestionCategoryToOther(category: EventCategory): 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(records))
 }
 
+/**
+ * Saves a suggestion as a planner item. Re-confirming an existing confirmation
+ * returns that item; a previously dismissed suggestion cannot be confirmed.
+ */
 export function confirmDashboardSuggestion(
   suggestion: DashboardSuggestion,
   sourceEmail: string
@@ -207,6 +217,7 @@ export function confirmDashboardSuggestion(
   return reviewedRecord
 }
 
+/** Records a dismissal once and marks the corresponding planner page as changed. */
 export function dismissDashboardSuggestion(suggestionId: number, kind: DashboardSuggestion['kind']): void {
   const records = readReviewedSuggestions()
   if (records.some((record) => record.suggestionId === suggestionId)) {

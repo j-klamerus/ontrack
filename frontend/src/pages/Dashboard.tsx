@@ -36,6 +36,7 @@ import '../styles/Dashboard.css'
 
 const eventPriorities: EventPriority[] = ['High', 'Medium', 'Low']
 
+/** Summarizes planner data and shows rule-derived email priorities only after an Inbox scan. */
 function Dashboard() {
   const eventCategories = getEventCategories()
   const [summary, setSummary] = useState<DashboardSummary | null>(null)

@@ -52,6 +52,7 @@ const createEmptyForm = (selectedDate: Date): EventFormState => ({
   description: ''
 })
 
+/** Coordinates calendar views, planner items, and reviewable event suggestions. */
 function Calendar() {
   const categoryOptions = getEventCategories()
   const [currentMonth, setCurrentMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))

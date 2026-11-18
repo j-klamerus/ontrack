@@ -29,6 +29,7 @@ import type { Commitment } from '../types/commitment'
 import type { StudentEmail } from '../types/email'
 import '../styles/Commitments.css'
 
+/** Coordinates commitment filtering, editing, and suggestion review. */
 function Commitments() {
   const eventCategories = getEventCategories()
   const [commitments, setCommitments] = useState<Commitment[]>([])

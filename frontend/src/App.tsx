@@ -30,6 +30,10 @@ type AppProps = {
   onLogOut: () => void
 }
 
+/**
+ * Owns app navigation, unread counts, and planner-change indicators.
+ * Only the active screen is mounted, so page-local state resets on navigation.
+ */
 function App({ onLogOut }: AppProps) {
   const [currentPage, setCurrentPage] = useState<Page>('Dashboard')
   const [unreadEmailCount, setUnreadEmailCount] = useState(0)

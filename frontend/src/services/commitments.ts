@@ -95,6 +95,10 @@ const getIsoDate = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
+/**
+ * Combines relative-date fixtures, confirmed suggestions, custom commitments,
+ * edits, and locally saved deletion markers.
+ */
 export async function getCommitments(): Promise<Commitment[]> {
   if (!Array.isArray(demoCommitments) || !demoCommitments.every(isDemoCommitment)) {
     throw new Error('The demo commitment data is invalid.')
@@ -135,6 +139,7 @@ export async function getCommitments(): Promise<Commitment[]> {
   return existingCommitments.filter((commitment) => !deletedIds.has(commitment.id))
 }
 
+/** Adds a new user-created commitment to browser storage. */
 export function addCommitment(commitment: Commitment): void {
   if (!isCommitment(commitment)) {
     throw new Error('The commitment data is invalid.')
@@ -155,6 +160,7 @@ export function addCommitment(commitment: Commitment): void {
   )
 }
 
+/** Stores a full replacement record as an override for the matching commitment. */
 export function updateCommitment(commitment: Commitment): void {
   if (!isCommitment(commitment)) {
     throw new Error('The commitment data is invalid.')
@@ -170,10 +176,12 @@ export function updateCommitment(commitment: Commitment): void {
   )
 }
 
+/** Deletes one commitment by delegating to the batch deletion path. */
 export function deleteCommitment(commitmentId: number): void {
   deleteCommitments([commitmentId])
 }
 
+/** Removes custom records and overrides, then records IDs to hide fixture items. */
 export function deleteCommitments(commitmentIds: number[]): void {
   const idsToDelete = new Set(commitmentIds)
   if (idsToDelete.size === 0) {
