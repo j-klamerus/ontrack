@@ -1,6 +1,10 @@
 // Settings UI for building, loading, ordering, and saving email priority rules.
 import { useState } from 'react'
-import { getEmailPriorityRules, saveEmailPriorityRules } from '../../services/emailPriorityRules'
+import {
+  getEmailPriorityRules,
+  saveEmailPriorityRules,
+  sortEmailPriorityRulesByPriority
+} from '../../services/emailPriorityRules'
 import type { EmailPriority } from '../../types/email'
 import type { EmailPriorityRule, EmailRuleField, EmailRuleOperator } from '../../types/emailRule'
 import { buildRegexFromPhrases } from './regexBuilder'
@@ -58,6 +62,57 @@ const baselinePriorityRules: EmailPriorityRule[] = [
   }
 ]
 
+const secondaryPriorityRules: EmailPriorityRule[] = [
+  {
+    id: 'secondary-priority-high-enrollment-subject',
+    enabled: true,
+    field: 'subject',
+    operator: 'regex',
+    pattern: '\\b(?:registration (?:window|time)|application deadline|spring housing preference form)\\b',
+    priority: 'High'
+  },
+  {
+    id: 'secondary-priority-high-explicit-weekday-body',
+    enabled: true,
+    field: 'body',
+    operator: 'regex',
+    pattern: '\\b(?:(?:due|closes?)\\s+(?:on\\s+)?|(?:by|before)\\s+(?:this\\s+)?)(?:today|tonight|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\\b',
+    priority: 'High'
+  },
+  {
+    id: 'secondary-priority-medium-student-actions',
+    enabled: true,
+    field: 'subject',
+    operator: 'regex',
+    pattern: '\\b(?:quiz(?:zes)?|lab safety refresher|interview availability|library hold|scholarship application workshop|study abroad information session)\\b',
+    priority: 'Medium'
+  },
+  {
+    id: 'secondary-priority-medium-student-actions-continued',
+    enabled: true,
+    field: 'subject',
+    operator: 'regex',
+    pattern: '\\b(?:prerequisites|volunteer shifts?|textbook rental return|research database orientation|shift schedule|reading for next week|internship fair|peer support group)\\b',
+    priority: 'Medium'
+  },
+  {
+    id: 'secondary-priority-low-campus-notices',
+    enabled: true,
+    field: 'subject',
+    operator: 'regex',
+    pattern: '\\b(?:film nights?|game nights?|dining hall hours|portal sign-in maintenance|shuttle stop|pool schedule|clothing drive|weekly digest)\\b',
+    priority: 'Low'
+  },
+  {
+    id: 'secondary-priority-low-campus-notices-continued',
+    enabled: true,
+    field: 'subject',
+    operator: 'regex',
+    pattern: '\\b(?:northlake weekly|calendar view|flu (?:shot )?clinic|candidate forum|account statement|transcript request received)\\b',
+    priority: 'Low'
+  }
+]
+
 type EmailPriorityRuleSet = {
   id: string
   name: string
@@ -71,8 +126,16 @@ const ruleSets: EmailPriorityRuleSet[] = [
     name: 'Baseline priorities',
     description: 'Looks for urgent language first, then common school tasks, then general notices.',
     rules: baselinePriorityRules
+  },
+  {
+    id: 'secondary-priorities',
+    name: 'Student-focused priority refinements',
+    description: 'Adds explicit deadline and student-specific cues from the expanded sample inbox. Within each priority level, loaded refinements stay before baseline rules.',
+    rules: secondaryPriorityRules
   }
 ]
+
+const evaluationSetOrder = ['secondary-priorities', 'baseline-priorities']
 
 const fieldLabels: Record<EmailRuleField, string> = {
   sender: 'Sender name',
@@ -108,8 +171,9 @@ function EmailPriorityRulesCard() {
 
   const updateRules = (nextRules: EmailPriorityRule[]): boolean => {
     try {
-      saveEmailPriorityRules(nextRules)
-      setState({ rules: nextRules, error: '' })
+      const sortedRules = sortEmailPriorityRulesByPriority(nextRules)
+      saveEmailPriorityRules(sortedRules)
+      setState({ rules: sortedRules, error: '' })
       return true
     } catch (saveError) {
       setState((currentState) => ({
@@ -147,10 +211,14 @@ function EmailPriorityRulesCard() {
     setPattern(builtPattern)
   }
 
-  // Rule order decides which priority wins when an email matches more than one rule.
+  // Higher-priority matches win; rules with the same priority retain their order.
   const moveRule = (index: number, direction: -1 | 1) => {
     const targetIndex = index + direction
-    if (targetIndex < 0 || targetIndex >= rules.length) {
+    if (
+      targetIndex < 0 ||
+      targetIndex >= rules.length ||
+      rules[targetIndex]?.priority !== rules[index]?.priority
+    ) {
       return
     }
 
@@ -174,12 +242,48 @@ function EmailPriorityRulesCard() {
     }
 
     const existingSetIds = new Set(ruleSet.rules.map(({ id }) => id))
-    const lastSetIndex = rules.reduce(
-      (lastIndex, rule, index) => existingSetIds.has(rule.id) ? index : lastIndex,
-      -1
-    )
+    const existingSetIndexes = rules
+      .map(({ id }, index) => existingSetIds.has(id) ? index : -1)
+      .filter((index) => index >= 0)
+    let insertionIndex: number
+
+    if (existingSetIndexes.length > 0) {
+      insertionIndex = existingSetIndexes[existingSetIndexes.length - 1] + 1
+    } else {
+      const currentSetIndex = evaluationSetOrder.indexOf(ruleSet.id)
+      const higherPrioritySetIds = new Set(
+        ruleSets
+          .filter(({ id }) => evaluationSetOrder.indexOf(id) < currentSetIndex)
+          .flatMap(({ rules: setRules }) => setRules.map(({ id }) => id))
+      )
+      const higherPriorityIndexes = rules
+        .map(({ id }, index) => higherPrioritySetIds.has(id) ? index : -1)
+        .filter((index) => index >= 0)
+
+      if (higherPriorityIndexes.length > 0) {
+        insertionIndex = higherPriorityIndexes[higherPriorityIndexes.length - 1] + 1
+      } else {
+        const lowerPrioritySetIds = new Set(
+          ruleSets
+            .filter(({ id }) => evaluationSetOrder.indexOf(id) > currentSetIndex)
+            .flatMap(({ rules: setRules }) => setRules.map(({ id }) => id))
+        )
+        const lowerPriorityIndexes = rules
+          .map(({ id }, index) => lowerPrioritySetIds.has(id) ? index : -1)
+          .filter((index) => index >= 0)
+        const firstCustomRuleIndex = rules.findIndex(({ id }) =>
+          !ruleSets.some(({ rules: setRules }) => setRules.some((setRule) => setRule.id === id))
+        )
+        insertionIndex = lowerPriorityIndexes.length > 0
+          ? lowerPriorityIndexes[0]
+          : firstCustomRuleIndex >= 0
+            ? firstCustomRuleIndex
+            : rules.length
+      }
+    }
+
     const nextRules = [...rules]
-    nextRules.splice(lastSetIndex + 1, 0, ...missingRules)
+    nextRules.splice(insertionIndex, 0, ...missingRules)
     updateRules(nextRules)
   }
 
@@ -195,7 +299,7 @@ function EmailPriorityRulesCard() {
         <h3>Email Priority Rules</h3>
       </div>
       <p className="field-note email-rules-note">
-        Priority rules are separate from category rules. The first matching rule sets High, Medium, or Low; if none match, the email has no priority after scanning.
+        Priority rules are separate from category rules. When multiple rules match, High takes precedence over Medium, then Low; rules with the same priority retain their order. If none match, the email has no priority after scanning. Load the student-focused refinements alongside Baseline priorities for more targeted deadline and campus-message cues.
       </p>
 
       <form className="email-rule-form" onSubmit={addRule}>
@@ -357,7 +461,7 @@ function EmailPriorityRulesCard() {
       {rules.length === 0 ? (
         <div className="email-rules-empty-state">
           <strong>No priority rules yet</strong>
-          <span>Load Baseline priorities or add a rule. Emails without a matching rule will have no priority after a scan.</span>
+          <span>Load Baseline priorities or add a rule. The student-focused refinements can be loaded separately; emails without a matching rule will have no priority after a scan.</span>
         </div>
       ) : (
         <div className="email-rule-list" aria-label="Saved email priority rules">
@@ -390,7 +494,7 @@ function EmailPriorityRulesCard() {
                   type="button"
                   className="email-rule-action"
                   aria-label={`Move ${rule.priority} priority rule up`}
-                  disabled={index === 0}
+                  disabled={index === 0 || rules[index - 1]?.priority !== rule.priority}
                   onClick={() => moveRule(index, -1)}
                 >
                   Move up
@@ -399,7 +503,7 @@ function EmailPriorityRulesCard() {
                   type="button"
                   className="email-rule-action"
                   aria-label={`Move ${rule.priority} priority rule down`}
-                  disabled={index === rules.length - 1}
+                  disabled={index === rules.length - 1 || rules[index + 1]?.priority !== rule.priority}
                   onClick={() => moveRule(index, 1)}
                 >
                   Move down

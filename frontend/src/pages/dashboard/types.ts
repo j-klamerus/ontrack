@@ -3,7 +3,7 @@ import type { Commitment, Priority } from '../../types/commitment'
 
 export type DashboardSummary = {
   totalEmails: number
-  highPriorityEmails: number
+  highPriorityEmails: number | null
   commitments: number
   events: number
 }

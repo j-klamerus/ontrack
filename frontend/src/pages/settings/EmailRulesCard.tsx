@@ -35,6 +35,18 @@ const baselineRuleDefinitions: Array<{
     label: 'Exam'
   },
   {
+    id: 'baseline-exam-quiz-subject',
+    field: 'subject',
+    pattern: '\\bquiz\\b',
+    label: 'Exam'
+  },
+  {
+    id: 'baseline-exam-quiz-body',
+    field: 'body',
+    pattern: '\\bquiz\\b',
+    label: 'Exam'
+  },
+  {
     id: 'baseline-appointment-subject',
     field: 'subject',
     pattern: '\\b(?:appointments?|consultation|advising session|counseling session|office visit)\\b',
@@ -59,6 +71,18 @@ const baselineRuleDefinitions: Array<{
     label: 'Meeting'
   },
   {
+    id: 'baseline-meeting-campus-events-subject',
+    field: 'subject',
+    pattern: '\\b(?:film nights?|game nights?|candidate forums?|information sessions?|peer support groups?|volunteer shifts?|internship fairs?)\\b',
+    label: 'Meeting'
+  },
+  {
+    id: 'baseline-meeting-campus-events-body',
+    field: 'body',
+    pattern: '\\b(?:film nights?|game nights?|candidate forums?|information sessions?|peer support groups?|volunteer shifts?|internship fairs?)\\b',
+    label: 'Meeting'
+  },
+  {
     id: 'baseline-deadline-subject',
     field: 'subject',
     pattern: '\\b(?:deadlines?|due(?: date)?|closes?|registration window|pickup window|return by|renew by)\\b',
@@ -68,6 +92,18 @@ const baselineRuleDefinitions: Array<{
     id: 'baseline-deadline-body',
     field: 'body',
     pattern: '\\b(?:deadlines?|due(?: date)?|closes?|registration window|pickup window|return by|renew by)\\b',
+    label: 'Deadline'
+  },
+  {
+    id: 'baseline-deadline-weekday-subject',
+    field: 'subject',
+    pattern: '\\b(?:by|through|until)\\s+(?:this\\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\\b',
+    label: 'Deadline'
+  },
+  {
+    id: 'baseline-deadline-weekday-body',
+    field: 'body',
+    pattern: '\\b(?:by|through|until)\\s+(?:this\\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\\b',
     label: 'Deadline'
   },
   {

@@ -7,6 +7,16 @@ import { getEmails, saveEmailReadStates, saveEmailReadState } from '../services/
 import { getEmailRules } from '../services/emailRules'
 import { getEmailPriorityRules } from '../services/emailPriorityRules'
 import { getEmailSpamSettings } from '../services/emailSpamSettings'
+import { getInboxSortPreference, saveInboxSortPreference } from '../services/inboxPreferences'
+import {
+  createInboxScanSignature,
+  DEFAULT_INBOX_VIEW_STATE,
+  getInboxViewState,
+  getSavedInboxScanState,
+  saveInboxScanState,
+  saveInboxViewState,
+  type InboxViewState
+} from '../services/inboxState'
 import {
   evaluateEmailRules,
   type EmailRuleEvaluation
@@ -19,9 +29,7 @@ import type { EmailPriority, EmailSignal, StudentEmail } from '../types/email'
 import type { EmailPriorityRule, EmailRule, EmailSpamRule } from '../types/emailRule'
 import {
   signalOptions,
-  type EmailFilter,
   type EmailSort,
-  type PriorityFilter
 } from './inbox/types'
 
 type InboxProps = {
@@ -46,18 +54,20 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   const [spamRules, setSpamRules] = useState<EmailSpamRule[]>([])
   const [blockedSenders, setBlockedSenders] = useState<string[]>([])
   const [ruleEvaluations, setRuleEvaluations] = useState<EmailRuleEvaluation[] | null>(null)
-  const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [activeFilter, setActiveFilter] = useState<EmailFilter>('All')
-  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('All')
-  const [signalFilter, setSignalFilter] = useState<EmailSignal | 'All'>('All')
+  const [classificationCleared, setClassificationCleared] = useState(false)
+  const [scanSignature, setScanSignature] = useState<string | null>(null)
+  const [viewState, setViewState] = useState<InboxViewState>(DEFAULT_INBOX_VIEW_STATE)
   const [sortBy, setSortBy] = useState<EmailSort>('category')
   const [isLoading, setIsLoading] = useState(true)
   const [isScanning, setIsScanning] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [scanError, setScanError] = useState<string | null>(null)
+  const [sortError, setSortError] = useState<string | null>(null)
+  const [viewPersistenceError, setViewPersistenceError] = useState<string | null>(null)
+  const [scanPersistenceError, setScanPersistenceError] = useState<string | null>(null)
   const [suggestedReplies, setSuggestedReplies] = useState<Record<string, string>>({})
   const [replyError, setReplyError] = useState<string | null>(null)
+  const { searchTerm, activeFilter, priorityFilter, signalFilter, selectedId } = viewState
 
   useEffect(() => {
     let isMounted = true
@@ -69,16 +79,71 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
         const loadedRules = getEmailRules()
         const loadedPriorityRules = getEmailPriorityRules()
         const loadedSpamSettings = getEmailSpamSettings()
+        let loadedViewState = DEFAULT_INBOX_VIEW_STATE
+        let loadedViewError: string | null = null
+        try {
+          loadedViewState = getInboxViewState() ?? DEFAULT_INBOX_VIEW_STATE
+        } catch (error) {
+          loadedViewError = error instanceof Error ? error.message : 'Unable to load Inbox view settings.'
+        }
+
+        let loadedScanState: ReturnType<typeof getSavedInboxScanState> = null
+        let loadedScanSignature: string | null = null
+        let loadedScanError: string | null = null
+        try {
+          loadedScanSignature = await createInboxScanSignature(
+            loadedEmails,
+            loadedRules,
+            loadedPriorityRules,
+            loadedSpamSettings.rules,
+            loadedSpamSettings.blockedSenders
+          )
+          loadedScanState = getSavedInboxScanState(loadedScanSignature)
+        } catch (error) {
+          loadedScanError = error instanceof Error ? error.message : 'Unable to load saved Inbox scan results.'
+        }
+
+        if (!loadedScanState) {
+          loadedViewState = {
+            ...loadedViewState,
+            priorityFilter: 'All',
+            signalFilter: 'All'
+          }
+        }
+        const selectedEmailId = loadedEmails.some((email) => email.id === loadedViewState.selectedId)
+          ? loadedViewState.selectedId
+          : loadedEmails[0]?.id ?? null
+        loadedViewState = { ...loadedViewState, selectedId: selectedEmailId }
+
+        let loadedSort: EmailSort = 'category'
+        let loadedSortError: string | null = null
+        try {
+          loadedSort = getInboxSortPreference()
+        } catch (error) {
+          loadedSortError = error instanceof Error ? error.message : 'Unable to load Inbox sort preference.'
+        }
         if (!isMounted) {
           return
         }
 
+        setSortError(loadedSortError)
+        setViewPersistenceError(loadedViewError)
+        setScanPersistenceError(loadedScanError)
         setEmails(loadedEmails)
-        setSelectedId(loadedEmails[0]?.id ?? null)
+        setViewState(loadedViewState)
         setEmailRules(loadedRules)
         setPriorityRules(loadedPriorityRules)
         setSpamRules(loadedSpamSettings.rules)
         setBlockedSenders(loadedSpamSettings.blockedSenders)
+        setSortBy(loadedSort)
+        setRuleEvaluations(loadedScanState?.evaluations ?? null)
+        setClassificationCleared(loadedScanState?.classificationCleared ?? false)
+        setScanSignature(loadedScanSignature)
+        try {
+          saveInboxViewState(loadedViewState)
+        } catch (error) {
+          setViewPersistenceError(error instanceof Error ? error.message : 'Unable to save Inbox view settings.')
+        }
         try {
           setSuggestedReplies(getSuggestedReplies())
         } catch (error) {
@@ -116,10 +181,64 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
         blockedSenders
       )
       setRuleEvaluations(results)
+      setClassificationCleared(false)
+      try {
+        const signature = await createInboxScanSignature(
+          emails,
+          emailRules,
+          priorityRules,
+          spamRules,
+          blockedSenders
+        )
+        setScanSignature(signature)
+        saveInboxScanState(results, false, signature)
+        setScanPersistenceError(null)
+      } catch (error) {
+        setScanPersistenceError(error instanceof Error ? error.message : 'Unable to save Inbox scan results.')
+      }
     } catch (error) {
       setScanError(error instanceof Error ? error.message : 'Unable to scan emails.')
     } finally {
       setIsScanning(false)
+    }
+  }
+
+  const changeSort = (nextSort: EmailSort) => {
+    try {
+      saveInboxSortPreference(nextSort)
+      setSortBy(nextSort)
+      setSortError(null)
+    } catch (error) {
+      setSortError(error instanceof Error ? error.message : 'Unable to save Inbox sort preference.')
+    }
+  }
+
+  const hasCategoryPriorityResults = ruleEvaluations !== null && !classificationCleared
+
+  const updateInboxView = (changes: Partial<InboxViewState>) => {
+    const nextViewState = { ...viewState, ...changes }
+    setViewState(nextViewState)
+    try {
+      saveInboxViewState(nextViewState)
+      setViewPersistenceError(null)
+    } catch (error) {
+      setViewPersistenceError(error instanceof Error ? error.message : 'Unable to save Inbox view settings.')
+    }
+  }
+
+  const clearCategoriesAndPriorities = () => {
+    setClassificationCleared(true)
+    updateInboxView({ priorityFilter: 'All', signalFilter: 'All' })
+    if (ruleEvaluations === null || scanSignature === null) {
+      setScanPersistenceError('The scan can be cleared for this session, but its results could not be saved.')
+      return
+    }
+
+    try {
+      saveInboxScanState(ruleEvaluations, true, scanSignature)
+      setScanPersistenceError(null)
+    } catch (error) {
+      setScanPersistenceError(error instanceof Error ? error.message : 'Unable to save cleared Inbox scan results.')
     }
   }
 
@@ -132,9 +251,11 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   const classifiedEmails = useMemo(
     () => emails.map((email) => {
       const evaluation = evaluationsByEmailId.get(email.id)
-      const matchedSignals = [...new Set((evaluation?.labels ?? []).filter(isEmailSignal))]
+      const matchedSignals = hasCategoryPriorityResults
+        ? [...new Set((evaluation?.labels ?? []).filter(isEmailSignal))]
+        : []
       const signals: EmailSignal[] = matchedSignals.filter((signal) => signal !== 'Other')
-      if (signals.length === 0 && evaluation && isEmailSignal(evaluation.groupLabel)) {
+      if (signals.length === 0 && hasCategoryPriorityResults && evaluation && isEmailSignal(evaluation.groupLabel)) {
         signals.push(
           matchedSignals.includes('Other') || evaluation.groupLabel === 'Other'
             ? 'Other'
@@ -144,19 +265,20 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
 
       return {
         ...email,
-        priority: ruleEvaluations === null ? null : evaluation?.priority ?? null,
+        priority: hasCategoryPriorityResults ? evaluation?.priority ?? null : null,
         spamDetected: ruleEvaluations === null ? false : evaluation?.spamDetected ?? false,
         signals
       }
     }),
-    [emails, evaluationsByEmailId, ruleEvaluations]
+    [emails, evaluationsByEmailId, hasCategoryPriorityResults, ruleEvaluations]
   )
 
   const labelsByEmailId = useMemo(
     () => new Map(
-      (ruleEvaluations ?? []).map((evaluation) => [evaluation.emailId, evaluation.labels])
+      (hasCategoryPriorityResults ? ruleEvaluations ?? [] : [])
+        .map((evaluation) => [evaluation.emailId, evaluation.labels])
     ),
-    [ruleEvaluations]
+    [hasCategoryPriorityResults, ruleEvaluations]
   )
 
   // Apply UI filters and search after scan-derived signals and rule labels are available.
@@ -247,7 +369,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
       )
     }
 
-    if (ruleEvaluations === null) {
+    if (!hasCategoryPriorityResults) {
       return filteredEmails
     }
 
@@ -256,12 +378,12 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
       (left, right) =>
         getOrder(left.id) - getOrder(right.id)
     )
-  }, [emails, filteredEmails, ruleEvaluations, sortBy])
+  }, [emails, filteredEmails, hasCategoryPriorityResults, ruleEvaluations, sortBy])
 
   const emailGroups = useMemo(() => {
-    if (ruleEvaluations === null || sortBy !== 'category') {
+    if (!hasCategoryPriorityResults || sortBy !== 'category') {
       return sortedFilteredEmails.length > 0
-        ? [{ id: 'unscanned', label: 'Inbox', emails: sortedFilteredEmails }]
+        ? [{ id: 'inbox', label: 'Inbox', emails: sortedFilteredEmails }]
         : []
     }
 
@@ -280,7 +402,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
     })
 
     return [...groups.values()]
-  }, [evaluationsByEmailId, ruleEvaluations, sortedFilteredEmails, sortBy])
+  }, [evaluationsByEmailId, hasCategoryPriorityResults, sortedFilteredEmails, sortBy])
 
   const visibleSelectedId = sortedFilteredEmails.some((email) => email.id === selectedId)
     ? selectedId
@@ -346,10 +468,12 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
     signalFilter !== 'All'
 
   const clearSearchFilters = () => {
-    setSearchTerm('')
-    setActiveFilter('All')
-    setPriorityFilter('All')
-    setSignalFilter('All')
+    updateInboxView({
+      searchTerm: '',
+      activeFilter: 'All',
+      priorityFilter: 'All',
+      signalFilter: 'All'
+    })
   }
 
   const markAllRead = () => {
@@ -428,16 +552,21 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
           priorityFilter={priorityFilter}
           signalFilter={signalFilter}
           sortBy={sortBy}
-          isScanned={ruleEvaluations !== null}
+          isScanned={hasCategoryPriorityResults}
+          hasScanResults={ruleEvaluations !== null}
+          classificationCleared={classificationCleared}
           isScanning={isScanning}
           scanError={scanError}
+          sortError={sortError}
+          persistenceError={[viewPersistenceError, scanPersistenceError].filter(Boolean).join(' ') || null}
           hasActiveSearchFilters={hasActiveSearchFilters}
-          onSelectEmail={setSelectedId}
-          onSearchChange={setSearchTerm}
-          onFilterChange={setActiveFilter}
-          onPriorityChange={setPriorityFilter}
-          onSignalChange={setSignalFilter}
-          onSortChange={setSortBy}
+          onSelectEmail={(id) => updateInboxView({ selectedId: id })}
+          onSearchChange={(nextSearchTerm) => updateInboxView({ searchTerm: nextSearchTerm })}
+          onFilterChange={(nextFilter) => updateInboxView({ activeFilter: nextFilter })}
+          onPriorityChange={(nextPriority) => updateInboxView({ priorityFilter: nextPriority })}
+          onSignalChange={(nextSignal) => updateInboxView({ signalFilter: nextSignal })}
+          onSortChange={changeSort}
+          onClearCategoriesAndPriorities={clearCategoriesAndPriorities}
           onClearFilters={clearSearchFilters}
           onMarkAllRead={markAllRead}
           onScanEmails={scanEmails}
@@ -445,7 +574,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
 
         <MessageDetailPanel
           email={selectedEmail}
-          isScanned={ruleEvaluations !== null}
+          isScanned={hasCategoryPriorityResults}
           suggestedReply={suggestedReply}
           replyError={replyError}
           onToggleRead={toggleRead}

@@ -2,6 +2,22 @@
 import type { EmailPriorityRule } from '../types/emailRule'
 
 const STORAGE_KEY = 'ontrack-email-priority-rules'
+const priorityOrder: Record<EmailPriorityRule['priority'], number> = {
+  High: 0,
+  Medium: 1,
+  Low: 2
+}
+
+// Keep the saved order for rules with the same priority.
+export function sortEmailPriorityRulesByPriority(rules: EmailPriorityRule[]): EmailPriorityRule[] {
+  return rules
+    .map((rule, index) => ({ rule, index }))
+    .sort((left, right) =>
+      priorityOrder[left.rule.priority] - priorityOrder[right.rule.priority] ||
+      left.index - right.index
+    )
+    .map(({ rule }) => rule)
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -59,11 +75,12 @@ export function getEmailPriorityRules(): EmailPriorityRule[] {
   }
 
   parsedRules.forEach(validateRule)
-  return parsedRules
+  return sortEmailPriorityRulesByPriority(parsedRules)
 }
 
 /** Validates the ordered priority rules before storing them in browser storage. */
 export function saveEmailPriorityRules(rules: EmailPriorityRule[]): void {
-  rules.forEach(validateRule)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(rules))
+  const sortedRules = sortEmailPriorityRulesByPriority(rules)
+  sortedRules.forEach(validateRule)
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sortedRules))
 }

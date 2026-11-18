@@ -23,8 +23,12 @@ type EmailListPanelProps = {
   signalFilter: EmailSignal | 'All'
   sortBy: EmailSort
   isScanned: boolean
+  hasScanResults: boolean
+  classificationCleared: boolean
   isScanning: boolean
   scanError: string | null
+  sortError: string | null
+  persistenceError: string | null
   hasActiveSearchFilters: boolean
   onSelectEmail: (id: number) => void
   onSearchChange: (value: string) => void
@@ -32,6 +36,7 @@ type EmailListPanelProps = {
   onPriorityChange: (value: PriorityFilter) => void
   onSignalChange: (value: EmailSignal | 'All') => void
   onSortChange: (value: EmailSort) => void
+  onClearCategoriesAndPriorities: () => void
   onClearFilters: () => void
   onMarkAllRead: () => void
   onScanEmails: () => void
@@ -50,8 +55,12 @@ function EmailListPanel({
   signalFilter,
   sortBy,
   isScanned,
+  hasScanResults,
+  classificationCleared,
   isScanning,
   scanError,
+  sortError,
+  persistenceError,
   hasActiveSearchFilters,
   onSelectEmail,
   onSearchChange,
@@ -59,6 +68,7 @@ function EmailListPanel({
   onPriorityChange,
   onSignalChange,
   onSortChange,
+  onClearCategoriesAndPriorities,
   onClearFilters,
   onMarkAllRead,
   onScanEmails
@@ -79,8 +89,19 @@ function EmailListPanel({
               disabled={isScanning}
             >
               <Search size={15} aria-hidden="true" />
-              {isScanning ? 'Scanning...' : isScanned ? 'Rescan emails' : 'Scan emails'}
+              {isScanning ? 'Scanning...' : hasScanResults ? 'Rescan emails' : 'Scan emails'}
             </button>
+            {isScanned && (
+              <button
+                type="button"
+                className="action-button"
+                onClick={onClearCategoriesAndPriorities}
+                disabled={isScanning}
+              >
+                <X size={15} aria-hidden="true" />
+                Clear categories &amp; priorities
+              </button>
+            )}
             <button
               type="button"
               className="action-button mark-all-read-button"
@@ -93,7 +114,12 @@ function EmailListPanel({
           </div>
         </div>
         {scanError && <p className="inbox-scan-error" role="alert">{scanError}</p>}
-        {!isScanned && !scanError && (
+        {sortError && <p className="inbox-scan-error" role="alert">{sortError}</p>}
+        {persistenceError && <p className="inbox-scan-error" role="alert">{persistenceError}</p>}
+        {classificationCleared && (
+          <p className="inbox-scan-note">Categories and priorities were cleared. Spam detections remain visible.</p>
+        )}
+        {!hasScanResults && !scanError && (
           <p className="inbox-scan-note">Categories, tags, priorities, and spam matches are added when you scan emails.</p>
         )}
 

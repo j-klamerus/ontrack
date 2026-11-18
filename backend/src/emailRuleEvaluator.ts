@@ -3,6 +3,12 @@ export type EmailRuleField = 'sender' | 'email' | 'subject' | 'body'
 export type EmailRuleOperator = 'contains' | 'regex'
 export type EmailPriority = 'High' | 'Medium' | 'Low'
 
+const priorityOrder: Record<EmailPriority, number> = {
+  High: 0,
+  Medium: 1,
+  Low: 2
+}
+
 export type EmailRule = {
   id: string
   enabled: boolean
@@ -93,10 +99,15 @@ export function evaluateEmailRules(
     }))
   const activePriorityRules: CompiledRule<EmailPriorityRule>[] = priorityRules
     .filter((rule) => rule.enabled)
-    .map((rule) => ({
+    .map((rule, index) => ({
       rule,
+      index,
       regex: rule.operator === 'regex' ? new RegExp(rule.pattern, 'i') : null
     }))
+    .sort((left, right) =>
+      priorityOrder[left.rule.priority] - priorityOrder[right.rule.priority] ||
+      left.index - right.index
+    )
   const activeSpamRules: CompiledRule<EmailSpamRule>[] = spamRules
     .filter((rule) => rule.enabled)
     .map((rule) => ({
