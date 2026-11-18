@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { google } from 'googleapis'
 import { resolve } from 'node:path'
 import { CalendarSelectionStore } from './calendarSelection.js'
+import { CalendarSyncStore, type LocalEventId } from './calendarSync.js'
 import { isValidTimeZone, normalizeGoogleCalendarEvent } from './calendarEvent.js'
 
 const router = express.Router()
@@ -20,6 +21,7 @@ const oauthStateLifetimeMs = 10 * 60 * 1000
 const pendingOAuthStates = new Map<string, { userId: string; createdAt: number }>()
 const connectedUsers = new Map<string, ReturnType<typeof createCalendarOAuthClient>>()
 const calendarSelections = new CalendarSelectionStore(resolve('.ontrack-data', 'calendar-selections'))
+const calendarSync = new CalendarSyncStore(resolve('.ontrack-data', 'calendar-sync'))
 
 function createCalendarOAuthClient() {
   const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID?.trim()
@@ -294,7 +296,8 @@ router.get('/api/google/calendar/events', async (request, response) => {
   }
 
   const googleEvents = google.calendar({ version: 'v3', auth: oauthClient }).events
-  const events: ReturnType<typeof normalizeGoogleCalendarEvent>[] = []
+  const syncEntries = await calendarSync.list(userId, calendarId)
+  const events: (ReturnType<typeof normalizeGoogleCalendarEvent> & { googleSourceId?: LocalEventId })[] = []
   let pageToken: string | undefined
   do {
     const { data } = await googleEvents.list({
@@ -306,11 +309,60 @@ router.get('/api/google/calendar/events', async (request, response) => {
       ...(timeMax ? { timeMax } : {}),
       ...(pageToken ? { pageToken } : {})
     })
-    events.push(...(data.items ?? []).map((event) => normalizeGoogleCalendarEvent(event, calendarId, timeZone)))
+    events.push(...(data.items ?? []).map((event) => ({
+      ...normalizeGoogleCalendarEvent(event, calendarId, timeZone),
+      ...(event.id && Object.hasOwn(syncEntries, event.id) ? { googleSourceId: syncEntries[event.id] } : {})
+    })))
     pageToken = data.nextPageToken ?? undefined
   } while (pageToken)
 
   response.json({ events })
+})
+
+router.post('/api/google/calendar/sync-event', async (request, response) => {
+  const userId = await getAuthenticatedUserId(request, response)
+  if (!userId) return
+  const oauthClient = getConnectedUserClient(userId, response)
+  if (!oauthClient) return
+
+  const body: unknown = request.body
+  const calendarId = isRecord(body) ? readNonEmptyString(body.calendarId) : null
+  const localEventId = isRecord(body) ? body.localEventId : undefined
+  const event = parseEventInput(body)
+  if (
+    !calendarId || calendarId === 'primary' || calendarId.length > 2048 || !event ||
+    !((typeof localEventId === 'string' && localEventId.length > 0 && localEventId.length <= 256) ||
+      (typeof localEventId === 'number' && Number.isSafeInteger(localEventId)))
+  ) {
+    response.status(400).json({ error: 'A valid calendar, On Track event ID, and event details are required.' })
+    return
+  }
+
+  const googleEvents = google.calendar({ version: 'v3', auth: oauthClient }).events
+  const result = await calendarSync.sync(userId, calendarId, localEventId, async (id) => {
+    const eventBody = toGoogleEventBody(event)
+    try {
+      await googleEvents.insert({
+        calendarId,
+        requestBody: {
+          ...eventBody,
+          id,
+          extendedProperties: {
+            private: { ...eventBody.extendedProperties.private, ontrackSyncId: id }
+          }
+        }
+      })
+      return 'added'
+    } catch (error) {
+      if (!isRecord(error) || (error.code !== 409 && error.status !== 409)) throw error
+      const { data } = await googleEvents.get({ calendarId, eventId: id })
+      if (data.id !== id || data.extendedProperties?.private?.ontrackSyncId !== id) {
+        throw new Error('Google Calendar returned a conflicting event ID that cannot be verified.')
+      }
+      return 'already-synced'
+    }
+  })
+  response.json({ result })
 })
 
 router.post('/api/google/calendar/events', async (request, response) => {
@@ -366,7 +418,13 @@ router.patch('/api/google/calendar/events/:eventId', async (request, response) =
       requestBody: toGoogleEventBody(event)
     })
 
-  response.json({ event: normalizeGoogleCalendarEvent(data, calendarId, event.timeZone) })
+  const syncEntries = await calendarSync.list(userId, calendarId)
+  response.json({
+    event: {
+      ...normalizeGoogleCalendarEvent(data, calendarId, event.timeZone),
+      ...(data.id && Object.hasOwn(syncEntries, data.id) ? { googleSourceId: syncEntries[data.id] } : {})
+    }
+  })
 })
 
 router.delete('/api/google/calendar/events/:eventId', async (request, response) => {

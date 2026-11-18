@@ -5,6 +5,7 @@ import { mkdtemp, readdir, rmdir, unlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { CalendarSelectionStore } from '../src/calendarSelection.ts'
+import { CalendarSyncStore, syncEventId } from '../src/calendarSync.ts'
 import { isValidTimeZone, normalizeGoogleCalendarEvent } from '../src/calendarEvent.ts'
 
 test('calendar selections persist per user, reset safely, and do not overwrite existing migrations', async () => {
@@ -58,4 +59,29 @@ test('normalizes timed events in the user time zone and preserves all-day dates'
   assert.equal(previousDay.time, '22:30')
   assert.equal(isValidTimeZone('Not/AZone'), false)
   assert.throws(() => normalizeGoogleCalendarEvent({ id: 'bad' }, 'calendar-1', 'UTC'), /invalid ID or start time/)
+})
+
+test('sync records serialize retries and persist separately per account and calendar', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'ontrack-sync-test-'))
+  try {
+    const store = new CalendarSyncStore(directory)
+    let calls = 0
+    const create = async () => { calls++; return 'added' }
+    const results = await Promise.all([
+      store.sync('user', 'calendar', 42, create),
+      store.sync('user', 'calendar', 42, create)
+    ])
+    assert.deepEqual(results, ['added', 'already-synced'])
+    assert.equal(calls, 1)
+    const restarted = new CalendarSyncStore(directory)
+    assert.equal(await restarted.sync('user', 'calendar', 42, create), 'already-synced')
+    assert.equal((await restarted.list('user', 'calendar'))[syncEventId('user', 'calendar', 42)], 42)
+    assert.equal(await restarted.sync('other-user', 'calendar', 42, create), 'added')
+    assert.equal(await restarted.sync('user', 'other-calendar', 42, create), 'added')
+    await assert.rejects(restarted.sync('user', 'calendar', 43, async () => { throw new Error('failed') }), /failed/)
+    assert.equal(await restarted.sync('user', 'calendar', 43, create), 'added')
+  } finally {
+    for (const name of await readdir(directory)) await unlink(join(directory, name))
+    await rmdir(directory)
+  }
 })

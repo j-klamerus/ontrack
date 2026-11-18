@@ -13,8 +13,13 @@ test('calendar selection migrates once without overwriting a backend choice or r
   const originalFetch = globalThis.fetch
   let selection = { initialized: false, calendarId: null }
   let fail = false
-  globalThis.fetch = async (_url, init) => {
+  const syncRequests = []
+  globalThis.fetch = async (url, init) => {
     if (fail) return new Response(JSON.stringify({ error: 'Storage unavailable' }), { status: 503 })
+    if (String(url).endsWith('/sync-event')) {
+      syncRequests.push(JSON.parse(init.body))
+      return Response.json({ result: syncRequests.length === 1 ? 'added' : 'already-synced' })
+    }
     if (init?.method === 'PUT') {
       const body = JSON.parse(init.body)
       if (!body.onlyIfUnset || !selection.initialized) {
@@ -42,6 +47,22 @@ test('calendar selection migrates once without overwriting a backend choice or r
     fail = true
     await assert.rejects(service.getSelectedGoogleCalendarId('first'), /Storage unavailable/)
     assert.equal(values.get('ontrack-google-calendar-id:first'), 'keep-on-error')
+    fail = false
+
+    const localEvent = {
+      id: 123, title: 'Study', course: 'BIO', date: '2025-03-10', time: '09:30',
+      category: 'Other', priority: 'Medium', description: 'Notes'
+    }
+    assert.equal(await service.syncOnTrackEvent('shared', localEvent), 'added')
+    assert.equal(await service.syncOnTrackEvent('shared', localEvent), 'already-synced')
+    assert.equal(syncRequests[0].calendarId, 'shared')
+    assert.equal(syncRequests[0].localEventId, 123)
+    assert.equal(syncRequests[0].summary, 'Study')
+    assert.equal(new Date(syncRequests[0].endDateTime) - new Date(syncRequests[0].startDateTime), 60 * 60000)
+    await assert.rejects(service.syncOnTrackEvent('shared', { ...localEvent, googleEventId: 'google-id' }), /cannot be synced/)
+    fail = true
+    await assert.rejects(service.syncOnTrackEvent('shared', localEvent), /Storage unavailable/)
+    fail = false
 
     const calendars = [
       { id: 'primary', primary: true, accessRole: 'owner' },

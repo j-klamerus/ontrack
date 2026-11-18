@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import express from 'express'
 import { google } from 'googleapis'
+import { syncEventId } from '../src/calendarSync.ts'
 
 test('calendar API authenticates, stores selections, and normalizes Google events', async () => {
   const originalDirectory = process.cwd()
@@ -29,16 +30,35 @@ test('calendar API authenticates, stores selections, and normalizes Google event
     end: { dateTime: '2025-03-09T07:30:00Z' }
   }
   const listRequests = []
+  const syncedEvents = new Map()
+  let syncInserts = 0
+  let failAfterInsert = false
   google.calendar = () => ({
     events: {
       list: async (options) => {
         listRequests.push(options)
         return options.pageToken
-          ? { data: { items: [{ ...event, id: 'event-2' }] } }
+          ? { data: { items: [{ ...event, id: 'event-2' }, ...[...syncedEvents.values()].filter((item) => item.calendarId === options.calendarId).map((item) => item.event)] } }
           : { data: { items: [event], nextPageToken: 'next-page' } }
       },
-      insert: async () => ({ data: event }),
-      patch: async () => ({ data: event })
+      insert: async ({ calendarId, requestBody }) => {
+        if (!requestBody.id) return { data: event }
+        syncInserts++
+        const key = `${calendarId}:${requestBody.id}`
+        if (syncedEvents.has(key)) throw Object.assign(new Error('Conflict'), { status: 409 })
+        const saved = { ...requestBody }
+        syncedEvents.set(key, { calendarId, event: saved })
+        if (failAfterInsert) {
+          failAfterInsert = false
+          throw Object.assign(new Error('Response lost'), { code: 503 })
+        }
+        return { data: saved }
+      },
+      get: async ({ calendarId, eventId }) => ({ data: syncedEvents.get(`${calendarId}:${eventId}`).event }),
+      patch: async ({ calendarId, eventId, requestBody }) => {
+        const stored = syncedEvents.get(`${calendarId}:${eventId}`)
+        return { data: stored ? { ...stored.event, ...requestBody } : event }
+      }
     }
   })
   globalThis.fetch = async (input, init) => {
@@ -56,6 +76,9 @@ test('calendar API authenticates, stores selections, and normalizes Google event
   app.use(express.json())
   const { default: router } = await import('../src/googleCalendar.ts')
   app.use(router)
+  app.use((error, _request, response, _next) => {
+    response.status(500).json({ error: error.message })
+  })
   const server = await new Promise((resolve) => {
     const listener = app.listen(0, '127.0.0.1', () => resolve(listener))
   })
@@ -108,6 +131,40 @@ test('calendar API authenticates, stores selections, and normalizes Google event
       assert.equal(saved.status, method === 'POST' ? 201 : 200)
       assert.equal((await saved.json()).event.time, '01:30')
     }
+
+    const sync = (body, token = 'user-one') => originalFetch(`${base}/api/google/calendar/sync-event`, {
+      method: 'POST', headers: { ...headers, Authorization: `Bearer ${token}` }, body: JSON.stringify(body)
+    })
+    const syncPayload = { ...payload, localEventId: 123 }
+    assert.equal((await sync(syncPayload, 'user-two')).status, 409)
+    assert.equal((await sync({ ...payload, localEventId: {} })).status, 400)
+    assert.deepEqual(await (await sync(syncPayload)).json(), { result: 'added' })
+    assert.deepEqual(await (await sync({ ...syncPayload, summary: 'Changed locally' })).json(), { result: 'already-synced' })
+    assert.equal(syncInserts, 1)
+    const afterSync = await (await originalFetch(`${base}/api/google/calendar/events?calendarId=work&timeZone=UTC`, { headers })).json()
+    const copied = afterSync.events.find((item) => item.googleSourceId === 123)
+    assert.equal(copied.title, 'Test event')
+    const updatedCopy = await originalFetch(`${base}/api/google/calendar/events/${copied.googleEventId}`, {
+      method: 'PATCH', headers, body: JSON.stringify({ ...payload, summary: 'Updated on Google' })
+    })
+    assert.equal((await updatedCopy.json()).event.googleSourceId, 123)
+    syncedEvents.delete(`work:${copied.googleEventId}`)
+    assert.deepEqual(await (await sync(syncPayload)).json(), { result: 'already-synced' })
+    assert.equal(syncInserts, 1)
+    assert.deepEqual(await (await sync({ ...syncPayload, calendarId: 'other' })).json(), { result: 'added' })
+    assert.equal(syncInserts, 2)
+
+    failAfterInsert = true
+    const retryPayload = { ...syncPayload, localEventId: 456 }
+    assert.equal((await sync(retryPayload)).status, 500)
+    assert.deepEqual(await (await sync(retryPayload)).json(), { result: 'already-synced' })
+    assert.deepEqual(await (await sync(retryPayload)).json(), { result: 'already-synced' })
+    assert.equal(syncInserts, 4)
+    const conflictId = syncEventId('user-one', 'work', 789)
+    syncedEvents.set(`work:${conflictId}`, { calendarId: 'work', event: { id: conflictId } })
+    const conflict = await sync({ ...syncPayload, localEventId: 789 })
+    assert.equal(conflict.status, 500)
+    assert.match((await conflict.json()).error, /conflicting event ID/)
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
     globalThis.fetch = originalFetch
@@ -122,6 +179,9 @@ test('calendar API authenticates, stores selections, and normalizes Google event
     const selections = join(directory, '.ontrack-data', 'calendar-selections')
     for (const name of await readdir(selections)) await unlink(join(selections, name))
     await rmdir(selections)
+    const syncDirectory = join(directory, '.ontrack-data', 'calendar-sync')
+    for (const name of await readdir(syncDirectory)) await unlink(join(syncDirectory, name))
+    await rmdir(syncDirectory)
     await rmdir(join(directory, '.ontrack-data'))
     await rmdir(directory)
   }

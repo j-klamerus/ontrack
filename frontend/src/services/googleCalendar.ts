@@ -40,6 +40,8 @@ function parseGoogleCalendarEvent(value: unknown, calendarId: string): CalendarE
     typeof value.googleDurationMinutes !== 'number' || !Number.isFinite(value.googleDurationMinutes) ||
     value.googleDurationMinutes <= 0 ||
     typeof value.googleAllDay !== 'boolean' || typeof value.googleLastDate !== 'string' ||
+    (value.googleSourceId !== undefined &&
+      typeof value.googleSourceId !== 'string' && typeof value.googleSourceId !== 'number') ||
     typeof value.title !== 'string' || typeof value.course !== 'string' ||
     typeof value.date !== 'string' || typeof value.time !== 'string' ||
     typeof value.category !== 'string' || !isEventPriority(value.priority) ||
@@ -54,6 +56,7 @@ function parseGoogleCalendarEvent(value: unknown, calendarId: string): CalendarE
     googleDurationMinutes: value.googleDurationMinutes,
     googleAllDay: value.googleAllDay,
     googleLastDate: value.googleLastDate,
+    ...(value.googleSourceId !== undefined ? { googleSourceId: value.googleSourceId } : {}),
     title: value.title,
     course: value.course,
     date: value.date,
@@ -181,6 +184,36 @@ function toGoogleEventRequest(calendarId: string, event: GoogleCalendarEventInpu
     endDateTime: event.endDateTime,
     timeZone: event.timeZone
   }
+}
+
+export function toGoogleCalendarEventInput(event: CalendarEvent): GoogleCalendarEventInput {
+  const start = new Date(`${event.date}T${event.time}:00`)
+  if (Number.isNaN(start.getTime())) {
+    throw new Error('Enter a valid event date and time.')
+  }
+  const end = new Date(start.getTime() + (event.googleDurationMinutes ?? 60) * 60000)
+  return {
+    title: event.title,
+    course: event.course,
+    description: event.description,
+    category: event.category,
+    priority: event.priority,
+    startDateTime: start.toISOString(),
+    endDateTime: end.toISOString(),
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  }
+}
+
+export async function syncOnTrackEvent(calendarId: string, event: CalendarEvent): Promise<'added' | 'already-synced'> {
+  if (event.googleEventId) throw new Error('Google Calendar events cannot be synced as On Track events.')
+  const response = await requestGoogleCalendar('/api/google/calendar/sync-event', {
+    method: 'POST',
+    body: JSON.stringify({ ...toGoogleEventRequest(calendarId, toGoogleCalendarEventInput(event)), localEventId: event.id })
+  })
+  if (!isRecord(response) || (response.result !== 'added' && response.result !== 'already-synced')) {
+    throw new Error('The backend returned an invalid sync result.')
+  }
+  return response.result
 }
 
 function parseSavedGoogleEvent(response: unknown, calendarId: string): CalendarEvent {

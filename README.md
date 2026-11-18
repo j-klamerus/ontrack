@@ -74,6 +74,8 @@ After connecting Google Calendar in Settings, choose a **Primary calendar for On
 
 Google events are fetched live for the displayed month or week, alongside On Track's local events; they are not imported as independent copies. Navigate to another range or use **Refresh Google Calendar** to fetch changes made in Google. A connection is required to view them. All-day Google events can be viewed and deleted here, but must be edited in Google Calendar.
 
+To copy On Track calendar events to the selected writable Google Calendar, use **Sync to Google** on the Calendar page and select the events to add. The list includes demo events and confirmed suggestions; commitments are not included. Copies are one hour long. Sync is add-only: repeated syncs do not duplicate or update an event, and subsequent edits or deletions are not propagated. Google copies are shown separately from the original On Track events. Sync records are stored per account and calendar under `backend/.ontrack-data/calendar-sync`; preserve this directory along with calendar selections when moving or backing up the backend. On Track's demo events use dates relative to the current day, and locally added events are currently session-only.
+
 Calendar selection, category edits, and preference changes are applied with **Save Changes**. You will be warned before leaving Settings with unsaved changes. Reset to Defaults opens a review where you can choose which preferences, calendar selection, and individual custom categories to reset; applying those resets takes effect immediately. Removing a custom category moves local events and commitments using it to Other. It does not modify categories stored in Google Calendar events.
 
 ### Test Everything is working Properly

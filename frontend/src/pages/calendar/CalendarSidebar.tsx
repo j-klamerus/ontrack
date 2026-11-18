@@ -75,7 +75,7 @@ function CalendarSidebar({
                 category={event.category}
                 priority={event.priority}
                 dateLabel={`${formatFullDate(selectedDateIso)} · ${event.googleAllDay ? 'All day' : event.date !== selectedDateIso ? 'Continues' : formatTime(event.time)}`}
-                subtitle={event.course}
+                subtitle={event.googleSourceId !== undefined ? `${event.course} · Google copy` : event.course}
                 description={event.description}
                 actionsOnHover
                 actionsPlacement="right"

@@ -11,6 +11,7 @@ type CalendarToolbarProps = {
   googleCalendarName: string | null
   isGoogleCalendarLoading: boolean
   onRefreshGoogleCalendar: () => void
+  onSyncGoogleCalendar: () => void
 }
 
 function CalendarToolbar({
@@ -21,7 +22,8 @@ function CalendarToolbar({
   onViewModeChange,
   googleCalendarName,
   isGoogleCalendarLoading,
-  onRefreshGoogleCalendar
+  onRefreshGoogleCalendar,
+  onSyncGoogleCalendar
 }: CalendarToolbarProps) {
   return (
     <div className="calendar-toolbar">
@@ -36,6 +38,15 @@ function CalendarToolbar({
       </div>
 
       <div className="toolbar-actions">
+        <button
+          type="button"
+          className="today-button"
+          onClick={onSyncGoogleCalendar}
+          disabled={isGoogleCalendarLoading}
+          title="Choose On Track events to add to Google Calendar"
+        >
+          Sync to Google
+        </button>
         <button
           type="button"
           className="today-button"

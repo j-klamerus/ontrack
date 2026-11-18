@@ -5,6 +5,7 @@ import CommitmentFormModal from './commitments/CommitmentFormModal'
 import CalendarGrid from './calendar/CalendarGrid'
 import CalendarSidebar from './calendar/CalendarSidebar'
 import CalendarToolbar from './calendar/CalendarToolbar'
+import SyncGoogleEventsModal from './calendar/SyncGoogleEventsModal'
 import {
   getDateFromIso,
   getIsoDate,
@@ -30,8 +31,8 @@ import {
   getGoogleCalendarStatus,
   getSelectedGoogleCalendarId,
   resolveSelectedGoogleCalendar,
+  toGoogleCalendarEventInput,
   updateGoogleCalendarEvent,
-  type GoogleCalendarEventInput
 } from '../services/googleCalendar'
 import {
   confirmDashboardSuggestion,
@@ -88,6 +89,7 @@ function Calendar({ userId }: { userId: string }) {
   const [selectedGoogleCalendarName, setSelectedGoogleCalendarName] = useState<string | null>(null)
   const [isGoogleCalendarLoading, setIsGoogleCalendarLoading] = useState(true)
   const [googleRefresh, setGoogleRefresh] = useState(0)
+  const [showSyncModal, setShowSyncModal] = useState(false)
   const [suggestionError, setSuggestionError] = useState<string | null>(null)
   const [savingSuggestionId, setSavingSuggestionId] = useState<number | null>(null)
   const [editingSuggestion, setEditingSuggestion] = useState<CalendarSuggestion | null>(null)
@@ -245,7 +247,7 @@ function Calendar({ userId }: { userId: string }) {
     const items: CalendarScheduleItem[] = [
       ...events.map((event) => ({
         id: `event-${event.id}`,
-        title: event.title,
+        title: event.googleSourceId !== undefined ? `${event.title} (Google copy)` : event.title,
         date: event.date,
         time: event.time,
         allDay: event.googleAllDay,
@@ -296,6 +298,18 @@ function Calendar({ userId }: { userId: string }) {
     setFormData(createEmptyForm(selectedDate))
     setFormError(null)
     setShowEventForm(true)
+  }
+
+  const openSyncModal = () => {
+    if (!googleCalendarConnected) {
+      setGoogleCalendarError('Connect Google Calendar in Settings before syncing events.')
+    } else if (!selectedGoogleCalendarId) {
+      setGoogleCalendarError('Choose an available Google Calendar in Settings before syncing events.')
+    } else if (!selectedGoogleCalendarCanWrite) {
+      setGoogleCalendarError('The selected Google Calendar is read-only. Choose a calendar with write access in Settings.')
+    } else {
+      setShowSyncModal(true)
+    }
   }
 
   const openEditForm = (event: CalendarEvent) => {
@@ -528,21 +542,7 @@ function Calendar({ userId }: { userId: string }) {
 
     if (existingEvent?.googleEventId && existingEvent.googleCalendarId) {
       try {
-        const start = new Date(`${preparedEvent.date}T${preparedEvent.time}:00`)
-        if (Number.isNaN(start.getTime())) {
-          throw new Error('Enter a valid event date and time.')
-        }
-        const end = new Date(start.getTime() + (existingEvent.googleDurationMinutes ?? 60) * 60000)
-        const eventInput: GoogleCalendarEventInput = {
-          title: preparedEvent.title,
-          course: preparedEvent.course,
-          description: preparedEvent.description,
-          category: preparedEvent.category,
-          priority: preparedEvent.priority,
-          startDateTime: start.toISOString(),
-          endDateTime: end.toISOString(),
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-        }
+        const eventInput = toGoogleCalendarEventInput(preparedEvent)
         const savedEvent = await updateGoogleCalendarEvent(
           existingEvent.googleCalendarId,
           existingEvent.googleEventId,
@@ -566,21 +566,7 @@ function Calendar({ userId }: { userId: string }) {
       }
 
       try {
-        const start = new Date(`${preparedEvent.date}T${preparedEvent.time}:00`)
-        if (Number.isNaN(start.getTime())) {
-          throw new Error('Enter a valid event date and time.')
-        }
-        const end = new Date(start.getTime() + 60 * 60000)
-        const eventInput: GoogleCalendarEventInput = {
-          title: preparedEvent.title,
-          course: preparedEvent.course,
-          description: preparedEvent.description,
-          category: preparedEvent.category,
-          priority: preparedEvent.priority,
-          startDateTime: start.toISOString(),
-          endDateTime: end.toISOString(),
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-        }
+        const eventInput = toGoogleCalendarEventInput(preparedEvent)
         const savedEvent = await createGoogleCalendarEvent(selectedGoogleCalendarId, eventInput)
         setEvents((currentEvents) => [...currentEvents, savedEvent])
       } catch (error) {
@@ -628,7 +614,7 @@ function Calendar({ userId }: { userId: string }) {
         .filter((event) => isEventOnDate(event, date))
         .map((event) => ({
           id: `event-${event.id}`,
-          title: event.title,
+          title: event.googleSourceId !== undefined ? `${event.title} (Google copy)` : event.title,
           date: event.date,
           time: event.time,
           allDay: event.googleAllDay,
@@ -679,6 +665,7 @@ function Calendar({ userId }: { userId: string }) {
             googleCalendarName={selectedGoogleCalendarName}
             isGoogleCalendarLoading={isGoogleCalendarLoading}
             onRefreshGoogleCalendar={() => setGoogleRefresh((current) => current + 1)}
+            onSyncGoogleCalendar={openSyncModal}
           />
 
           <PlannerKey categories={categoryOptions} page="calendar" />
@@ -731,6 +718,17 @@ function Calendar({ userId }: { userId: string }) {
           onClose={() => setShowEventForm(false)}
           onDelete={handleDeleteEvent}
           onSubmit={handleFormSubmit}
+        />
+      )}
+      {showSyncModal && selectedGoogleCalendarId && selectedGoogleCalendarName && (
+        <SyncGoogleEventsModal
+          calendarId={selectedGoogleCalendarId}
+          calendarName={selectedGoogleCalendarName}
+          events={events.filter((event) => !event.googleEventId)}
+          onClose={(refresh) => {
+            setShowSyncModal(false)
+            if (refresh) setGoogleRefresh((current) => current + 1)
+          }}
         />
       )}
       {editingCommitment && (

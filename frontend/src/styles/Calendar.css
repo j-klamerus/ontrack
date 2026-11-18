@@ -19,6 +19,33 @@
   font-size: 14px;
 }
 
+.calendar-sync-list {
+  display: grid;
+  gap: 8px;
+  max-height: 45vh;
+  overflow-y: auto;
+  margin: 16px 0;
+}
+
+.calendar-sync-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+.calendar-sync-option > span {
+  display: grid;
+  gap: 4px;
+}
+
+.calendar-sync-option > span > span {
+  color: #475569;
+  font-size: 13px;
+}
+
 .today-button:disabled,
 .add-event-button:disabled {
   cursor: wait;
