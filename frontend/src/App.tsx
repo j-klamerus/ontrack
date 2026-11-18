@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { User } from '@supabase/supabase-js'
 import {
   LayoutDashboard,
   Mail,
@@ -15,6 +16,7 @@ import Calendar from './pages/Calendar'
 import Settings from './pages/Settings'
 import { getEmails } from './services/emails'
 import { getDashboardSuggestions } from './services/dashboardSuggestions'
+import { getUserProfile } from './services/user'
 import {
   getPlannerPageChanges,
   markPlannerPageVisited,
@@ -27,11 +29,13 @@ type Page = 'Dashboard' | 'Inbox' | 'Commitments' | 'Calendar' | 'Settings'
 type SuggestionCounts = Record<PlannerPage, number>
 
 type AppProps = {
+  user: User
   onLogOut: () => void
   authError: string | null
 }
 
-function App({ onLogOut, authError }: AppProps) {
+function App({ user, onLogOut, authError }: AppProps) {
+  const profile = getUserProfile(user)
   const [currentPage, setCurrentPage] = useState<Page>('Dashboard')
   const [unreadEmailCount, setUnreadEmailCount] = useState(0)
   const [navigationError, setNavigationError] = useState<string | null>(null)
@@ -114,11 +118,11 @@ function App({ onLogOut, authError }: AppProps) {
   }, [currentPage])
 
   const pages = {
-    Dashboard: <Dashboard />,
+    Dashboard: <Dashboard user={profile} />,
     Inbox: <Inbox onUnreadCountChange={setUnreadEmailCount} />,
     Commitments: <Commitments />,
     Calendar: <Calendar />,
-    Settings: <Settings onLogOut={onLogOut} />
+    Settings: <Settings user={profile} onLogOut={onLogOut} />
   }
 
   const navigationItems = [

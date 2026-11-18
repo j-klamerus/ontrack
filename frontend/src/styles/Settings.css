@@ -190,6 +190,10 @@
   gap: 16px;
 }
 
+.field-group + .field-note {
+  margin: 16px 0 0;
+}
+
 .settings-page .field-group > label,
 .settings-page .select-field {
   display: flex;

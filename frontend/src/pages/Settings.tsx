@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import demoUser from '../data/demoUser.json'
 import {
   addCustomEventCategory,
   getEventCategoryDefinitions,
@@ -19,11 +18,10 @@ import type { EventCategoryDefinition } from '../constants/eventCategories'
 import CategorySettingsCard from './settings/CategorySettingsCard'
 import PreferenceSettingsCards from './settings/PreferenceSettingsCards'
 import type { SettingsState } from './settings/types'
+import type { UserProfile } from '../types/user'
 import '../styles/Settings.css'
 
 const defaultSettings: SettingsState = {
-  studentName: demoUser.name,
-  studentEmail: demoUser.email,
   priorityEmailFiltering: true,
   highlightAssignments: true,
   highlightDeadlines: true,
@@ -39,10 +37,11 @@ const defaultSettings: SettingsState = {
 }
 
 type SettingsProps = {
+  user: UserProfile
   onLogOut: () => void
 }
 
-function Settings({ onLogOut }: SettingsProps) {
+function Settings({ user, onLogOut }: SettingsProps) {
   const [settings, setSettings] = useState<SettingsState>(() => {
     try {
       const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY)
@@ -51,7 +50,12 @@ function Settings({ onLogOut }: SettingsProps) {
         return defaultSettings
       }
 
-      const parsedSettings = JSON.parse(storedSettings) as Partial<SettingsState>
+      const parsedSettings = JSON.parse(storedSettings) as Partial<SettingsState> & {
+        studentName?: unknown
+        studentEmail?: unknown
+      }
+      delete parsedSettings.studentName
+      delete parsedSettings.studentEmail
       return {
         ...defaultSettings,
         ...parsedSettings,
@@ -165,7 +169,7 @@ function Settings({ onLogOut }: SettingsProps) {
           onRemoveCategory={handleRemoveCategory}
         />
 
-        <PreferenceSettingsCards settings={settings} updateSetting={updateSetting} />
+        <PreferenceSettingsCards user={user} settings={settings} updateSetting={updateSetting} />
       </div>
 
       <div className="settings-actions">

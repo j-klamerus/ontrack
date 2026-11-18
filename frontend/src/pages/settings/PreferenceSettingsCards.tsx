@@ -1,13 +1,15 @@
 import type { SettingsState } from './types'
+import type { UserProfile } from '../../types/user'
 import ToggleRow from './ToggleRow'
 import GoogleCalendarConnectionCard from './GoogleCalendarConnectionCard'
 
 type PreferenceSettingsCardsProps = {
+  user: UserProfile
   settings: SettingsState
   updateSetting: <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void
 }
 
-function PreferenceSettingsCards({ settings, updateSetting }: PreferenceSettingsCardsProps) {
+function PreferenceSettingsCards({ user, settings, updateSetting }: PreferenceSettingsCardsProps) {
   return (
     <>
       <div className="settings-card">
@@ -64,8 +66,9 @@ function PreferenceSettingsCards({ settings, updateSetting }: PreferenceSettings
             <input
               id="student-name"
               type="text"
-              value={settings.studentName}
-              onChange={(event) => updateSetting('studentName', event.target.value)}
+              value={user.name}
+              placeholder="Not available"
+              readOnly
             />
           </label>
           <label htmlFor="student-email">
@@ -73,11 +76,13 @@ function PreferenceSettingsCards({ settings, updateSetting }: PreferenceSettings
             <input
               id="student-email"
               type="email"
-              value={settings.studentEmail}
-              onChange={(event) => updateSetting('studentEmail', event.target.value)}
+              value={user.email}
+              placeholder="Not available"
+              readOnly
             />
           </label>
         </div>
+        <p className="field-note">Profile details come from your signed-in account.</p>
       </div>
 
       <div className="settings-card">

@@ -21,7 +21,6 @@ import {
   dismissDashboardSuggestion
 } from '../services/reviewedSuggestions'
 import { recordPlannerPageChange } from '../services/plannerNavigation'
-import { getUserProfile } from '../services/user'
 import type { CalendarEvent, EventPriority } from '../types/calendarEvent'
 import type { Commitment } from '../types/commitment'
 import type { DashboardSuggestion } from '../types/dashboardSuggestion'
@@ -32,7 +31,7 @@ import '../styles/Dashboard.css'
 
 const eventPriorities: EventPriority[] = ['High', 'Medium', 'Low']
 
-function Dashboard() {
+function Dashboard({ user }: { user: UserProfile }) {
   const eventCategories = getEventCategories()
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [emails, setEmails] = useState<StudentEmail[]>([])
@@ -41,7 +40,6 @@ function Dashboard() {
   const [commitments, setCommitments] = useState<Commitment[]>([])
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [suggestions, setSuggestions] = useState<DashboardSuggestion[]>([])
-  const [user, setUser] = useState<UserProfile | null>(null)
   const [confirmedSuggestions, setConfirmedSuggestions] = useState<DashboardUpcomingItem[]>([])
   const [editingSuggestion, setEditingSuggestion] = useState<DashboardSuggestion | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -53,10 +51,9 @@ function Dashboard() {
       getEmails(),
       getCommitments(),
       getCalendarEvents(),
-      getDashboardSuggestions(),
-      getUserProfile()
+      getDashboardSuggestions()
     ])
-      .then(([loadedEmails, loadedCommitments, loadedEvents, loadedSuggestions, loadedUser]) => {
+      .then(([loadedEmails, loadedCommitments, loadedEvents, loadedSuggestions]) => {
         setEmails(loadedEmails)
         try {
           setSuggestedReplies(getSuggestedReplies())
@@ -66,7 +63,6 @@ function Dashboard() {
         setCommitments(loadedCommitments)
         setEvents(loadedEvents)
         setSuggestions(loadedSuggestions)
-        setUser(loadedUser)
         setSummary({
           totalEmails: loadedEmails.length,
           highPriorityEmails: loadedEmails.filter((email) => email.priority === 'High').length,
@@ -170,7 +166,7 @@ function Dashboard() {
     return <section className="dashboard-page" role="alert">{loadError}</section>
   }
 
-  if (!summary || !user) {
+  if (!summary) {
     return <section className="dashboard-page" role="status">Loading dashboard...</section>
   }
 
@@ -180,7 +176,7 @@ function Dashboard() {
         <h2>Your Overview</h2>
 
         <p className="summary-description">
-          Welcome back, {user.name}! Stay on top of important emails, commitments, and upcoming events.
+          Welcome back{user.name || user.email ? `, ${user.name || user.email}` : ''}! Stay on top of important emails, commitments, and upcoming events.
         </p>
 
         {actionError && <p className="suggestion-action-error" role="alert">{actionError}</p>}

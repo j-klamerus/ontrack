@@ -41,6 +41,7 @@ VITE_SUPABASE_ANON_KEY=your-supabase-publishable-key
 ~~~
 Restart Vite after changing this file. In Supabase, enable the Email provider for password sign-in and account creation. To use "Continue with Google", enable the Google provider under Authentication > Sign In / Providers, add the Supabase callback URL shown there to your Google OAuth client's authorized redirect URIs, and add your local and deployed frontend origins to Supabase's allowed redirect URLs. Gmail API access is separate from Google sign-in and requires its own Gmail authorization flow.
 
+The dashboard and Student Profile show details from the signed-in account. Profile fields are read-only; email/password accounts do not provide a name during registration, so the dashboard uses the email address when no name is available.
 
 
 ### Setup the Backend
