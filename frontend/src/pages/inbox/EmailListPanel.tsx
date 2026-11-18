@@ -94,7 +94,7 @@ function EmailListPanel({
         </div>
         {scanError && <p className="inbox-scan-error" role="alert">{scanError}</p>}
         {!isScanned && !scanError && (
-          <p className="inbox-scan-note">Categories, tags, and priorities are added when you scan emails.</p>
+          <p className="inbox-scan-note">Categories, tags, priorities, and spam matches are added when you scan emails.</p>
         )}
 
         <label className="inbox-search-field" htmlFor="inbox-search">
@@ -209,13 +209,18 @@ function EmailListPanel({
 
                 <div className="meta-row">
                   <span>{formatDate(email.date)}</span>
-                  {email.priority ? (
-                    <span className={`priority-badge priority-${email.priority.toLowerCase()}`}>
-                      {email.priority}
-                    </span>
-                  ) : isScanned ? (
-                    <span className="priority-badge priority-none">No priority detected</span>
-                  ) : null}
+                  <span className="email-meta-badges">
+                    {email.spamDetected && (
+                      <span className="detail-chip spam-detected-chip">Spam detected</span>
+                    )}
+                    {email.priority ? (
+                      <span className={`priority-badge priority-${email.priority.toLowerCase()}`}>
+                        {email.priority}
+                      </span>
+                    ) : isScanned ? (
+                      <span className="priority-badge priority-none">No priority detected</span>
+                    ) : null}
+                  </span>
                 </div>
 
                 <p className="email-preview">{email.preview}</p>

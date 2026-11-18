@@ -6,6 +6,7 @@ import MessageDetailPanel from './inbox/MessageDetailPanel'
 import { getEmails, saveEmailReadStates, saveEmailReadState } from '../services/emails'
 import { getEmailRules } from '../services/emailRules'
 import { getEmailPriorityRules } from '../services/emailPriorityRules'
+import { getEmailSpamSettings } from '../services/emailSpamSettings'
 import {
   evaluateEmailRules,
   type EmailRuleEvaluation
@@ -15,7 +16,7 @@ import {
   getSuggestedReplies
 } from '../services/suggestedReplies'
 import type { EmailPriority, EmailSignal, StudentEmail } from '../types/email'
-import type { EmailPriorityRule, EmailRule } from '../types/emailRule'
+import type { EmailPriorityRule, EmailRule, EmailSpamRule } from '../types/emailRule'
 import {
   signalOptions,
   type EmailFilter,
@@ -42,6 +43,8 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   const [emails, setEmails] = useState<StudentEmail[]>([])
   const [emailRules, setEmailRules] = useState<EmailRule[]>([])
   const [priorityRules, setPriorityRules] = useState<EmailPriorityRule[]>([])
+  const [spamRules, setSpamRules] = useState<EmailSpamRule[]>([])
+  const [blockedSenders, setBlockedSenders] = useState<string[]>([])
   const [ruleEvaluations, setRuleEvaluations] = useState<EmailRuleEvaluation[] | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -65,6 +68,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
         const loadedEmails = await getEmails()
         const loadedRules = getEmailRules()
         const loadedPriorityRules = getEmailPriorityRules()
+        const loadedSpamSettings = getEmailSpamSettings()
         if (!isMounted) {
           return
         }
@@ -73,6 +77,8 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
         setSelectedId(loadedEmails[0]?.id ?? null)
         setEmailRules(loadedRules)
         setPriorityRules(loadedPriorityRules)
+        setSpamRules(loadedSpamSettings.rules)
+        setBlockedSenders(loadedSpamSettings.blockedSenders)
         try {
           setSuggestedReplies(getSuggestedReplies())
         } catch (error) {
@@ -102,7 +108,13 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
     setIsScanning(true)
     setScanError(null)
     try {
-      const results = await evaluateEmailRules(emails, emailRules, priorityRules)
+      const results = await evaluateEmailRules(
+        emails,
+        emailRules,
+        priorityRules,
+        spamRules,
+        blockedSenders
+      )
       setRuleEvaluations(results)
     } catch (error) {
       setScanError(error instanceof Error ? error.message : 'Unable to scan emails.')
@@ -133,6 +145,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
       return {
         ...email,
         priority: ruleEvaluations === null ? null : evaluation?.priority ?? null,
+        spamDetected: ruleEvaluations === null ? false : evaluation?.spamDetected ?? false,
         signals
       }
     }),
@@ -157,7 +170,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
         return false
       }
 
-      if (activeFilter === 'Spam' && !email.spam) {
+      if (activeFilter === 'Spam' && !email.spam && !email.spamDetected) {
         return false
       }
 
@@ -195,7 +208,8 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
         email.warning ?? '',
         email.read ? 'read' : 'unread',
         email.important ? 'important' : '',
-        email.spam ? 'spam' : 'inbox'
+        email.spam ? 'spam' : 'inbox',
+        email.spamDetected ? 'spam detected' : ''
       ]
         .join(' ')
         .toLowerCase()

@@ -1,4 +1,4 @@
-// Backend matching and ordering for category rules and separate priority rules.
+// Backend matching and ordering for category rules, priority rules, and spam detection.
 export type EmailRuleField = 'sender' | 'email' | 'subject' | 'body'
 export type EmailRuleOperator = 'contains' | 'regex'
 export type EmailPriority = 'High' | 'Medium' | 'Low'
@@ -22,6 +22,14 @@ export type EmailPriorityRule = {
   priority: EmailPriority
 }
 
+export type EmailSpamRule = {
+  id: string
+  enabled: boolean
+  field: EmailRuleField
+  operator: EmailRuleOperator
+  pattern: string
+}
+
 export type RuleEvaluationEmail = {
   id: number
   sender: string
@@ -38,6 +46,7 @@ export type EmailRuleEvaluation = {
   groupLabel: string
   groupOrder: number
   priority: EmailPriority | null
+  spamDetected: boolean
 }
 
 type RuleMatcher = Pick<EmailRule, 'field' | 'operator' | 'pattern'>
@@ -68,11 +77,13 @@ const ruleMatches = <TRule extends RuleMatcher>(
   return regex?.test(fieldValue) ?? false
 }
 
-/** Applies category and priority rules, returning null priority when none match. */
+/** Applies category, priority, and spam rules while preserving category ordering. */
 export function evaluateEmailRules(
   emails: RuleEvaluationEmail[],
   rules: EmailRule[],
-  priorityRules: EmailPriorityRule[] = []
+  priorityRules: EmailPriorityRule[] = [],
+  spamRules: EmailSpamRule[] = [],
+  blockedSenders: string[] = []
 ): EmailRuleEvaluation[] {
   const activeRules: CompiledRule<EmailRule>[] = rules
     .filter((rule) => rule.enabled)
@@ -86,6 +97,15 @@ export function evaluateEmailRules(
       rule,
       regex: rule.operator === 'regex' ? new RegExp(rule.pattern, 'i') : null
     }))
+  const activeSpamRules: CompiledRule<EmailSpamRule>[] = spamRules
+    .filter((rule) => rule.enabled)
+    .map((rule) => ({
+      rule,
+      regex: rule.operator === 'regex' ? new RegExp(rule.pattern, 'i') : null
+    }))
+  const blockedSenderAddresses = new Set(
+    blockedSenders.map((address) => address.trim().toLocaleLowerCase())
+  )
 
   // Keep every matching label, but use the first match as the sorting group.
   const orderedResults: OrderedEvaluation[] = emails.map((email, originalIndex) => {
@@ -94,6 +114,9 @@ export function evaluateEmailRules(
     const firstMatchingPriorityRule = activePriorityRules.find((compiledRule) =>
       ruleMatches(email, compiledRule)
     )
+    const spamDetected =
+      blockedSenderAddresses.has(email.email.trim().toLocaleLowerCase()) ||
+      activeSpamRules.some((compiledRule) => ruleMatches(email, compiledRule))
     const labels = [...new Set(matchingRules.map(({ rule }) => rule.label.trim()))]
     const groupOrder = firstMatchingRule
       ? activeRules.findIndex(({ rule }) => rule === firstMatchingRule)
@@ -106,7 +129,8 @@ export function evaluateEmailRules(
         groupId: firstMatchingRule?.id ?? 'other',
         groupLabel: firstMatchingRule?.label.trim() ?? 'Other',
         groupOrder,
-        priority: firstMatchingPriorityRule?.rule.priority ?? null
+        priority: firstMatchingPriorityRule?.rule.priority ?? null,
+        spamDetected
       },
       dateTime: Date.parse(email.date) || 0,
       originalIndex

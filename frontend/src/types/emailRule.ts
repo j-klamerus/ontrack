@@ -23,3 +23,16 @@ export type EmailPriorityRule = {
   pattern: string
   priority: EmailPriority
 }
+
+export type EmailSpamRule = {
+  id: string
+  enabled: boolean
+  field: EmailRuleField
+  operator: EmailRuleOperator
+  pattern: string
+}
+
+export type EmailSpamSettings = {
+  rules: EmailSpamRule[]
+  blockedSenders: string[]
+}

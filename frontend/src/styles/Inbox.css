@@ -349,6 +349,13 @@ body:has(.inbox-page)::-webkit-scrollbar {
   gap: 8px;
 }
 
+.email-meta-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
 .sender-name {
   font-weight: 700;
   color: #133048;
@@ -525,6 +532,12 @@ body:has(.inbox-page)::-webkit-scrollbar {
 .spam-chip {
   background: rgba(239, 68, 68, 0.08);
   color: #b91c1c;
+}
+
+.spam-detected-chip {
+  background: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+  padding: 5px 8px;
 }
 
 .signal-tags {

@@ -66,8 +66,11 @@ function MessageDetailPanel({
             ) : isScanned ? (
               <span className="priority-badge priority-none">No priority detected</span>
             ) : null}
+            {email.spamDetected && (
+              <span className="detail-chip spam-detected-chip">Spam detected</span>
+            )}
             {email.important && <span className="detail-chip">Important</span>}
-            {email.spam && <span className="detail-chip spam-chip">Spam</span>}
+            {email.spam && !email.spamDetected && <span className="detail-chip spam-chip">Spam</span>}
           </div>
 
           <div className="signal-tags">
@@ -79,6 +82,13 @@ function MessageDetailPanel({
           {email.warning && (
             <div className="warning-banner" role="alert">
               <strong>Scam warning:</strong> {email.warning}
+            </div>
+          )}
+
+          {email.spamDetected && (
+            <div className="info-card danger-card">
+              <span className="section-label">Spam detection</span>
+              <p>This message matched an enabled spam rule or blocked sender. It has not been moved automatically.</p>
             </div>
           )}
 

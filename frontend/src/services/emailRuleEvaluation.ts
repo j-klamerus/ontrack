@@ -1,6 +1,6 @@
 // Frontend API client for the category and priority results used by Inbox.
 import type { EmailPriority, StudentEmail } from '../types/email'
-import type { EmailPriorityRule, EmailRule } from '../types/emailRule'
+import type { EmailPriorityRule, EmailSpamRule, EmailRule } from '../types/emailRule'
 
 export type EmailRuleEvaluation = {
   emailId: number
@@ -9,6 +9,7 @@ export type EmailRuleEvaluation = {
   groupLabel: string
   groupOrder: number
   priority: EmailPriority | null
+  spamDetected: boolean
 }
 
 type JsonRecord = Record<string, unknown>
@@ -31,20 +32,23 @@ const isEvaluationResult = (value: unknown): value is EmailRuleEvaluation =>
   typeof value.groupId === 'string' &&
   typeof value.groupLabel === 'string' &&
   typeof value.groupOrder === 'number' &&
-  (value.priority === null || isEmailPriority(value.priority))
+  (value.priority === null || isEmailPriority(value.priority)) &&
+  typeof value.spamDetected === 'boolean'
 
-/** Sends both rule sets to the backend and validates its classification and priority results. */
+/** Sends all enabled rule data to the backend and validates the scan results. */
 export async function evaluateEmailRules(
   emails: StudentEmail[],
   rules: EmailRule[],
-  priorityRules: EmailPriorityRule[]
+  priorityRules: EmailPriorityRule[],
+  spamRules: EmailSpamRule[] = [],
+  blockedSenders: string[] = []
 ): Promise<EmailRuleEvaluation[]> {
   let response: Response
   try {
     response = await fetch(`${API_BASE_URL}/api/email-rules/evaluate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emails, rules, priorityRules })
+      body: JSON.stringify({ emails, rules, priorityRules, spamRules, blockedSenders })
     })
   } catch {
     throw new Error(

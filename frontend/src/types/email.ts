@@ -15,6 +15,8 @@ export type StudentEmail = {
   important: boolean
   read: boolean
   spam: boolean
+  // Populated only by a successful Inbox scan; detection does not move the message to Spam.
+  spamDetected?: boolean
   // LEGACY: Demo records used to store these manually; Inbox now derives them after a rule scan.
   signals: EmailSignal[]
   summary: string

@@ -233,6 +233,85 @@
   cursor: not-allowed;
 }
 
+.spam-sender-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.spam-sender-settings h4 {
+  margin: 0 0 5px;
+  color: #133048;
+  font-size: 14px;
+}
+
+.spam-sender-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.settings-page .spam-sender-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  color: #133048;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.settings-page .spam-sender-form input {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid #dbe6f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #133048;
+  padding: 10px 11px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.settings-page .spam-sender-form input:focus {
+  outline: 2px solid rgba(28, 138, 253, 0.2);
+  border-color: #1c8afd;
+}
+
+.spam-sender-form .secondary-button {
+  min-height: 40px;
+}
+
+.spam-sender-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.spam-sender-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 13px;
+}
+
+.spam-sender-row > span {
+  overflow-wrap: anywhere;
+}
+
 .email-rule-list {
   display: flex;
   flex-direction: column;
@@ -778,6 +857,10 @@
   .email-rule-set {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .spam-sender-form {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .email-rule-set-actions {

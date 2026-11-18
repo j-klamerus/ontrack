@@ -8,6 +8,7 @@ import {
   evaluateEmailRules,
   type EmailRule,
   type EmailPriorityRule,
+  type EmailSpamRule,
   type RuleEvaluationEmail
 } from "./emailRuleEvaluator.js";
 
@@ -68,29 +69,41 @@ app.post('/api/email-rules/evaluate', (req, res) => {
     !isRecord(body) ||
     !Array.isArray(body.emails) ||
     !Array.isArray(body.rules) ||
-    (body.priorityRules !== undefined && !Array.isArray(body.priorityRules))
+    (body.priorityRules !== undefined && !Array.isArray(body.priorityRules)) ||
+    (body.spamRules !== undefined && !Array.isArray(body.spamRules)) ||
+    (body.blockedSenders !== undefined && !Array.isArray(body.blockedSenders))
   ) {
-    res.status(400).json({ error: 'Request must include email and category rule arrays, with an optional priority rule array.' })
+    res.status(400).json({ error: 'Request must include email and category rule arrays, with optional priority, spam rule, and blocked sender arrays.' })
     return
   }
 
   const priorityRules = Array.isArray(body.priorityRules) ? body.priorityRules : []
-  if (body.emails.length > 100 || body.rules.length > 50 || priorityRules.length > 50) {
-    res.status(400).json({ error: 'Evaluation supports up to 100 emails, 50 category rules, and 50 priority rules.' })
+  const spamRules = Array.isArray(body.spamRules) ? body.spamRules : []
+  const blockedSenders = Array.isArray(body.blockedSenders) ? body.blockedSenders : []
+  if (
+    body.emails.length > 100 ||
+    body.rules.length > 50 ||
+    priorityRules.length > 50 ||
+    spamRules.length > 50 ||
+    blockedSenders.length > 200
+  ) {
+    res.status(400).json({ error: 'Evaluation supports up to 100 emails, 50 rules per category, priority, or spam group, and 200 blocked senders.' })
     return
   }
 
   if (
     !body.emails.every(isRuleEvaluationEmail) ||
     !body.rules.every(isEmailRule) ||
-    !priorityRules.every(isEmailPriorityRule)
+    !priorityRules.every(isEmailPriorityRule) ||
+    !spamRules.every(isEmailSpamRule) ||
+    !blockedSenders.every(isBlockedSender)
   ) {
-    res.status(400).json({ error: 'Email or rule data has an invalid format.' })
+    res.status(400).json({ error: 'Email, rule, or blocked sender data has an invalid format.' })
     return
   }
 
   try {
-    const results = evaluateEmailRules(body.emails, body.rules, priorityRules)
+    const results = evaluateEmailRules(body.emails, body.rules, priorityRules, spamRules, blockedSenders)
     res.json({ results })
   } catch (error) {
     res.status(400).json({
@@ -176,6 +189,25 @@ const isEmailPriorityRule = (value: unknown): value is EmailPriorityRule =>
   value.pattern.trim().length > 0 &&
   value.pattern.length <= 200 &&
   (value.priority === 'High' || value.priority === 'Medium' || value.priority === 'Low')
+
+// Spam rules share the same match fields without category or priority outcomes.
+const isEmailSpamRule = (value: unknown): value is EmailSpamRule =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  value.id.length > 0 &&
+  value.id.length <= 100 &&
+  typeof value.enabled === 'boolean' &&
+  (value.field === 'sender' || value.field === 'email' || value.field === 'subject' || value.field === 'body') &&
+  (value.operator === 'contains' || value.operator === 'regex') &&
+  typeof value.pattern === 'string' &&
+  value.pattern.trim().length > 0 &&
+  value.pattern.length <= 200
+
+// Blocked sender entries are exact email addresses rather than domain-wide patterns.
+const isBlockedSender = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  value.length <= 320 &&
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
 
 // Restrict scan email fields and sizes at the API boundary.
 const isRuleEvaluationEmail = (value: unknown): value is RuleEvaluationEmail =>

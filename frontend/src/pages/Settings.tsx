@@ -19,6 +19,7 @@ import type { EventCategoryDefinition } from '../constants/eventCategories'
 import CategorySettingsCard from './settings/CategorySettingsCard'
 import EmailRulesCard from './settings/EmailRulesCard'
 import EmailPriorityRulesCard from './settings/EmailPriorityRulesCard'
+import EmailSpamSettingsCard from './settings/EmailSpamSettingsCard'
 import PreferenceSettingsCards from './settings/PreferenceSettingsCards'
 import type { SettingsState } from './settings/types'
 import '../styles/Settings.css'
@@ -171,6 +172,7 @@ function Settings({ onLogOut }: SettingsProps) {
         {/* Rules have their own storage and save lifecycle, separate from general preferences. */}
         <EmailRulesCard />
         <EmailPriorityRulesCard />
+        <EmailSpamSettingsCard />
       </div>
 
       <div className="settings-actions">
