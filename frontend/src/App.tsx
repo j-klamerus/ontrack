@@ -15,6 +15,7 @@ import Calendar from './pages/Calendar'
 import Settings from './pages/Settings'
 import { getEmails } from './services/emails'
 import { getDashboardSuggestions } from './services/dashboardSuggestions'
+import { SETTINGS_STORAGE_KEY } from './services/user'
 import {
   getPlannerPageChanges,
   markPlannerPageVisited,
@@ -22,9 +23,27 @@ import {
   type PlannerPage,
   type PlannerPageChanges
 } from './services/plannerNavigation'
+import type { PlannerItemSelection } from './types/plannerItemSelection'
+
+type Theme = 'light' | 'dark'
+
+const getInitialTheme = (): Theme => {
+  try {
+    const savedSettings = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
+    if (savedSettings) {
+      const parsedSettings = JSON.parse(savedSettings) as { darkTheme?: boolean }
+      return parsedSettings.darkTheme === true ? 'dark' : 'light'
+    }
+  } catch {
+    return 'light'
+  }
+
+  return 'light'
+}
 
 type Page = 'Dashboard' | 'Inbox' | 'Commitments' | 'Calendar' | 'Settings'
 type SuggestionCounts = Record<PlannerPage, number>
+type PendingSettingsExit = { type: 'navigate'; page: Page } | { type: 'logout' }
 
 type AppProps = {
   onLogOut: () => void
@@ -32,7 +51,12 @@ type AppProps = {
 }
 
 function App({ onLogOut, authError }: AppProps) {
+  const [theme, setTheme] = useState<Theme>(getInitialTheme)
   const [currentPage, setCurrentPage] = useState<Page>('Dashboard')
+  const [calendarSelection, setCalendarSelection] = useState<PlannerItemSelection | null>(null)
+  const [commitmentSelection, setCommitmentSelection] = useState<PlannerItemSelection | null>(null)
+  const [settingsHaveUnsavedChanges, setSettingsHaveUnsavedChanges] = useState(false)
+  const [pendingSettingsExit, setPendingSettingsExit] = useState<PendingSettingsExit | null>(null)
   const [unreadEmailCount, setUnreadEmailCount] = useState(0)
   const [navigationError, setNavigationError] = useState<string | null>(null)
   const [plannerPageChanges, setPlannerPageChanges] = useState<PlannerPageChanges>({
@@ -43,6 +67,10 @@ function App({ onLogOut, authError }: AppProps) {
     calendar: 0,
     commitments: 0
   })
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
 
   useEffect(() => {
     let isMounted = true
@@ -110,15 +138,109 @@ function App({ onLogOut, authError }: AppProps) {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' })
-    document.querySelector('.main-content')?.scrollTo({ top: 0, behavior: 'instant' })
+    document.querySelector('.page-viewport')?.scrollTo({ top: 0, behavior: 'instant' })
   }, [currentPage])
 
+  useEffect(() => {
+    if (currentPage !== 'Settings' || !settingsHaveUnsavedChanges) {
+      return
+    }
+
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', warnBeforeUnload)
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload)
+  }, [currentPage, settingsHaveUnsavedChanges])
+
+  const navigateToPage = (page: Page) => {
+    if (page === currentPage) {
+      return
+    }
+
+    if (currentPage === 'Settings' && settingsHaveUnsavedChanges) {
+      setPendingSettingsExit({ type: 'navigate', page })
+      return
+    }
+
+    setCurrentPage(page)
+  }
+
+  const handleViewInCalendar = (request: PlannerItemSelection) => {
+    setCalendarSelection(request)
+    setCurrentPage('Calendar')
+  }
+
+  const handleViewInCommitments = (request: PlannerItemSelection) => {
+    setCommitmentSelection(request)
+    setCurrentPage('Commitments')
+  }
+
+  const handleCalendarSelectionHandled = () => {
+    setCalendarSelection(null)
+  }
+
+  const handleCommitmentSelectionHandled = () => {
+    setCommitmentSelection(null)
+  }
+
+  const handleLogOut = () => {
+    if (currentPage === 'Settings' && settingsHaveUnsavedChanges) {
+      setPendingSettingsExit({ type: 'logout' })
+      return
+    }
+
+    onLogOut()
+  }
+
+  const finishSettingsExit = () => {
+    if (!pendingSettingsExit) {
+      return
+    }
+
+    setSettingsHaveUnsavedChanges(false)
+    setPendingSettingsExit(null)
+    if (pendingSettingsExit.type === 'logout') {
+      onLogOut()
+    } else {
+      setCurrentPage(pendingSettingsExit.page)
+    }
+  }
+
   const pages = {
-    Dashboard: <Dashboard />,
+    Dashboard: (
+      <Dashboard
+        onViewInCalendar={handleViewInCalendar}
+        onViewInCommitments={handleViewInCommitments}
+      />
+    ),
     Inbox: <Inbox onUnreadCountChange={setUnreadEmailCount} />,
-    Commitments: <Commitments />,
-    Calendar: <Calendar />,
-    Settings: <Settings onLogOut={onLogOut} />
+    Commitments: (
+      <Commitments
+        onViewInCalendar={handleViewInCalendar}
+        selectionRequest={commitmentSelection}
+        onSelectionHandled={handleCommitmentSelectionHandled}
+      />
+    ),
+    Calendar: (
+      <Calendar
+        selectionRequest={calendarSelection}
+        onSelectionHandled={handleCalendarSelectionHandled}
+        onViewInCommitments={handleViewInCommitments}
+      />
+    ),
+    Settings: (
+      <Settings
+        onLogOut={handleLogOut}
+        onThemeChange={(isDark) => setTheme(isDark ? 'dark' : 'light')}
+        onUnsavedChangesChange={setSettingsHaveUnsavedChanges}
+        leaveConfirmationOpen={pendingSettingsExit !== null}
+        onCancelLeave={() => setPendingSettingsExit(null)}
+        onLeaveAnyway={finishSettingsExit}
+      />
+    )
   }
 
   const navigationItems = [
@@ -149,7 +271,7 @@ function App({ onLogOut, authError }: AppProps) {
                 }`}
                 aria-current={currentPage === page ? 'page' : undefined}
                 aria-label={plannerPage && plannerPageChanges[plannerPage] ? `${page}, new changes` : undefined}
-                onClick={() => setCurrentPage(page)}
+                onClick={() => navigateToPage(page)}
               >
                 <Icon size={20} strokeWidth={1.8} />
                 <span>{page}</span>
@@ -185,7 +307,7 @@ function App({ onLogOut, authError }: AppProps) {
           <button
             className={`nav-item ${currentPage === 'Settings' ? 'active' : ''}`}
             aria-current={currentPage === 'Settings' ? 'page' : undefined}
-            onClick={() => setCurrentPage('Settings')}
+            onClick={() => navigateToPage('Settings')}
           >
             <SettingsIcon size={20} strokeWidth={1.8} />
             <span>Settings</span>
@@ -199,7 +321,9 @@ function App({ onLogOut, authError }: AppProps) {
         </header>
 
         {authError && <p className="auth-error" role="alert">{authError}</p>}
-        {pages[currentPage]}
+        <div className="page-viewport">
+          {pages[currentPage]}
+        </div>
       </main>
     </div>
   )

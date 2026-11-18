@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { PlannerItemAction } from './PlannerItemCard'
+import { useExpandableCardActions } from './useExpandableCardActions'
 import { resolveSuggestedReply, saveSuggestedReply } from '../services/suggestedReplies'
 import type { StudentEmail } from '../types/email'
 import './SuggestedReplyCard.css'
@@ -15,6 +16,8 @@ function SuggestedReplyCard({ email, reply, onResolve, onSave }: SuggestedReplyC
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(reply)
   const [error, setError] = useState<string | null>(null)
+  const cardRef = useRef<HTMLElement | null>(null)
+  const actionDisclosure = useExpandableCardActions(cardRef, isEditing)
 
   const handleResolve = (status: 'confirmed' | 'dismissed') => {
     try {
@@ -45,7 +48,33 @@ function SuggestedReplyCard({ email, reply, onResolve, onSave }: SuggestedReplyC
 
   return (
     <article
-      className={`planner-item-card planner-item-card-suggestion suggested-reply-item${isEditing ? ' planner-item-card-editing' : ''}`}
+      ref={cardRef}
+      className={`planner-item-card planner-item-card-suggestion planner-item-card-expandable suggested-reply-item${actionDisclosure.isOpen || isEditing ? ' planner-item-card-actions-open' : ''}${isEditing ? ' planner-item-card-editing' : ''}`}
+      tabIndex={0}
+      aria-label={`Suggested reply to ${email.sender}: ${email.subject}`}
+      aria-expanded={actionDisclosure.isOpen || isEditing}
+      aria-controls={actionDisclosure.actionsId}
+      onClick={(event) => {
+        if (
+          isEditing ||
+          (event.target instanceof Element &&
+            event.target.closest('button, input, textarea, select, a, [contenteditable="true"]'))
+        ) {
+          return
+        }
+
+        actionDisclosure.toggle()
+      }}
+      onKeyDown={(event) => {
+        if (
+          !isEditing &&
+          event.target === event.currentTarget &&
+          (event.key === 'Enter' || event.key === ' ')
+        ) {
+          event.preventDefault()
+          actionDisclosure.toggle()
+        }
+      }}
     >
       <div className="planner-item-content">
         <div className="planner-item-labels">
@@ -71,38 +100,42 @@ function SuggestedReplyCard({ email, reply, onResolve, onSave }: SuggestedReplyC
           <p className="planner-item-description suggested-reply-content">{reply}</p>
         )}
         {error && <p className="suggested-reply-card-error" role="alert">{error}</p>}
-      </div>
-      <div className="planner-item-actions suggested-reply-actions">
-        {isEditing ? (
-          <>
-            <PlannerItemAction kind="save" onClick={handleSave} />
-            <PlannerItemAction
-              kind="cancel"
-              onClick={() => {
-                setDraft(reply)
-                setIsEditing(false)
-                setError(null)
-              }}
-            />
-          </>
-        ) : (
-          <>
-            <PlannerItemAction kind="send" onClick={() => handleResolve('confirmed')} />
-            <PlannerItemAction
-              kind="edit"
-              onClick={() => {
-                setDraft(reply)
-                setIsEditing(true)
-                setError(null)
-              }}
-            />
-            <PlannerItemAction
-              kind="delete"
-              label="Dismiss"
-              onClick={() => handleResolve('dismissed')}
-            />
-          </>
-        )}
+        <div
+          id={actionDisclosure.actionsId}
+          className="planner-item-actions suggested-reply-actions"
+          onClick={actionDisclosure.close}
+        >
+          {isEditing ? (
+            <>
+              <PlannerItemAction kind="save" onClick={handleSave} />
+              <PlannerItemAction
+                kind="cancel"
+                onClick={() => {
+                  setDraft(reply)
+                  setIsEditing(false)
+                  setError(null)
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <PlannerItemAction kind="send" onClick={() => handleResolve('confirmed')} />
+              <PlannerItemAction
+                kind="edit"
+                onClick={() => {
+                  setDraft(reply)
+                  setIsEditing(true)
+                  setError(null)
+                }}
+              />
+              <PlannerItemAction
+                kind="delete"
+                label="Dismiss"
+                onClick={() => handleResolve('dismissed')}
+              />
+            </>
+          )}
+        </div>
       </div>
     </article>
   )

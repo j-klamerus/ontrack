@@ -1,9 +1,9 @@
-import type { Dispatch, SetStateAction } from 'react'
 import { Plus } from 'lucide-react'
 import { PlannerItemAction, PlannerItemCard } from '../../components/PlannerItemCard'
-import type { EventCategory, EventPriority, CalendarEvent } from '../../types/calendarEvent'
+import type { CalendarEvent } from '../../types/calendarEvent'
 import type { Commitment } from '../../types/commitment'
-import type { CalendarScheduleItem, CalendarSuggestion } from './types'
+import type { PlannerItemSelection } from '../../types/plannerItemSelection'
+import type { CalendarScheduleItem } from './types'
 import { formatFullDate, formatTime } from './formatters'
 
 type CalendarSidebarProps = {
@@ -11,21 +11,13 @@ type CalendarSidebarProps = {
   selectedDayEvents: CalendarEvent[]
   selectedDayCommitments: Commitment[]
   upcomingItems: CalendarScheduleItem[]
-  suggestions: CalendarSuggestion[]
-  categoryOptions: EventCategory[]
-  priorityOptions: EventPriority[]
-  suggestionError: string | null
-  savingSuggestionId: number | null
-  editingSuggestion: CalendarSuggestion | null
-  onEditingSuggestionChange: Dispatch<SetStateAction<CalendarSuggestion | null>>
   onAddEvent: () => void
   onEditEvent: (event: CalendarEvent) => void
   onDeleteEvent: (id: number) => void
   onEditCommitment: (commitment: Commitment) => void
   onDeleteCommitment: (id: number) => void
-  onConfirmSuggestion: (suggestion: CalendarSuggestion) => void
-  onDismissSuggestion: (id: number) => void
-  onSaveSuggestion: () => void
+  onViewInCommitments: (request: PlannerItemSelection) => void
+  selectedCalendarItem: Pick<PlannerItemSelection, 'kind' | 'id'> | null
 }
 
 function CalendarSidebar({
@@ -33,21 +25,13 @@ function CalendarSidebar({
   selectedDayEvents,
   selectedDayCommitments,
   upcomingItems,
-  suggestions,
-  categoryOptions,
-  priorityOptions,
-  suggestionError,
-  savingSuggestionId,
-  editingSuggestion,
-  onEditingSuggestionChange,
   onAddEvent,
   onEditEvent,
   onDeleteEvent,
   onEditCommitment,
   onDeleteCommitment,
-  onConfirmSuggestion,
-  onDismissSuggestion,
-  onSaveSuggestion
+  onViewInCommitments,
+  selectedCalendarItem
 }: CalendarSidebarProps) {
   return (
     <aside className="event-sidebar">
@@ -67,7 +51,14 @@ function CalendarSidebar({
           <>
             {selectedDayEvents.map((event) => (
               <PlannerItemCard
+                id={`calendar-event-card-${event.id}`}
                 key={event.id}
+                className={
+                  selectedCalendarItem?.kind === 'Calendar event' && selectedCalendarItem.id === event.id
+                    ? 'planner-item-card-selected'
+                    : undefined
+                }
+                initialActionsOpen={selectedCalendarItem?.kind === 'Calendar event' && selectedCalendarItem.id === event.id}
                 kind="Calendar event"
                 title={event.title}
                 category={event.category}
@@ -75,8 +66,8 @@ function CalendarSidebar({
                 dateLabel={`${formatFullDate(event.date)} · ${formatTime(event.time)}`}
                 subtitle={event.course}
                 description={event.description}
-                actionsOnHover
-                actionsPlacement="right"
+                expandActionsOnClick
+                actionsPlacement="bottom"
                 actions={(
                   <>
                     <PlannerItemAction kind="edit" onClick={() => onEditEvent(event)} />
@@ -87,19 +78,35 @@ function CalendarSidebar({
             ))}
             {selectedDayCommitments.map((commitment) => (
               <PlannerItemCard
+                id={`calendar-commitment-card-${commitment.id}`}
                 key={commitment.id}
+                className={
+                  selectedCalendarItem?.kind === 'Commitment' && selectedCalendarItem.id === commitment.id
+                    ? 'planner-item-card-selected'
+                    : undefined
+                }
+                initialActionsOpen={selectedCalendarItem?.kind === 'Commitment' && selectedCalendarItem.id === commitment.id}
                 kind="Commitment"
                 title={commitment.name}
                 category={commitment.category}
                 priority={commitment.priority}
                 dateLabel={`Due ${formatFullDate(commitment.dueDate)} · ${formatTime(commitment.dueTime)}`}
                 subtitle={commitment.course}
-                actionsOnHover
-                actionsPlacement="right"
+                status={commitment.completed ? 'Completed' : undefined}
+                expandActionsOnClick
+                actionsPlacement="bottom"
                 actions={(
                   <>
                     <PlannerItemAction kind="edit" onClick={() => onEditCommitment(commitment)} />
                     <PlannerItemAction kind="delete" onClick={() => onDeleteCommitment(commitment.id)} />
+                    <PlannerItemAction
+                      kind="commitments"
+                      onClick={() => onViewInCommitments({
+                        kind: 'Commitment',
+                        id: commitment.id,
+                        date: commitment.dueDate
+                      })}
+                    />
                   </>
                 )}
               />
@@ -124,6 +131,18 @@ function CalendarSidebar({
                 category={item.category}
                 priority={item.priority}
                 dateLabel={`${formatFullDate(item.date)} · ${formatTime(item.time)}`}
+                expandActionsOnClick={item.kind === 'Commitment'}
+                actionsPlacement="bottom"
+                actions={item.kind === 'Commitment' ? (
+                  <PlannerItemAction
+                    kind="commitments"
+                    onClick={() => onViewInCommitments({
+                      kind: 'Commitment',
+                      id: item.sourceId,
+                      date: item.date
+                    })}
+                  />
+                ) : undefined}
               />
             ))}
           </div>
@@ -132,140 +151,6 @@ function CalendarSidebar({
         )}
       </div>
 
-      <div className="suggested-events-section">
-        <h3>Suggested Events</h3>
-        {suggestionError && <p className="suggestion-error" role="alert">{suggestionError}</p>}
-        {suggestions.length > 0 ? (
-          <div className="suggested-events-list">
-            {suggestions.map((suggestion) => {
-              const isEditing = editingSuggestion?.id === suggestion.id
-
-              return (
-                <PlannerItemCard
-                  key={suggestion.id}
-                  kind="Calendar event"
-                  title={suggestion.title}
-                  category={suggestion.category}
-                  priority={suggestion.priority}
-                  dateLabel={`${formatFullDate(suggestion.date)} · ${formatTime(suggestion.time)}`}
-                  subtitle={suggestion.course}
-                  description={suggestion.description}
-                  isSuggestion
-                  isEditing={isEditing}
-                  actionsPlacement="right"
-                  actions={isEditing ? (
-                    <>
-                      <PlannerItemAction kind="save" onClick={onSaveSuggestion} />
-                      <PlannerItemAction kind="cancel" onClick={() => onEditingSuggestionChange(null)} />
-                    </>
-                  ) : (
-                    <>
-                      <PlannerItemAction
-                        kind="confirm"
-                        disabled={savingSuggestionId === suggestion.id}
-                        label={savingSuggestionId === suggestion.id ? 'Adding...' : undefined}
-                        onClick={() => onConfirmSuggestion(suggestion)}
-                      />
-                      <PlannerItemAction
-                        kind="edit"
-                        disabled={savingSuggestionId === suggestion.id}
-                        onClick={() => onEditingSuggestionChange({ ...suggestion })}
-                      />
-                      <PlannerItemAction
-                        kind="delete"
-                        label="Dismiss"
-                        disabled={savingSuggestionId === suggestion.id}
-                        onClick={() => onDismissSuggestion(suggestion.id)}
-                      />
-                    </>
-                  )}
-                >
-                  {isEditing && editingSuggestion && (
-                    <div className="calendar-suggestion-edit-form">
-                      <div className="calendar-suggestion-edit-grid">
-                        <label>
-                          <span>Title</span>
-                          <input
-                            type="text"
-                            value={editingSuggestion.title}
-                            onChange={(event) => onEditingSuggestionChange((current) =>
-                              current ? { ...current, title: event.target.value } : current
-                            )}
-                          />
-                        </label>
-                        <label>
-                          <span>Course</span>
-                          <input
-                            type="text"
-                            value={editingSuggestion.course}
-                            onChange={(event) => onEditingSuggestionChange((current) =>
-                              current ? { ...current, course: event.target.value } : current
-                            )}
-                          />
-                        </label>
-                        <label>
-                          <span>Date</span>
-                          <input
-                            type="date"
-                            value={editingSuggestion.date}
-                            onChange={(event) => onEditingSuggestionChange((current) =>
-                              current ? { ...current, date: event.target.value } : current
-                            )}
-                          />
-                        </label>
-                        <label>
-                          <span>Time</span>
-                          <input
-                            type="time"
-                            value={editingSuggestion.time}
-                            onChange={(event) => onEditingSuggestionChange((current) =>
-                              current ? { ...current, time: event.target.value } : current
-                            )}
-                          />
-                        </label>
-                        <label>
-                          <span>Category</span>
-                          <select
-                            value={editingSuggestion.category}
-                            onChange={(event) => onEditingSuggestionChange((current) =>
-                              current ? { ...current, category: event.target.value as EventCategory } : current
-                            )}
-                          >
-                            {categoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}
-                          </select>
-                        </label>
-                        <label>
-                          <span>Priority</span>
-                          <select
-                            value={editingSuggestion.priority}
-                            onChange={(event) => onEditingSuggestionChange((current) =>
-                              current ? { ...current, priority: event.target.value as EventPriority } : current
-                            )}
-                          >
-                            {priorityOptions.map((priority) => <option key={priority} value={priority}>{priority}</option>)}
-                          </select>
-                        </label>
-                        <label className="calendar-suggestion-full-width">
-                          <span>Description</span>
-                          <textarea
-                            rows={3}
-                            value={editingSuggestion.description}
-                            onChange={(event) => onEditingSuggestionChange((current) =>
-                              current ? { ...current, description: event.target.value } : current
-                            )}
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </PlannerItemCard>
-              )
-            })}
-          </div>
-        ) : (
-          <p className="empty-upcoming">No suggested events to review.</p>
-        )}
-      </div>
     </aside>
   )
 }

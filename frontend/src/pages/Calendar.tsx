@@ -4,6 +4,7 @@ import CalendarEventFormModal from './calendar/CalendarEventFormModal'
 import CommitmentFormModal from './commitments/CommitmentFormModal'
 import CalendarGrid from './calendar/CalendarGrid'
 import CalendarSidebar from './calendar/CalendarSidebar'
+import CalendarSuggestionsPanel from './calendar/CalendarSuggestionsPanel'
 import CalendarToolbar from './calendar/CalendarToolbar'
 import {
   getDateFromIso,
@@ -31,6 +32,7 @@ import {
   saveItemCategoryOverride
 } from '../constants/eventCategories'
 import type { CalendarEvent, EventFormState, EventPriority } from '../types/calendarEvent'
+import type { PlannerItemSelection } from '../types/plannerItemSelection'
 import {
   addCommitment,
   deleteCommitment,
@@ -52,10 +54,21 @@ const createEmptyForm = (selectedDate: Date): EventFormState => ({
   description: ''
 })
 
-function Calendar() {
+type CalendarProps = {
+  selectionRequest: PlannerItemSelection | null
+  onSelectionHandled: () => void
+  onViewInCommitments: (request: PlannerItemSelection) => void
+}
+
+function Calendar({ selectionRequest, onSelectionHandled, onViewInCommitments }: CalendarProps) {
   const categoryOptions = getEventCategories()
-  const [currentMonth, setCurrentMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
-  const [selectedDate, setSelectedDate] = useState(() => new Date())
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const date = selectionRequest ? getDateFromIso(selectionRequest.date) : new Date()
+    return new Date(date.getFullYear(), date.getMonth(), 1)
+  })
+  const [selectedDate, setSelectedDate] = useState(() =>
+    selectionRequest ? getDateFromIso(selectionRequest.date) : new Date()
+  )
   const [viewMode, setViewMode] = useState<CalendarViewMode>('month')
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [commitments, setCommitments] = useState<Commitment[]>([])
@@ -73,6 +86,11 @@ function Calendar() {
   const [editingSuggestion, setEditingSuggestion] = useState<CalendarSuggestion | null>(null)
   const [editingCommitment, setEditingCommitment] = useState<Commitment | null>(null)
   const [commitmentFormError, setCommitmentFormError] = useState<string | null>(null)
+  const [selectedCalendarItem, setSelectedCalendarItem] = useState<Pick<PlannerItemSelection, 'kind' | 'id'> | null>(() =>
+    selectionRequest
+      ? { kind: selectionRequest.kind, id: selectionRequest.id }
+      : null
+  )
 
   useEffect(() => {
     Promise.all([getCalendarEvents(), getCommitments(), getDashboardSuggestions(), getEmails()])
@@ -91,6 +109,20 @@ function Calendar() {
       })
       .finally(() => setIsLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (!selectionRequest || isLoading) {
+      return
+    }
+
+    const selectedCardId = selectionRequest.kind === 'Calendar event'
+      ? `calendar-event-card-${selectionRequest.id}`
+      : `calendar-commitment-card-${selectionRequest.id}`
+    document
+      .getElementById(selectedCardId)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    onSelectionHandled()
+  }, [isLoading, onSelectionHandled, selectionRequest])
 
   const selectedDateIso = getIsoDate(selectedDate)
 
@@ -122,6 +154,7 @@ function Calendar() {
     const items: CalendarScheduleItem[] = [
       ...events.map((event) => ({
         id: `event-${event.id}`,
+        sourceId: event.id,
         title: event.title,
         date: event.date,
         time: event.time,
@@ -134,6 +167,7 @@ function Calendar() {
         .filter((commitment) => !commitment.completed)
         .map((commitment) => ({
           id: `commitment-${commitment.id}`,
+          sourceId: commitment.id,
           title: commitment.name,
           date: commitment.dueDate,
           time: commitment.dueTime,
@@ -161,9 +195,13 @@ function Calendar() {
   const selectedDayCommitments = useMemo(
     () =>
       commitments
-        .filter((commitment) => commitment.dueDate === selectedDateIso && !commitment.completed)
+        .filter((commitment) =>
+          commitment.dueDate === selectedDateIso &&
+          (!commitment.completed ||
+            (selectedCalendarItem?.kind === 'Commitment' && selectedCalendarItem.id === commitment.id))
+        )
         .sort((left, right) => left.dueTime.localeCompare(right.dueTime)),
-    [commitments, selectedDateIso]
+    [commitments, selectedCalendarItem, selectedDateIso]
   )
 
   const openAddForm = () => {
@@ -396,10 +434,20 @@ function Calendar() {
     setCurrentMonth(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 1))
   }
 
+  const handleMonthSelect = (year: number, month: number) => {
+    setCurrentMonth(new Date(year, month, 1))
+  }
+
   const jumpToToday = () => {
     const now = new Date()
     setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1))
     setSelectedDate(now)
+    setSelectedCalendarItem(null)
+  }
+
+  const handleSelectDate = (date: Date) => {
+    setSelectedDate(date)
+    setSelectedCalendarItem(null)
   }
 
   const getScheduleItemsForDay = (day: Date): CalendarScheduleItem[] => {
@@ -410,6 +458,7 @@ function Calendar() {
         .filter((event) => event.date === date)
         .map((event) => ({
           id: `event-${event.id}`,
+          sourceId: event.id,
           title: event.title,
           date: event.date,
           time: event.time,
@@ -422,6 +471,7 @@ function Calendar() {
         .filter((commitment) => commitment.dueDate === date && !commitment.completed)
         .map((commitment) => ({
           id: `commitment-${commitment.id}`,
+          sourceId: commitment.id,
           title: commitment.name,
           date: commitment.dueDate,
           time: commitment.dueTime,
@@ -449,6 +499,7 @@ function Calendar() {
             currentMonth={currentMonth}
             viewMode={viewMode}
             onMonthChange={handleMonthChange}
+            onMonthSelect={handleMonthSelect}
             onJumpToToday={jumpToToday}
             onViewModeChange={setViewMode}
           />
@@ -462,7 +513,7 @@ function Calendar() {
             currentMonth={currentMonth}
             selectedDateIso={selectedDateIso}
             getItemsForDay={getScheduleItemsForDay}
-            onSelectDate={setSelectedDate}
+            onSelectDate={handleSelectDate}
           />
         </div>
 
@@ -471,23 +522,28 @@ function Calendar() {
           selectedDayEvents={selectedDayEvents}
           selectedDayCommitments={selectedDayCommitments}
           upcomingItems={upcomingItems}
-          suggestions={suggestions}
-          categoryOptions={categoryOptions}
-          priorityOptions={priorityOptions}
-          suggestionError={suggestionError}
-          savingSuggestionId={savingSuggestionId}
-          editingSuggestion={editingSuggestion}
-          onEditingSuggestionChange={setEditingSuggestion}
           onAddEvent={openAddForm}
           onEditEvent={openEditForm}
           onDeleteEvent={handleDeleteEvent}
           onEditCommitment={openEditCommitment}
           onDeleteCommitment={handleDeleteCommitment}
+          onViewInCommitments={onViewInCommitments}
+          selectedCalendarItem={selectedCalendarItem}
+        />
+      </div>
+
+      <CalendarSuggestionsPanel
+        suggestions={suggestions}
+        categoryOptions={categoryOptions}
+        priorityOptions={priorityOptions}
+        suggestionError={suggestionError}
+        savingSuggestionId={savingSuggestionId}
+        editingSuggestion={editingSuggestion}
+        onEditingSuggestionChange={setEditingSuggestion}
           onConfirmSuggestion={handleConfirmSuggestion}
           onDismissSuggestion={handleDismissSuggestion}
           onSaveSuggestion={handleSaveSuggestion}
-        />
-      </div>
+      />
 
       {showEventForm && (
         <CalendarEventFormModal

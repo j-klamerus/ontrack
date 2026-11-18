@@ -1,12 +1,15 @@
-import { PlannerItemCard } from '../../components/PlannerItemCard'
+import { PlannerItemAction, PlannerItemCard } from '../../components/PlannerItemCard'
 import { formatDateTime } from './formatters'
 import type { DashboardUpcomingItem } from './types'
+import type { PlannerItemSelection } from '../../types/plannerItemSelection'
 
 type UpcomingPanelProps = {
   items: DashboardUpcomingItem[]
+  onViewInCalendar: (request: PlannerItemSelection) => void
+  onViewInCommitments: (request: PlannerItemSelection) => void
 }
 
-function UpcomingPanel({ items }: UpcomingPanelProps) {
+function UpcomingPanel({ items, onViewInCalendar, onViewInCommitments }: UpcomingPanelProps) {
   return (
     <section className="dashboard-panel" aria-labelledby="upcoming-heading">
       <div className="dashboard-panel-header">
@@ -27,6 +30,30 @@ function UpcomingPanel({ items }: UpcomingPanelProps) {
               category={item.category}
               priority={item.priority}
               dateLabel={formatDateTime(item.date, item.time)}
+              expandActionsOnClick
+              actionsPlacement="bottom"
+              actions={(
+                <>
+                  <PlannerItemAction
+                    kind="calendar"
+                    onClick={() => onViewInCalendar({
+                      kind: item.kind,
+                      id: item.sourceId,
+                      date: item.date
+                    })}
+                  />
+                  {item.kind === 'Commitment' && (
+                    <PlannerItemAction
+                      kind="commitments"
+                      onClick={() => onViewInCommitments({
+                        kind: 'Commitment',
+                        id: item.sourceId,
+                        date: item.date
+                      })}
+                    />
+                  )}
+                </>
+              )}
             />
           ))}
         </div>

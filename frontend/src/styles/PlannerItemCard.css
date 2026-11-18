@@ -10,9 +10,28 @@
   transition: background-color 160ms ease, border-color 160ms ease;
 }
 
-.planner-item-card-suggestion:hover,
-.planner-item-card-actions-on-hover:hover,
-.planner-item-card:has(.commitment-card-actions):hover {
+.planner-item-card-expandable {
+  cursor: pointer;
+}
+
+.planner-item-card-expandable:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.planner-item-card-expandable:hover,
+.planner-item-card-actions-open,
+.commitment-card:hover {
+  border-color: #cbd5e1;
+  background-color: #f3f6fa;
+}
+
+.commitment-card-completed {
+  border-color: #cbd5e1;
+  background-color: #f3f6fa;
+}
+
+.planner-item-card-selected {
   border-color: #cbd5e1;
   background-color: #f3f6fa;
 }
@@ -20,6 +39,22 @@
 .planner-item-leading {
   flex: 0 0 auto;
   padding-top: 2px;
+}
+
+.commitment-card {
+  align-items: stretch;
+}
+
+.commitment-card .planner-item-content {
+  order: 1;
+}
+
+.commitment-card .planner-item-trailing {
+  order: 2;
+  min-width: 40px;
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
 }
 
 .planner-item-content {
@@ -54,48 +89,8 @@
   justify-content: center;
 }
 
-.planner-item-card-actions-on-hover .planner-item-trailing {
-  align-self: stretch;
-  justify-content: center;
-}
-
-.planner-item-card-actions-on-hover .planner-item-actions-right {
-  align-self: stretch;
-  justify-content: center;
-}
-
 .planner-item-actions-right .planner-item-action {
   width: 100%;
-}
-
-.commitment-card-trailing {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
-}
-
-.commitment-card-trailing .planner-item-date {
-  text-align: right;
-}
-
-.commitment-card-trailing .planner-item-action {
-  min-width: 88px;
-}
-
-.commitment-card-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 160ms ease;
-}
-
-.planner-item-card:has(.commitment-card-actions):hover .commitment-card-actions,
-.planner-item-card:has(.commitment-card-actions):has(:focus-visible) .commitment-card-actions {
-  opacity: 1;
-  pointer-events: auto;
 }
 
 .planner-item-labels {
@@ -105,7 +100,19 @@
   gap: 7px;
 }
 
+.planner-item-kind-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+}
+
+.planner-item-kind-group .type-marker {
+  margin-top: 1px;
+}
+
 .planner-item-kind {
+  min-width: 0;
   color: #475569;
   font-size: 11px;
   font-weight: 700;
@@ -173,28 +180,38 @@
   margin-top: 2px;
 }
 
-.planner-item-card-suggestion:not(.planner-item-card-editing) .planner-item-actions {
+.planner-item-card-expandable .planner-item-actions {
+  display: flex;
+  visibility: hidden;
+  max-height: 0;
+  overflow: hidden;
+  margin-top: -8px;
+  padding-top: 0;
+  border-top: 0 solid transparent;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 160ms ease;
+  transform: translateY(10px);
+  transition:
+    max-height 220ms ease,
+    margin-top 220ms ease,
+    padding-top 220ms ease,
+    border-top-width 220ms ease,
+    opacity 180ms ease,
+    transform 220ms ease,
+    visibility 0s linear 220ms;
 }
 
-.planner-item-card-actions-on-hover:not(.planner-item-card-editing) .planner-item-actions {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 160ms ease;
-}
-
-.planner-item-card-suggestion:not(.planner-item-card-editing):hover .planner-item-actions,
-.planner-item-card-suggestion:not(.planner-item-card-editing):has(:focus-visible) .planner-item-actions {
+.planner-item-card-expandable.planner-item-card-actions-open .planner-item-actions {
+  visibility: visible;
+  max-height: 240px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top-width: 1px;
+  border-top-color: var(--color-border);
   opacity: 1;
   pointer-events: auto;
-}
-
-.planner-item-card-actions-on-hover:not(.planner-item-card-editing):hover .planner-item-actions,
-.planner-item-card-actions-on-hover:not(.planner-item-card-editing):has(:focus-visible) .planner-item-actions {
-  opacity: 1;
-  pointer-events: auto;
+  transform: translateY(0);
+  transition-delay: 0s;
 }
 
 .planner-item-action {
@@ -281,10 +298,6 @@
     padding-left: 0;
   }
 
-  .planner-item-card-actions-on-hover .planner-item-trailing {
-    padding-left: 0;
-  }
-
   .planner-item-actions-right {
     flex-direction: row;
     flex-wrap: wrap;
@@ -295,20 +308,32 @@
     width: auto;
   }
 
-  .commitment-card-trailing {
-    align-items: flex-start;
+  .commitment-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 40px;
+    align-items: center;
   }
 
-  .commitment-card-trailing .planner-item-date {
-    text-align: left;
+  .commitment-card .planner-item-content {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .commitment-card .planner-item-trailing {
+    grid-column: 2;
+    grid-row: 1;
+    flex-basis: auto;
+    min-width: 40px;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    padding-left: 0;
   }
 }
 
-@media (hover: none) {
-  .planner-item-card-suggestion:not(.planner-item-card-editing) .planner-item-actions,
-  .planner-item-card-actions-on-hover:not(.planner-item-card-editing) .planner-item-actions,
-  .commitment-card-actions {
-    opacity: 1;
-    pointer-events: auto;
+@media (prefers-reduced-motion: reduce) {
+  .planner-item-card-expandable .planner-item-actions {
+    transition: none;
   }
 }
+

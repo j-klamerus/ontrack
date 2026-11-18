@@ -1,12 +1,15 @@
-import { Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { PlannerKey } from '../../components/PlannerKey'
 import type { Commitment, Priority } from '../../types/commitment'
 import type { EventCategory } from '../../types/calendarEvent'
+import type { PlannerItemSelection } from '../../types/plannerItemSelection'
 import CommitmentCard from './CommitmentCard'
 import { allFilterOption, filterOptions, priorityOptions, type CommitmentFilter } from './types'
 
 type CommitmentTrackerProps = {
   commitments: Commitment[]
+  onAddCommitment: () => void
+  selectedCommitmentId: number | null
   activeCommitments: Commitment[]
   completedCommitments: Commitment[]
   categories: EventCategory[]
@@ -24,10 +27,13 @@ type CommitmentTrackerProps = {
   onToggleCompletion: (id: number) => void
   onEdit: (commitment: Commitment) => void
   onDelete: (id: number) => void
+  onViewInCalendar: (request: PlannerItemSelection) => void
 }
 
 function CommitmentTracker({
   commitments,
+  onAddCommitment,
+  selectedCommitmentId,
   activeCommitments,
   completedCommitments,
   categories,
@@ -44,7 +50,8 @@ function CommitmentTracker({
   onClearCompleted,
   onToggleCompletion,
   onEdit,
-  onDelete
+  onDelete,
+  onViewInCalendar
 }: CommitmentTrackerProps) {
   const renderCard = (commitment: Commitment) => (
     <CommitmentCard
@@ -53,6 +60,8 @@ function CommitmentTracker({
       onToggleCompletion={onToggleCompletion}
       onEdit={onEdit}
       onDelete={onDelete}
+      onViewInCalendar={onViewInCalendar}
+      isSelected={selectedCommitmentId === commitment.id}
     />
   )
 
@@ -63,7 +72,17 @@ function CommitmentTracker({
           <h2 id="commitment-tracker-heading">All Commitments</h2>
           <p>Track and manage your tasks and deadlines.</p>
         </div>
-        <span className="panel-count">{activeCommitments.length + completedCommitments.length}</span>
+        <div className="commitment-tracker-header-actions">
+          <button
+            type="button"
+            className="primary-button commitment-tracker-add-button"
+            onClick={onAddCommitment}
+          >
+            <Plus size={16} aria-hidden="true" />
+            Add Commitment
+          </button>
+          <span className="panel-count">{activeCommitments.length + completedCommitments.length}</span>
+        </div>
       </div>
 
       <PlannerKey categories={categories} page="commitments" />
@@ -137,13 +156,13 @@ function CommitmentTracker({
           <section className="commitment-group" aria-labelledby="completed-commitments-heading">
             <header className="commitment-group-header">
               <h3 id="completed-commitments-heading">Completed</h3>
-              <span className="panel-count">{completedCommitments.length}</span>
               {commitments.some((commitment) => commitment.completed) && (
                 <button type="button" className="completed-toggle-button" onClick={onClearCompleted}>
                   <Trash2 size={14} aria-hidden="true" />
                   Delete completed
                 </button>
               )}
+              <span className="panel-count">{completedCommitments.length}</span>
             </header>
             <div className="commitment-list">
               {completedCommitments.length > 0

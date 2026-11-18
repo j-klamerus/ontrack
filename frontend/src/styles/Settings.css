@@ -1,4 +1,7 @@
 .save-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 20px;
   background: #e8f9f0;
   border: 1px solid #8ad8b0;
@@ -6,6 +9,79 @@
   border-radius: 12px;
   padding: 12px 14px;
   font-weight: 600;
+}
+
+.save-banner-unsaved {
+  background: #fffbeb;
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.save-banner-error {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.settings-actions .primary-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.settings-leave-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.settings-leave-dialog {
+  width: min(520px, 100%);
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-modal);
+}
+
+.settings-leave-header h2 {
+  margin: 0;
+  color: #133048;
+  font-size: 24px;
+}
+
+.settings-leave-dialog p {
+  margin: 14px 0 0;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.settings-leave-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.settings-leave-discard-button {
+  padding: 10px 14px;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-control);
+  background: #fff;
+  color: #b91c1c;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.settings-leave-discard-button:hover {
+  border-color: #fca5a5;
+  background: #fef2f2;
 }
 
 .settings-grid {
@@ -314,10 +390,10 @@
 .settings-logout-button {
   margin-right: auto;
   padding: 10px 14px;
-  border: 1px solid #fecaca;
+  border: 1px solid #dc2626;
   border-radius: var(--radius-control);
-  background: #fff;
-  color: #b91c1c;
+  background: #dc2626;
+  color: #fff;
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -325,8 +401,8 @@
 }
 
 .settings-logout-button:hover {
-  border-color: #fca5a5;
-  background: #fef2f2;
+  border-color: #b91c1c;
+  background: #b91c1c;
 }
 
 .settings-logout-button:focus-visible {
