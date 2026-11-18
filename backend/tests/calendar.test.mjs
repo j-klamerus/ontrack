@@ -42,9 +42,17 @@ test('normalizes timed events in the user time zone and preserves all-day dates'
     { date: result.date, time: result.time, duration: result.googleDurationMinutes, course: result.course },
     { date: '2025-03-09', time: '01:30', duration: 60, course: 'BIO' }
   )
-  const allDay = normalizeGoogleCalendarEvent({ id: 'day', start: { date: '2025-03-09' } }, 'calendar-1', 'Pacific/Honolulu')
+  const allDay = normalizeGoogleCalendarEvent({ id: 'day', start: { date: '2025-03-09' }, end: { date: '2025-03-12' } }, 'calendar-1', 'Pacific/Honolulu')
   assert.equal(allDay.date, '2025-03-09')
   assert.equal(allDay.time, '00:00')
+  assert.equal(allDay.googleAllDay, true)
+  assert.equal(allDay.googleLastDate, '2025-03-11')
+  const overnight = normalizeGoogleCalendarEvent({
+    id: 'overnight', start: { dateTime: '2025-03-09T23:00:00Z' },
+    end: { dateTime: '2025-03-11T00:00:00Z' }
+  }, 'calendar-1', 'UTC')
+  assert.equal(overnight.googleAllDay, false)
+  assert.equal(overnight.googleLastDate, '2025-03-10')
   const previousDay = normalizeGoogleCalendarEvent(event, 'calendar-1', 'America/Los_Angeles')
   assert.equal(previousDay.date, '2025-03-08')
   assert.equal(previousDay.time, '22:30')

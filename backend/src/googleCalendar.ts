@@ -293,17 +293,24 @@ router.get('/api/google/calendar/events', async (request, response) => {
     return
   }
 
-  const { data } = await google.calendar({ version: 'v3', auth: oauthClient })
-    .events.list({
+  const googleEvents = google.calendar({ version: 'v3', auth: oauthClient }).events
+  const events: ReturnType<typeof normalizeGoogleCalendarEvent>[] = []
+  let pageToken: string | undefined
+  do {
+    const { data } = await googleEvents.list({
       calendarId,
       maxResults: 2500,
       orderBy: 'startTime',
       singleEvents: true,
       ...(timeMin ? { timeMin } : {}),
-      ...(timeMax ? { timeMax } : {})
+      ...(timeMax ? { timeMax } : {}),
+      ...(pageToken ? { pageToken } : {})
     })
+    events.push(...(data.items ?? []).map((event) => normalizeGoogleCalendarEvent(event, calendarId, timeZone)))
+    pageToken = data.nextPageToken ?? undefined
+  } while (pageToken)
 
-  response.json({ events: (data.items ?? []).map((event) => normalizeGoogleCalendarEvent(event, calendarId, timeZone)) })
+  response.json({ events })
 })
 
 router.post('/api/google/calendar/events', async (request, response) => {

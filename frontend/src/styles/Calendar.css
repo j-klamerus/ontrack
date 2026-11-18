@@ -13,6 +13,18 @@
   color: #b91c1c;
 }
 
+.calendar-integration-status {
+  margin: 0 0 16px;
+  color: #475569;
+  font-size: 14px;
+}
+
+.today-button:disabled,
+.add-event-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 .calendar-layout.week-layout {
   grid-template-columns: minmax(0, 1fr);
 }

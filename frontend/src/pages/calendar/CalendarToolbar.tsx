@@ -8,6 +8,9 @@ type CalendarToolbarProps = {
   onMonthChange: (change: number) => void
   onJumpToToday: () => void
   onViewModeChange: (mode: CalendarViewMode) => void
+  googleCalendarName: string | null
+  isGoogleCalendarLoading: boolean
+  onRefreshGoogleCalendar: () => void
 }
 
 function CalendarToolbar({
@@ -15,7 +18,10 @@ function CalendarToolbar({
   viewMode,
   onMonthChange,
   onJumpToToday,
-  onViewModeChange
+  onViewModeChange,
+  googleCalendarName,
+  isGoogleCalendarLoading,
+  onRefreshGoogleCalendar
 }: CalendarToolbarProps) {
   return (
     <div className="calendar-toolbar">
@@ -30,6 +36,15 @@ function CalendarToolbar({
       </div>
 
       <div className="toolbar-actions">
+        <button
+          type="button"
+          className="today-button"
+          onClick={onRefreshGoogleCalendar}
+          disabled={isGoogleCalendarLoading}
+          title={googleCalendarName ? `Refresh ${googleCalendarName}` : 'Check Google Calendar connection'}
+        >
+          {isGoogleCalendarLoading ? 'Refreshing...' : 'Refresh Google Calendar'}
+        </button>
         <button type="button" className="today-button" onClick={onJumpToToday}>
           Today
         </button>

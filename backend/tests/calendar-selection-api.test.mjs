@@ -28,9 +28,15 @@ test('calendar API authenticates, stores selections, and normalizes Google event
     start: { dateTime: '2025-03-09T06:30:00Z' },
     end: { dateTime: '2025-03-09T07:30:00Z' }
   }
+  const listRequests = []
   google.calendar = () => ({
     events: {
-      list: async () => ({ data: { items: [event] } }),
+      list: async (options) => {
+        listRequests.push(options)
+        return options.pageToken
+          ? { data: { items: [{ ...event, id: 'event-2' }] } }
+          : { data: { items: [event], nextPageToken: 'next-page' } }
+      },
       insert: async () => ({ data: event }),
       patch: async () => ({ data: event })
     }
@@ -77,8 +83,16 @@ test('calendar API authenticates, stores selections, and normalizes Google event
     const connect = await (await originalFetch(`${base}/api/google/calendar/connect`, { headers })).json()
     const state = new URL(connect.url).searchParams.get('state')
     assert.equal((await originalFetch(`${base}/auth/google/calendar/callback?state=${state}&code=test`, { redirect: 'manual' })).status, 302)
-    const list = await originalFetch(`${base}/api/google/calendar/events?calendarId=work&timeZone=America%2FNew_York`, { headers })
-    const listedEvent = (await list.json()).events[0]
+    const list = await originalFetch(`${base}/api/google/calendar/events?calendarId=work&timeZone=America%2FNew_York&timeMin=2025-03-01T00%3A00%3A00Z&timeMax=2025-04-01T00%3A00%3A00Z`, { headers })
+    const listedEvents = (await list.json()).events
+    assert.deepEqual(listedEvents.map((item) => item.googleEventId), ['event-1', 'event-2'])
+    assert.equal(listRequests.length, 2)
+    assert.equal(listRequests[1].pageToken, 'next-page')
+    assert.equal(listRequests[1].calendarId, 'work')
+    assert.equal(listRequests[1].timeMin, '2025-03-01T00:00:00Z')
+    assert.equal(listRequests[1].timeMax, '2025-04-01T00:00:00Z')
+    assert.equal(listRequests[1].singleEvents, true)
+    const listedEvent = listedEvents[0]
     assert.equal(listedEvent.googleCalendarId, 'work')
     assert.equal(listedEvent.date, '2025-03-09')
     assert.equal(listedEvent.time, '01:30')

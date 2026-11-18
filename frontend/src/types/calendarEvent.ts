@@ -13,9 +13,11 @@ export type CalendarEvent = {
   googleEventId?: string
   googleCalendarId?: string
   googleDurationMinutes?: number
+  googleAllDay?: boolean
+  googleLastDate?: string
 }
 
 export type EventFormState = Omit<
   CalendarEvent,
-  'id' | 'googleEventId' | 'googleCalendarId' | 'googleDurationMinutes'
+  'id' | 'googleEventId' | 'googleCalendarId' | 'googleDurationMinutes' | 'googleAllDay' | 'googleLastDate'
 >

@@ -39,6 +39,7 @@ function parseGoogleCalendarEvent(value: unknown, calendarId: string): CalendarE
     value.id !== `google:${value.googleEventId}` || value.googleCalendarId !== calendarId ||
     typeof value.googleDurationMinutes !== 'number' || !Number.isFinite(value.googleDurationMinutes) ||
     value.googleDurationMinutes <= 0 ||
+    typeof value.googleAllDay !== 'boolean' || typeof value.googleLastDate !== 'string' ||
     typeof value.title !== 'string' || typeof value.course !== 'string' ||
     typeof value.date !== 'string' || typeof value.time !== 'string' ||
     typeof value.category !== 'string' || !isEventPriority(value.priority) ||
@@ -51,6 +52,8 @@ function parseGoogleCalendarEvent(value: unknown, calendarId: string): CalendarE
     googleEventId: value.googleEventId,
     googleCalendarId: calendarId,
     googleDurationMinutes: value.googleDurationMinutes,
+    googleAllDay: value.googleAllDay,
+    googleLastDate: value.googleLastDate,
     title: value.title,
     course: value.course,
     date: value.date,

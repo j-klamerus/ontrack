@@ -9,6 +9,7 @@ export type CalendarScheduleItem = {
   title: string
   date: string
   time: string
+  allDay?: boolean
   kind: 'Commitment' | 'Calendar event'
   color: string
   category: EventCategory

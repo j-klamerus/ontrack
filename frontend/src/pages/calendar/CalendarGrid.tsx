@@ -103,7 +103,7 @@ function CalendarGrid({
                       </span>
                     </div>
                     <span className="mini-title">{item.title}</span>
-                    <span className="mini-meta">{formatTime(item.time)}</span>
+                    <span className="mini-meta">{item.allDay ? 'All day' : item.date !== isoDay ? 'Continues' : formatTime(item.time)}</span>
                   </div>
                 )) : <span className="no-events">No items</span>}
               </div>

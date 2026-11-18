@@ -52,6 +52,14 @@ test('calendar selection migrates once without overwriting a backend choice or r
     assert.equal(service.resolveSelectedGoogleCalendar(calendars, null).id, 'primary')
     assert.equal(service.resolveSelectedGoogleCalendar(calendars.slice(0, 1), 'shared'), null)
     assert.equal(service.resolveSelectedGoogleCalendar([], null), null)
+
+    const { isEventOnDate } = await server.ssrLoadModule('/src/pages/calendar/formatters.ts')
+    const multiDay = { date: '2025-03-09', googleLastDate: '2025-03-11' }
+    assert.equal(isEventOnDate(multiDay, '2025-03-08'), false)
+    assert.equal(isEventOnDate(multiDay, '2025-03-09'), true)
+    assert.equal(isEventOnDate(multiDay, '2025-03-11'), true)
+    assert.equal(isEventOnDate(multiDay, '2025-03-12'), false)
+    assert.equal(isEventOnDate({ date: '2025-03-09' }, '2025-03-10'), false)
   } finally {
     await server.close()
     globalThis.fetch = originalFetch
