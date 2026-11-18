@@ -24,6 +24,19 @@ import {
 } from './services/plannerNavigation'
 import type { PlannerItemSelection } from './types/plannerItemSelection'
 
+type Theme = 'light' | 'dark'
+
+const getInitialTheme = (): Theme => {
+  const savedTheme = window.localStorage.getItem('ontrack-theme')
+  if (savedTheme === 'light' || savedTheme === 'dark') {
+    return savedTheme
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light'
+}
+
 type Page = 'Dashboard' | 'Inbox' | 'Commitments' | 'Calendar' | 'Settings'
 type SuggestionCounts = Record<PlannerPage, number>
 type PendingSettingsExit = { type: 'navigate'; page: Page } | { type: 'logout' }
@@ -34,6 +47,7 @@ type AppProps = {
 }
 
 function App({ onLogOut, authError }: AppProps) {
+  const [theme, setTheme] = useState<Theme>(getInitialTheme)
   const [currentPage, setCurrentPage] = useState<Page>('Dashboard')
   const [calendarSelection, setCalendarSelection] = useState<PlannerItemSelection | null>(null)
   const [commitmentSelection, setCommitmentSelection] = useState<PlannerItemSelection | null>(null)
@@ -49,6 +63,11 @@ function App({ onLogOut, authError }: AppProps) {
     calendar: 0,
     commitments: 0
   })
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    window.localStorage.setItem('ontrack-theme', theme)
+  }, [theme])
 
   useEffect(() => {
     let isMounted = true
@@ -295,6 +314,14 @@ function App({ onLogOut, authError }: AppProps) {
       <main className="main-content">
         <header className="top-bar">
           <h1>{currentPage}</h1>
+          <button
+            className="theme-toggle"
+            type="button"
+            aria-pressed={theme === 'dark'}
+            onClick={() => setTheme((currentTheme) => currentTheme === 'dark' ? 'light' : 'dark')}
+          >
+            Dark theme: {theme === 'dark' ? 'On' : 'Off'}
+          </button>
         </header>
 
         {authError && <p className="auth-error" role="alert">{authError}</p>}
