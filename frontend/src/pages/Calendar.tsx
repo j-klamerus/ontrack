@@ -28,6 +28,7 @@ import {
   getGoogleCalendars,
   getGoogleCalendarStatus,
   getSelectedGoogleCalendarId,
+  resolveSelectedGoogleCalendar,
   updateGoogleCalendarEvent,
   type GoogleCalendarEventInput
 } from '../services/googleCalendar'
@@ -63,7 +64,7 @@ const createEmptyForm = (selectedDate: Date): EventFormState => ({
   description: ''
 })
 
-function Calendar() {
+function Calendar({ userId }: { userId: string }) {
   const categoryOptions = getEventCategories()
   const [currentMonth, setCurrentMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
   const [selectedDate, setSelectedDate] = useState(() => new Date())
@@ -135,15 +136,18 @@ function Calendar() {
         }
 
         const calendars = await getGoogleCalendars()
-        const savedCalendarId = getSelectedGoogleCalendarId()
-        const selectedCalendar = calendars.find(
-          (calendar) => calendar.id === savedCalendarId && canWriteGoogleCalendar(calendar)
-        )
-          ?? calendars.find((calendar) => calendar.primary && canWriteGoogleCalendar(calendar))
-          ?? calendars.find(canWriteGoogleCalendar)
-          ?? calendars.find((calendar) => calendar.primary)
-          ?? calendars[0]
+        if (!isMounted) {
+          return
+        }
+        const savedCalendarId = await getSelectedGoogleCalendarId(userId)
+        if (!isMounted) return
+        const selectedCalendar = resolveSelectedGoogleCalendar(calendars, savedCalendarId)
         if (!selectedCalendar) {
+          setSelectedGoogleCalendarId(null)
+          setSelectedGoogleCalendarCanWrite(false)
+          setGoogleCalendarError(savedCalendarId
+            ? 'Your selected Google Calendar is no longer available. Choose another calendar in Settings.'
+            : 'No Google calendars are available for this account.')
           return
         }
 
@@ -182,7 +186,7 @@ function Calendar() {
     return () => {
       isMounted = false
     }
-  }, [currentMonth])
+  }, [currentMonth, userId])
 
   const selectedDateIso = getIsoDate(selectedDate)
 

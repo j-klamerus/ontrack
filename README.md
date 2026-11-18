@@ -70,6 +70,10 @@ PORT=3000
 ~~~
 The OAuth client must be a Web application with the redirect URI above. The prototype keeps Google tokens in backend memory, so reconnect after restarting the backend. `backend/.env` is ignored by Git; never commit or share its secrets.
 
+After connecting Google Calendar in Settings, choose a **Primary calendar for On Track**. The Calendar page displays that calendar and creates new events there; a read-only calendar can be viewed but cannot receive new events. The choice is stored per On Track account in `backend/.ontrack-data/calendar-selections` and does not change Google's own primary calendar. Run the backend from the `backend` directory so it uses the same data location each time. This local prototype is intended for a single backend process; backing up or moving the server requires preserving that directory. Existing per-account browser selections migrate on first use; earlier shared browser selections are not carried over. If the saved calendar is no longer available, choose another in Settings.
+
+Calendar selection, category edits, and preference changes are applied with **Save Changes**. You will be warned before leaving Settings with unsaved changes. Reset to Defaults opens a review where you can choose which preferences, calendar selection, and individual custom categories to reset; applying those resets takes effect immediately. Removing a custom category moves local events and commitments using it to Other. It does not modify categories stored in Google Calendar events.
+
 ### Test Everything is working Properly
 
 At this point everything should be setup properly in order to run the app. Follow these steps to make sure its working as expected:

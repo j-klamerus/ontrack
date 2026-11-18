@@ -2,6 +2,9 @@ import { randomBytes } from 'node:crypto'
 import express from 'express'
 import { createClient } from '@supabase/supabase-js'
 import { google } from 'googleapis'
+import { resolve } from 'node:path'
+import { CalendarSelectionStore } from './calendarSelection.js'
+import { isValidTimeZone, normalizeGoogleCalendarEvent } from './calendarEvent.js'
 
 const router = express.Router()
 const frontendOrigin = process.env.FRONTEND_ORIGIN?.trim() || 'http://localhost:5173'
@@ -16,6 +19,7 @@ const supabaseAuth = supabaseUrl && supabaseAnonKey
 const oauthStateLifetimeMs = 10 * 60 * 1000
 const pendingOAuthStates = new Map<string, { userId: string; createdAt: number }>()
 const connectedUsers = new Map<string, ReturnType<typeof createCalendarOAuthClient>>()
+const calendarSelections = new CalendarSelectionStore(resolve('.ontrack-data', 'calendar-selections'))
 
 function createCalendarOAuthClient() {
   const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID?.trim()
@@ -94,7 +98,7 @@ function parseEventInput(value: unknown) {
     !summary ||
     !startDateTime ||
     !endDateTime ||
-    !timeZone ||
+    !timeZone || !isValidTimeZone(timeZone) ||
     Number.isNaN(Date.parse(startDateTime)) ||
     Number.isNaN(Date.parse(endDateTime)) ||
     Date.parse(endDateTime) <= Date.parse(startDateTime)
@@ -205,6 +209,28 @@ router.delete('/api/google/calendar', async (request, response) => {
   response.status(204).end()
 })
 
+router.get('/api/google/calendar/selection', async (request, response) => {
+  const userId = await getAuthenticatedUserId(request, response)
+  if (!userId) return
+  response.json(await calendarSelections.get(userId))
+})
+
+router.put('/api/google/calendar/selection', async (request, response) => {
+  const userId = await getAuthenticatedUserId(request, response)
+  if (!userId) return
+  const body: unknown = request.body
+  if (
+    !isRecord(body) ||
+    (body.calendarId !== null &&
+      (typeof body.calendarId !== 'string' || !body.calendarId.trim() || body.calendarId.length > 2048)) ||
+    (body.onlyIfUnset !== undefined && typeof body.onlyIfUnset !== 'boolean')
+  ) {
+    response.status(400).json({ error: 'A valid calendar selection is required.' })
+    return
+  }
+  response.json(await calendarSelections.set(userId, body.calendarId, body.onlyIfUnset === true))
+})
+
 router.get('/api/google/calendar/calendars', async (request, response) => {
   const userId = await getAuthenticatedUserId(request, response)
   if (!userId) {
@@ -216,22 +242,27 @@ router.get('/api/google/calendar/calendars', async (request, response) => {
     return
   }
 
-  const { data } = await google.calendar({ version: 'v3', auth: oauthClient })
-    .calendarList.list({ maxResults: 250 })
-
-  const calendars = (data.items ?? []).flatMap((calendar) => {
-    if (typeof calendar.id !== 'string') {
-      return []
+  const calendarList = google.calendar({ version: 'v3', auth: oauthClient }).calendarList
+  const calendars: { id: string; summary: string; primary: boolean; accessRole: string; timeZone: string | null }[] = []
+  let pageToken: string | undefined
+  do {
+    const { data } = await calendarList.list({
+      maxResults: 250,
+      ...(pageToken ? { pageToken } : {})
+    })
+    for (const calendar of data.items ?? []) {
+      if (typeof calendar.id === 'string') {
+        calendars.push({
+          id: calendar.id,
+          summary: calendar.summary || calendar.id,
+          primary: calendar.primary ?? false,
+          accessRole: calendar.accessRole ?? 'reader',
+          timeZone: calendar.timeZone ?? null
+        })
+      }
     }
-
-    return [{
-      id: calendar.id,
-      summary: calendar.summary || calendar.id,
-      primary: calendar.primary ?? false,
-      accessRole: calendar.accessRole ?? 'reader',
-      timeZone: calendar.timeZone ?? null
-    }]
-  })
+    pageToken = data.nextPageToken ?? undefined
+  } while (pageToken)
 
   response.json({ calendars })
 })
@@ -250,13 +281,15 @@ router.get('/api/google/calendar/events', async (request, response) => {
   const calendarId = readNonEmptyString(request.query.calendarId) || 'primary'
   const timeMin = readNonEmptyString(request.query.timeMin)
   const timeMax = readNonEmptyString(request.query.timeMax)
+  const timeZone = readNonEmptyString(request.query.timeZone)
 
   if (
+    !timeZone || !isValidTimeZone(timeZone) ||
     (timeMin && Number.isNaN(Date.parse(timeMin))) ||
     (timeMax && Number.isNaN(Date.parse(timeMax))) ||
     (timeMin && timeMax && Date.parse(timeMax) <= Date.parse(timeMin))
   ) {
-    response.status(400).json({ error: 'The event date range is invalid.' })
+    response.status(400).json({ error: 'The event date range or time zone is invalid.' })
     return
   }
 
@@ -270,7 +303,7 @@ router.get('/api/google/calendar/events', async (request, response) => {
       ...(timeMax ? { timeMax } : {})
     })
 
-  response.json({ events: data.items ?? [] })
+  response.json({ events: (data.items ?? []).map((event) => normalizeGoogleCalendarEvent(event, calendarId, timeZone)) })
 })
 
 router.post('/api/google/calendar/events', async (request, response) => {
@@ -297,7 +330,7 @@ router.post('/api/google/calendar/events', async (request, response) => {
       requestBody: toGoogleEventBody(event)
     })
 
-  response.status(201).json({ event: data })
+  response.status(201).json({ event: normalizeGoogleCalendarEvent(data, calendarId, event.timeZone) })
 })
 
 router.patch('/api/google/calendar/events/:eventId', async (request, response) => {
@@ -326,7 +359,7 @@ router.patch('/api/google/calendar/events/:eventId', async (request, response) =
       requestBody: toGoogleEventBody(event)
     })
 
-  response.json({ event: data })
+  response.json({ event: normalizeGoogleCalendarEvent(data, calendarId, event.timeZone) })
 })
 
 router.delete('/api/google/calendar/events/:eventId', async (request, response) => {

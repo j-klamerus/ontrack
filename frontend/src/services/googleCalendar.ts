@@ -33,70 +33,31 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isEventPriority = (value: unknown): value is EventPriority =>
   value === 'High' || value === 'Medium' || value === 'Low'
 
-const getIsoDate = (date: Date) => {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-const getLocalTime = (date: Date) =>
-  `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-
-function parseGoogleCalendarEvent(value: unknown, calendarId: string): CalendarEvent | null {
-  if (!isRecord(value) || typeof value.id !== 'string') {
-    return null
+function parseGoogleCalendarEvent(value: unknown, calendarId: string): CalendarEvent {
+  if (
+    !isRecord(value) || typeof value.googleEventId !== 'string' ||
+    value.id !== `google:${value.googleEventId}` || value.googleCalendarId !== calendarId ||
+    typeof value.googleDurationMinutes !== 'number' || !Number.isFinite(value.googleDurationMinutes) ||
+    value.googleDurationMinutes <= 0 ||
+    typeof value.title !== 'string' || typeof value.course !== 'string' ||
+    typeof value.date !== 'string' || typeof value.time !== 'string' ||
+    typeof value.category !== 'string' || !isEventPriority(value.priority) ||
+    typeof value.description !== 'string'
+  ) {
+    throw new Error('The backend returned an invalid Google Calendar event.')
   }
-
-  const start = isRecord(value.start) ? value.start : null
-  const end = isRecord(value.end) ? value.end : null
-  if (!start) {
-    return null
-  }
-
-  const startDateTime = typeof start.dateTime === 'string' ? start.dateTime : null
-  const startDate = typeof start.date === 'string' ? start.date : null
-  const startDateObject = startDateTime ? new Date(startDateTime) : null
-  if (startDateTime && (!startDateObject || Number.isNaN(startDateObject.getTime()))) {
-    return null
-  }
-  if (!startDateTime && !startDate) {
-    return null
-  }
-
-  const endDateTime = end && typeof end.dateTime === 'string' ? end.dateTime : null
-  const parsedEnd = endDateTime ? Date.parse(endDateTime) : Number.NaN
-  const parsedStart = startDateTime ? Date.parse(startDateTime) : Number.NaN
-  const googleEventId = value.id
-  const extendedProperties = isRecord(value.extendedProperties) &&
-    isRecord(value.extendedProperties.private)
-    ? value.extendedProperties.private
-    : {}
-  const eventDate = startDateObject ? getIsoDate(startDateObject) : startDate
-  if (!eventDate) {
-    return null
-  }
-
   return {
-    id: `google:${googleEventId}`,
-    googleEventId,
+    id: value.id,
+    googleEventId: value.googleEventId,
     googleCalendarId: calendarId,
-    googleDurationMinutes: Number.isFinite(parsedEnd - parsedStart) && parsedEnd > parsedStart
-      ? Math.max(1, Math.round((parsedEnd - parsedStart) / 60000))
-      : 60,
-    title: typeof value.summary === 'string' && value.summary.trim() ? value.summary : '(Untitled event)',
-    course: typeof extendedProperties.ontrackCourse === 'string'
-      ? extendedProperties.ontrackCourse
-      : 'Google Calendar',
-    date: eventDate,
-    time: startDateObject ? getLocalTime(startDateObject) : '00:00',
-    category: typeof extendedProperties.ontrackCategory === 'string'
-      ? extendedProperties.ontrackCategory
-      : 'Other',
-    priority: isEventPriority(extendedProperties.ontrackPriority)
-      ? extendedProperties.ontrackPriority
-      : 'Medium',
-    description: typeof value.description === 'string' ? value.description : ''
+    googleDurationMinutes: value.googleDurationMinutes,
+    title: value.title,
+    course: value.course,
+    date: value.date,
+    time: value.time,
+    category: value.category,
+    priority: value.priority,
+    description: value.description
   }
 }
 
@@ -195,15 +156,14 @@ export async function getGoogleCalendarEvents(
   timeMin: string,
   timeMax: string
 ): Promise<CalendarEvent[]> {
-  const query = new URLSearchParams({ calendarId, timeMin, timeMax })
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  const query = new URLSearchParams({ calendarId, timeMin, timeMax, timeZone })
   const response = await requestGoogleCalendar(`/api/google/calendar/events?${query.toString()}`)
   if (!isRecord(response) || !Array.isArray(response.events)) {
     throw new Error('The backend returned an invalid Google Calendar event list.')
   }
 
-  return response.events
-    .map((event) => parseGoogleCalendarEvent(event, calendarId))
-    .filter((event): event is CalendarEvent => event !== null)
+  return response.events.map((event) => parseGoogleCalendarEvent(event, calendarId))
 }
 
 function toGoogleEventRequest(calendarId: string, event: GoogleCalendarEventInput) {
@@ -225,11 +185,7 @@ function parseSavedGoogleEvent(response: unknown, calendarId: string): CalendarE
     throw new Error('The backend returned an invalid saved Google Calendar event.')
   }
 
-  const event = parseGoogleCalendarEvent(response.event, calendarId)
-  if (!event) {
-    throw new Error('The backend returned an invalid saved Google Calendar event.')
-  }
-  return event
+  return parseGoogleCalendarEvent(response.event, calendarId)
 }
 
 export async function createGoogleCalendarEvent(
@@ -266,10 +222,55 @@ export async function deleteGoogleCalendarEvent(calendarId: string, eventId: str
   )
 }
 
-export function getSelectedGoogleCalendarId(): string | null {
-  return localStorage.getItem(selectedCalendarStorageKey)
+type CalendarSelection = { initialized: boolean; calendarId: string | null }
+
+function parseCalendarSelection(value: unknown): CalendarSelection {
+  if (
+    !isRecord(value) || typeof value.initialized !== 'boolean' ||
+    (value.calendarId !== null && (typeof value.calendarId !== 'string' || !value.calendarId.trim()))
+  ) {
+    throw new Error('The backend returned an invalid Google Calendar selection.')
+  }
+  return { initialized: value.initialized, calendarId: value.calendarId }
 }
 
-export function saveSelectedGoogleCalendarId(calendarId: string): void {
-  localStorage.setItem(selectedCalendarStorageKey, calendarId)
+async function writeCalendarSelection(calendarId: string | null, onlyIfUnset = false): Promise<CalendarSelection> {
+  return parseCalendarSelection(await requestGoogleCalendar('/api/google/calendar/selection', {
+    method: 'PUT',
+    body: JSON.stringify({ calendarId, onlyIfUnset })
+  }))
+}
+
+export async function getSelectedGoogleCalendarId(userId: string): Promise<string | null> {
+  let selection = parseCalendarSelection(await requestGoogleCalendar('/api/google/calendar/selection'))
+  const legacyKey = `${selectedCalendarStorageKey}:${userId}`
+  const legacyCalendarId = localStorage.getItem(legacyKey)
+  if (!selection.initialized && legacyCalendarId) {
+    selection = await writeCalendarSelection(legacyCalendarId, true)
+  }
+  if (legacyCalendarId) localStorage.removeItem(legacyKey)
+  return selection.calendarId
+}
+
+export async function saveSelectedGoogleCalendarId(calendarId: string): Promise<void> {
+  await writeCalendarSelection(calendarId)
+}
+
+export async function resetSelectedGoogleCalendarId(): Promise<void> {
+  await writeCalendarSelection(null)
+}
+
+export function resolveSelectedGoogleCalendar(
+  calendars: GoogleCalendarInfo[],
+  savedCalendarId: string | null
+): GoogleCalendarInfo | null {
+  if (savedCalendarId) {
+    return calendars.find((calendar) => calendar.id === savedCalendarId) ?? null
+  }
+
+  return calendars.find((calendar) => calendar.primary && canWriteGoogleCalendar(calendar))
+    ?? calendars.find(canWriteGoogleCalendar)
+    ?? calendars.find((calendar) => calendar.primary)
+    ?? calendars[0]
+    ?? null
 }

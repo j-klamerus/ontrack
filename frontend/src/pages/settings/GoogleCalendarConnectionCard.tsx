@@ -4,18 +4,23 @@ import {
   disconnectGoogleCalendar,
   getGoogleCalendarStatus,
   getGoogleCalendars,
-  getSelectedGoogleCalendarId,
-  saveSelectedGoogleCalendarId,
+  resolveSelectedGoogleCalendar,
   startGoogleCalendarConnection,
   type GoogleCalendarInfo
 } from '../../services/googleCalendar'
 
-function GoogleCalendarConnectionCard() {
+type GoogleCalendarConnectionCardProps = {
+  selectedCalendarId: string | null
+  selectionLoading: boolean
+  selectionError: string | null
+  onCalendarChange: (calendarId: string) => void
+}
+
+function GoogleCalendarConnectionCard({ selectedCalendarId, selectionLoading, selectionError, onCalendarChange }: GoogleCalendarConnectionCardProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isBusy, setIsBusy] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
   const [calendars, setCalendars] = useState<GoogleCalendarInfo[]>([])
-  const [selectedCalendarId, setSelectedCalendarId] = useState('')
   const [message, setMessage] = useState<string | null>(() => {
     const connectionResult = new URLSearchParams(window.location.search).get('calendar_connection')
     if (connectionResult === 'connected') {
@@ -46,15 +51,9 @@ function GoogleCalendarConnectionCard() {
           }
 
           setCalendars(loadedCalendars)
-          const savedCalendarId = getSelectedGoogleCalendarId()
-          const selectedCalendar = loadedCalendars.find(
-            (calendar) => calendar.id === savedCalendarId && canWriteGoogleCalendar(calendar)
-          )
-          const defaultCalendar = loadedCalendars.find((calendar) => calendar.primary && canWriteGoogleCalendar(calendar))
-            ?? loadedCalendars.find(canWriteGoogleCalendar)
-            ?? loadedCalendars.find((calendar) => calendar.primary)
-            ?? loadedCalendars[0]
-          setSelectedCalendarId(selectedCalendar?.id ?? defaultCalendar?.id ?? '')
+          if (loadedCalendars.length === 0) {
+            setError('No Google calendars are available for this account.')
+          }
         }
       } catch (loadError) {
         if (isMounted) {
@@ -94,7 +93,6 @@ function GoogleCalendarConnectionCard() {
       await disconnectGoogleCalendar()
       setIsConnected(false)
       setCalendars([])
-      setSelectedCalendarId('')
       setMessage('Google Calendar disconnected from this running backend.')
     } catch (disconnectError) {
       setError(disconnectError instanceof Error ? disconnectError.message : 'Unable to disconnect Google Calendar.')
@@ -104,14 +102,12 @@ function GoogleCalendarConnectionCard() {
   }
 
   const handleCalendarChange = (calendarId: string) => {
-    setSelectedCalendarId(calendarId)
-    try {
-      saveSelectedGoogleCalendarId(calendarId)
-      setError(null)
-    } catch {
-      setError('Unable to save the selected calendar in this browser.')
-    }
+    onCalendarChange(calendarId)
+    setError(null)
+    setMessage(null)
   }
+
+  const resolvedCalendar = resolveSelectedGoogleCalendar(calendars, selectedCalendarId)
 
   return (
     <div className="settings-card">
@@ -122,7 +118,7 @@ function GoogleCalendarConnectionCard() {
         </span>
       </div>
       <p className="field-note">
-        Connect a Google account to authorize On Track to view and manage events on calendars you can edit.
+        Connect a Google account to authorize On Track to view and manage your calendar events.
       </p>
       <p className="field-note">
         Local prototype: the backend keeps tokens in memory, so reconnect after restarting it. Disconnecting here
@@ -131,15 +127,17 @@ function GoogleCalendarConnectionCard() {
 
       {isConnected && calendars.length > 0 && (
         <label className="select-field" htmlFor="google-calendar-selection">
-          Calendar for new events
+          Primary calendar for On Track
           <select
             id="google-calendar-selection"
-            value={selectedCalendarId}
+            value={resolvedCalendar?.id ?? ''}
+            disabled={selectionLoading || !!selectionError}
             onChange={(event) => handleCalendarChange(event.target.value)}
           >
+            {!resolvedCalendar && <option value="" disabled>Choose a calendar</option>}
             {calendars.map((calendar) => (
-              <option key={calendar.id} value={calendar.id} disabled={!canWriteGoogleCalendar(calendar)}>
-                {calendar.summary}{calendar.primary ? ' (primary)' : ''}
+              <option key={calendar.id} value={calendar.id}>
+                {calendar.summary}{calendar.primary ? ' (Google primary)' : ''}
                 {!canWriteGoogleCalendar(calendar) ? ' (read only)' : ''}
               </option>
             ))}
@@ -147,7 +145,22 @@ function GoogleCalendarConnectionCard() {
         </label>
       )}
 
+      {isConnected && !selectionLoading && !selectionError && resolvedCalendar && (
+        <p className="field-note">
+          On Track displays this calendar and adds new events to it. Read-only calendars cannot receive new events.
+          This choice does not change your primary calendar in Google.
+        </p>
+      )}
+
+      {isConnected && !selectionLoading && !selectionError && selectedCalendarId && !resolvedCalendar && calendars.length > 0 && (
+        <p className="category-error" role="alert">
+          Your selected calendar is no longer available. Choose another calendar.
+        </p>
+      )}
+
       {message && <p className="save-banner" role="status">{message}</p>}
+      {selectionLoading && <p className="field-note" role="status">Loading your calendar choice...</p>}
+      {selectionError && <p className="category-error" role="alert">{selectionError}</p>}
       {error && <p className="category-error" role="alert">{error}</p>}
 
       {isConnected ? (

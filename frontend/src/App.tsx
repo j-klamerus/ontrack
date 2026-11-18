@@ -37,6 +37,7 @@ type AppProps = {
 function App({ user, onLogOut, authError }: AppProps) {
   const profile = getUserProfile(user)
   const [currentPage, setCurrentPage] = useState<Page>('Dashboard')
+  const [settingsDirty, setSettingsDirty] = useState(false)
   const [unreadEmailCount, setUnreadEmailCount] = useState(0)
   const [navigationError, setNavigationError] = useState<string | null>(null)
   const [plannerPageChanges, setPlannerPageChanges] = useState<PlannerPageChanges>({
@@ -117,12 +118,30 @@ function App({ user, onLogOut, authError }: AppProps) {
     document.querySelector('.main-content')?.scrollTo({ top: 0, behavior: 'instant' })
   }, [currentPage])
 
+  const confirmLeavingSettings = () =>
+    currentPage !== 'Settings' || !settingsDirty || window.confirm('Discard unsaved settings changes?')
+
+  const navigateTo = (page: Page) => {
+    if (page !== currentPage && confirmLeavingSettings()) {
+      setCurrentPage(page)
+    }
+  }
+
   const pages = {
     Dashboard: <Dashboard user={profile} />,
     Inbox: <Inbox onUnreadCountChange={setUnreadEmailCount} />,
     Commitments: <Commitments />,
-    Calendar: <Calendar />,
-    Settings: <Settings user={profile} onLogOut={onLogOut} />
+    Calendar: <Calendar userId={user.id} />,
+    Settings: (
+      <Settings
+        user={profile}
+        userId={user.id}
+        onDirtyChange={setSettingsDirty}
+        onLogOut={() => {
+          if (confirmLeavingSettings()) onLogOut()
+        }}
+      />
+    )
   }
 
   const navigationItems = [
@@ -153,7 +172,7 @@ function App({ user, onLogOut, authError }: AppProps) {
                 }`}
                 aria-current={currentPage === page ? 'page' : undefined}
                 aria-label={plannerPage && plannerPageChanges[plannerPage] ? `${page}, new changes` : undefined}
-                onClick={() => setCurrentPage(page)}
+                onClick={() => navigateTo(page)}
               >
                 <Icon size={20} strokeWidth={1.8} />
                 <span>{page}</span>
@@ -189,7 +208,7 @@ function App({ user, onLogOut, authError }: AppProps) {
           <button
             className={`nav-item ${currentPage === 'Settings' ? 'active' : ''}`}
             aria-current={currentPage === 'Settings' ? 'page' : undefined}
-            onClick={() => setCurrentPage('Settings')}
+            onClick={() => navigateTo('Settings')}
           >
             <SettingsIcon size={20} strokeWidth={1.8} />
             <span>Settings</span>

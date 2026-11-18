@@ -15,14 +15,14 @@ test('settings shows the current account instead of an old saved demo profile', 
   }
   globalThis.window = { location: { search: '' } }
 
-  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  const server = await createServer({ server: { middlewareMode: true, ws: false }, appType: 'custom' })
   try {
     const { default: Settings } = await server.ssrLoadModule('/src/pages/Settings.tsx')
     for (const user of [
       { name: 'Alex Student', email: 'alex@example.com' },
       { name: 'Taylor Student', email: 'taylor@example.com' }
     ]) {
-      const html = renderToStaticMarkup(createElement(Settings, { user, onLogOut() {} }))
+      const html = renderToStaticMarkup(createElement(Settings, { user, userId: 'test-user', onDirtyChange() {}, onLogOut() {} }))
       assert.match(html, new RegExp(`id="student-name"[^>]*readOnly=""[^>]*value="${user.name}"`))
       assert.match(html, new RegExp(`id="student-email"[^>]*readOnly=""[^>]*value="${user.email}"`))
       assert.doesNotMatch(html, /Old Demo Name|old@example\.com/)

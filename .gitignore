@@ -10,6 +10,7 @@ dist/
 build/
 frontend/dist/
 backend/dist/
+backend/.ontrack-data/
 
 *.log
 npm-debug.log*

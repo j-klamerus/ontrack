@@ -5,11 +5,15 @@ import GoogleCalendarConnectionCard from './GoogleCalendarConnectionCard'
 
 type PreferenceSettingsCardsProps = {
   user: UserProfile
+  selectedCalendarId: string | null
+  selectionLoading: boolean
+  selectionError: string | null
+  onCalendarChange: (calendarId: string) => void
   settings: SettingsState
   updateSetting: <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void
 }
 
-function PreferenceSettingsCards({ user, settings, updateSetting }: PreferenceSettingsCardsProps) {
+function PreferenceSettingsCards({ user, selectedCalendarId, selectionLoading, selectionError, onCalendarChange, settings, updateSetting }: PreferenceSettingsCardsProps) {
   return (
     <>
       <div className="settings-card">
@@ -98,7 +102,12 @@ function PreferenceSettingsCards({ user, settings, updateSetting }: PreferenceSe
         </button>
       </div>
 
-      <GoogleCalendarConnectionCard />
+      <GoogleCalendarConnectionCard
+        selectedCalendarId={selectedCalendarId}
+        selectionLoading={selectionLoading}
+        selectionError={selectionError}
+        onCalendarChange={onCalendarChange}
+      />
 
       <div className="settings-card">
         <div className="card-header-row">
@@ -204,7 +213,7 @@ function PreferenceSettingsCards({ user, settings, updateSetting }: PreferenceSe
           onChange={(checked) => updateSetting('emailAnalysisEnabled', checked)}
         />
         <p className="field-note">
-          No real Gmail or Google Calendar data is currently accessed. Demo processing only.
+          Gmail analysis uses demo data only. Google Calendar data is accessed when you connect a calendar.
         </p>
       </div>
     </>
