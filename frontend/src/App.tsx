@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { User } from '@supabase/supabase-js'
 import {
   LayoutDashboard,
   Mail,
@@ -15,6 +16,7 @@ import Calendar from './pages/Calendar'
 import Settings from './pages/Settings'
 import { getEmails } from './services/emails'
 import { getDashboardSuggestions } from './services/dashboardSuggestions'
+import { getUserProfile } from './services/user'
 import {
   getPlannerPageChanges,
   markPlannerPageVisited,
@@ -27,12 +29,15 @@ type Page = 'Dashboard' | 'Inbox' | 'Commitments' | 'Calendar' | 'Settings'
 type SuggestionCounts = Record<PlannerPage, number>
 
 type AppProps = {
+  user: User
   onLogOut: () => void
   authError: string | null
 }
 
-function App({ onLogOut, authError }: AppProps) {
+function App({ user, onLogOut, authError }: AppProps) {
+  const profile = getUserProfile(user)
   const [currentPage, setCurrentPage] = useState<Page>('Dashboard')
+  const [settingsDirty, setSettingsDirty] = useState(false)
   const [unreadEmailCount, setUnreadEmailCount] = useState(0)
   const [navigationError, setNavigationError] = useState<string | null>(null)
   const [plannerPageChanges, setPlannerPageChanges] = useState<PlannerPageChanges>({
@@ -113,12 +118,30 @@ function App({ onLogOut, authError }: AppProps) {
     document.querySelector('.main-content')?.scrollTo({ top: 0, behavior: 'instant' })
   }, [currentPage])
 
+  const confirmLeavingSettings = () =>
+    currentPage !== 'Settings' || !settingsDirty || window.confirm('Discard unsaved settings changes?')
+
+  const navigateTo = (page: Page) => {
+    if (page !== currentPage && confirmLeavingSettings()) {
+      setCurrentPage(page)
+    }
+  }
+
   const pages = {
-    Dashboard: <Dashboard />,
+    Dashboard: <Dashboard user={profile} />,
     Inbox: <Inbox onUnreadCountChange={setUnreadEmailCount} />,
     Commitments: <Commitments />,
-    Calendar: <Calendar />,
-    Settings: <Settings onLogOut={onLogOut} />
+    Calendar: <Calendar userId={user.id} />,
+    Settings: (
+      <Settings
+        user={profile}
+        userId={user.id}
+        onDirtyChange={setSettingsDirty}
+        onLogOut={() => {
+          if (confirmLeavingSettings()) onLogOut()
+        }}
+      />
+    )
   }
 
   const navigationItems = [
@@ -149,7 +172,7 @@ function App({ onLogOut, authError }: AppProps) {
                 }`}
                 aria-current={currentPage === page ? 'page' : undefined}
                 aria-label={plannerPage && plannerPageChanges[plannerPage] ? `${page}, new changes` : undefined}
-                onClick={() => setCurrentPage(page)}
+                onClick={() => navigateTo(page)}
               >
                 <Icon size={20} strokeWidth={1.8} />
                 <span>{page}</span>
@@ -185,7 +208,7 @@ function App({ onLogOut, authError }: AppProps) {
           <button
             className={`nav-item ${currentPage === 'Settings' ? 'active' : ''}`}
             aria-current={currentPage === 'Settings' ? 'page' : undefined}
-            onClick={() => setCurrentPage('Settings')}
+            onClick={() => navigateTo('Settings')}
           >
             <SettingsIcon size={20} strokeWidth={1.8} />
             <span>Settings</span>

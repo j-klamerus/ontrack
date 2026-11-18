@@ -3,35 +3,24 @@ import cors from "cors";
 import "dotenv/config"
 
 import { google } from "googleapis";
+import googleCalendarRouter from "./googleCalendar.js";
 
 const app = express()
 const port = process.env.PORT || 3000;
+const frontendOrigin = process.env.FRONTEND_ORIGIN?.trim() || 'http://localhost:5173'
 
 //get env vars
-const {
-  GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET,
-  REDIRECT_URI,
-  SESSION_SECRET,
-} = process.env;
-
-
-/*const oauth2Client = new google.auth.OAuth2(
-    process.env.CLIENT_ID,
-    process.env.CLIENT_SECRET,
-    process.env.REDIRECT_URL
-);*/
+const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI } = process.env;
 
 const scopes = ['https://www.googleapis.com/auth/gmail.readonly'];
 
-app.use(cors())
+app.use(cors({ origin: frontendOrigin }))
+app.use(express.json())
+// Calendar OAuth and routes are separate from the legacy Gmail OAuth flow below.
+app.use(googleCalendarRouter)
 
 app.get('/', (req, res) => {
   res.json({ message: 'Hello World!' })
-})
-
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
 })
 
 app.get("/testAuth", (req, res) => {
@@ -43,8 +32,13 @@ app.get("/testAuth", (req, res) => {
 })
 
 app.get("/auth/google/callback", async (req, res) => {
-  const {code} = req.query;
-  const {tokens} = await oauth2.getToken(code);
+  const code = req.query.code;
+  if (typeof code !== 'string') {
+    res.status(400).send('Google did not return an authorization code.')
+    return
+  }
+
+  const { tokens } = await oauth2.getToken(code);
   oauth2.setCredentials(tokens);
   readEmails(oauth2,res);
 })
@@ -64,7 +58,11 @@ async function readEmails(auth : any, res: express.Response){
         return;
     }
     
-    const mails = await Promise.all(messages.map(async(message)=>`<li>${await getEmail(message.id,gmail)}</li>`))
+    const mails = await Promise.all(
+        messages
+            .filter((message) => typeof message.id === 'string')
+            .map(async (message) => `<li>${await getEmail(message.id, gmail)}</li>`)
+    )
     
     res.send(`<h2>Messages</h2><ul>${mails.join('')}</ul>`)
     return;
@@ -75,8 +73,9 @@ async function getEmail(emailId : any,gmail: any){
     const response = await gmail.users.messages.get({id:emailId,userId:'me'});
     const email = response.data;
     
-    const subject = email.payload.headers.find(e=>e.name == 'Subject').value;
-    const from = email.payload.headers.find(e=>e.name == 'From').value;
+    const headers = email.payload?.headers ?? [];
+    const subject = headers.find((header: { name?: string | null }) => header.name === 'Subject')?.value ?? '';
+    const from = headers.find((header: { name?: string | null }) => header.name === 'From')?.value ?? '';
 
     return 'From:<b>'+from+'</b>\n'+subject;
 }
@@ -86,3 +85,13 @@ function generateOAuthClient() {
 }
 
 const oauth2 = generateOAuthClient();
+
+app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const message = error instanceof Error ? error.message : 'Unknown server error'
+  console.error('Backend request failed:', message)
+  res.status(500).json({ error: 'The backend could not complete the request. Check the backend terminal for details.' })
+})
+
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`)
+})

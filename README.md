@@ -41,6 +41,7 @@ VITE_SUPABASE_ANON_KEY=your-supabase-publishable-key
 ~~~
 Restart Vite after changing this file. In Supabase, enable the Email provider for password sign-in and account creation. To use "Continue with Google", enable the Google provider under Authentication > Sign In / Providers, add the Supabase callback URL shown there to your Google OAuth client's authorized redirect URIs, and add your local and deployed frontend origins to Supabase's allowed redirect URLs. Gmail API access is separate from Google sign-in and requires its own Gmail authorization flow.
 
+The dashboard and Student Profile show details from the signed-in account. Profile fields are read-only; email/password accounts do not provide a name during registration, so the dashboard uses the email address when no name is available.
 
 
 ### Setup the Backend
@@ -56,6 +57,30 @@ Restart Vite after changing this file. In Supabase, enable the Email provider fo
 Example app listening on port 3000
 ~~~
 appear in your terminal.
+
+For the local Google Calendar prototype, add the following settings to `backend/.env`. Copy the Supabase URL and publishable/anon key from `frontend/.env`; do not use a Supabase service-role key:
+~~~
+GOOGLE_CALENDAR_CLIENT_ID=your-calendar-oauth-client-id
+GOOGLE_CALENDAR_CLIENT_SECRET=your-calendar-oauth-client-secret
+GOOGLE_CALENDAR_REDIRECT_URI=http://localhost:3000/auth/google/calendar/callback
+SUPABASE_URL=your-supabase-project-url
+SUPABASE_ANON_KEY=your-supabase-publishable-key
+FRONTEND_ORIGIN=http://localhost:5173
+PORT=3000
+~~~
+The OAuth client must be a Web application with the redirect URI above. The prototype keeps Google tokens in backend memory, so reconnect after restarting the backend. `backend/.env` is ignored by Git; never commit or share its secrets.
+
+#### Google Calendar setup
+1. In Google Cloud, enable the **Google Calendar API** for the project that contains the OAuth client. If the OAuth app is in testing mode, add your Google account as a test user.
+2. Register the exact redirect URI above on the OAuth client. The app requests the `calendar.calendarlist.readonly` and `calendar.events` scopes.
+3. The frontend contacts `http://localhost:3000` by default. If the backend runs elsewhere, set `VITE_BACKEND_URL` in `frontend/.env` and `FRONTEND_ORIGIN` in `backend/.env`, then restart both.
+4. Start the backend from the `backend` directory (calendar choices and sync records are saved in `backend/.ontrack-data`). In Settings, click **Connect Google Calendar**, choose a **Primary calendar for On Track**, and click **Save Changes**.
+
+Reconnect after restarting the backend.
+
+Calendar tests use mocked Google and Supabase responses, they do not verify a live Google connection (test live connection with actual Google account with calendar and events):
+- `npx tsx --test tests\calendar.test.mjs tests\calendar-selection-api.test.mjs` (from `backend`): calendar choices are saved per user and resets are respected; timed events convert to the user's time zone while all-day dates are kept; sync records avoid duplicates; and the API authenticates users, saves selections, and returns normalized Google events.
+- `node --test tests\google-calendar-selection.test.mjs` (from `frontend`): an older browser calendar choice migrates to the backend once without overwriting a backend choice or reset, and the default calendar is chosen correctly.
 
 ### Test Everything is working Properly
 

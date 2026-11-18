@@ -1,3 +1,4 @@
+/** Selected-day details, upcoming planner items, and calendar suggestion review. */
 import type { Dispatch, SetStateAction } from 'react'
 import { Plus } from 'lucide-react'
 import { PlannerItemAction, PlannerItemCard } from '../../components/PlannerItemCard'
@@ -19,8 +20,9 @@ type CalendarSidebarProps = {
   editingSuggestion: CalendarSuggestion | null
   onEditingSuggestionChange: Dispatch<SetStateAction<CalendarSuggestion | null>>
   onAddEvent: () => void
+  isGoogleCalendarLoading: boolean
   onEditEvent: (event: CalendarEvent) => void
-  onDeleteEvent: (id: number) => void
+  onDeleteEvent: (id: number | string) => void
   onEditCommitment: (commitment: Commitment) => void
   onDeleteCommitment: (id: number) => void
   onConfirmSuggestion: (suggestion: CalendarSuggestion) => void
@@ -28,6 +30,7 @@ type CalendarSidebarProps = {
   onSaveSuggestion: () => void
 }
 
+/** Delegate mutations to the page and keep all-day Google editing in Google Calendar. */
 function CalendarSidebar({
   selectedDateIso,
   selectedDayEvents,
@@ -41,6 +44,7 @@ function CalendarSidebar({
   editingSuggestion,
   onEditingSuggestionChange,
   onAddEvent,
+  isGoogleCalendarLoading,
   onEditEvent,
   onDeleteEvent,
   onEditCommitment,
@@ -56,7 +60,7 @@ function CalendarSidebar({
           <p className="mini-label">Selected day</p>
           <h3>{formatFullDate(selectedDateIso)}</h3>
         </div>
-        <button type="button" className="add-event-button primary-button" onClick={onAddEvent}>
+        <button type="button" className="add-event-button primary-button" onClick={onAddEvent} disabled={isGoogleCalendarLoading}>
           <Plus size={16} />
           Add
         </button>
@@ -72,14 +76,19 @@ function CalendarSidebar({
                 title={event.title}
                 category={event.category}
                 priority={event.priority}
-                dateLabel={`${formatFullDate(event.date)} · ${formatTime(event.time)}`}
-                subtitle={event.course}
+                dateLabel={`${formatFullDate(selectedDateIso)} · ${event.googleAllDay ? 'All day' : event.date !== selectedDateIso ? 'Continues' : formatTime(event.time)}`}
+                subtitle={event.googleSourceId !== undefined ? `${event.course} · Google copy` : event.course}
                 description={event.description}
                 actionsOnHover
                 actionsPlacement="right"
                 actions={(
                   <>
-                    <PlannerItemAction kind="edit" onClick={() => onEditEvent(event)} />
+                    <PlannerItemAction
+                      kind="edit"
+                      onClick={() => onEditEvent(event)}
+                      disabled={event.googleAllDay}
+                      label={event.googleAllDay ? 'Edit in Google Calendar' : undefined}
+                    />
                     <PlannerItemAction kind="delete" onClick={() => onDeleteEvent(event.id)} />
                   </>
                 )}
@@ -123,7 +132,7 @@ function CalendarSidebar({
                 title={item.title}
                 category={item.category}
                 priority={item.priority}
-                dateLabel={`${formatFullDate(item.date)} · ${formatTime(item.time)}`}
+                dateLabel={`${formatFullDate(item.date)} · ${item.allDay ? 'All day' : formatTime(item.time)}`}
               />
             ))}
           </div>
