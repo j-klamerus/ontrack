@@ -16,6 +16,7 @@ const scopes = ['https://www.googleapis.com/auth/gmail.readonly'];
 
 app.use(cors({ origin: frontendOrigin }))
 app.use(express.json())
+// Calendar OAuth and routes are separate from the legacy Gmail OAuth flow below.
 app.use(googleCalendarRouter)
 
 app.get('/', (req, res) => {

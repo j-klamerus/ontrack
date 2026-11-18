@@ -1,9 +1,11 @@
+/** Persist each On Track user's selected Google calendar for a single backend process. */
 import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 type Selection = { initialized: boolean; calendarId: string | null }
 
+/** Serialize access and atomically replace selection files; null is an explicit reset. */
 export class CalendarSelectionStore {
   private queue: Promise<void> = Promise.resolve()
 
@@ -36,6 +38,7 @@ export class CalendarSelectionStore {
     return { initialized: true, calendarId: value.calendarId }
   }
 
+  /** Keep a failed operation from blocking later reads or writes. */
   private run<T>(operation: () => Promise<T>): Promise<T> {
     const result = this.queue.then(operation)
     this.queue = result.then(() => undefined, () => undefined)
@@ -46,6 +49,7 @@ export class CalendarSelectionStore {
     return this.run(() => this.read(userId))
   }
 
+  /** Save a selection, optionally only when no selection or reset has been recorded. */
   set(userId: string, calendarId: string | null, onlyIfUnset = false): Promise<Selection> {
     return this.run(async () => {
       const current = await this.read(userId)

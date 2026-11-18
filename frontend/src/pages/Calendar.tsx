@@ -1,3 +1,7 @@
+/**
+ * Calendar page orchestration: local planner data, the selected Google calendar,
+ * month/week navigation, event actions, and the add-only sync dialog.
+ */
 import { useEffect, useMemo, useState } from 'react'
 import { PlannerKey } from '../components/PlannerKey'
 import CalendarEventFormModal from './calendar/CalendarEventFormModal'
@@ -66,6 +70,7 @@ const createEmptyForm = (selectedDate: Date): EventFormState => ({
   description: ''
 })
 
+/** Combine local events and commitments with the current live Google event range. */
 function Calendar({ userId }: { userId: string }) {
   const categoryOptions = getEventCategories()
   const [currentMonth, setCurrentMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
@@ -87,6 +92,8 @@ function Calendar({ userId }: { userId: string }) {
   const [selectedGoogleCalendarId, setSelectedGoogleCalendarId] = useState<string | null>(null)
   const [selectedGoogleCalendarCanWrite, setSelectedGoogleCalendarCanWrite] = useState(false)
   const [selectedGoogleCalendarName, setSelectedGoogleCalendarName] = useState<string | null>(null)
+  const [googleCalendarEventsLoaded, setGoogleCalendarEventsLoaded] = useState(false)
+  const [googleAccountName, setGoogleAccountName] = useState<string | null>(null)
   const [isGoogleCalendarLoading, setIsGoogleCalendarLoading] = useState(true)
   const [googleRefresh, setGoogleRefresh] = useState(0)
   const [showSyncModal, setShowSyncModal] = useState(false)
@@ -96,6 +103,7 @@ function Calendar({ userId }: { userId: string }) {
   const [editingCommitment, setEditingCommitment] = useState<Commitment | null>(null)
   const [commitmentFormError, setCommitmentFormError] = useState<string | null>(null)
 
+  // Load browser-backed planner data separately so Google refreshes preserve local edits.
   useEffect(() => {
     let isMounted = true
     const loadCalendar = async () => {
@@ -139,6 +147,7 @@ function Calendar({ userId }: { userId: string }) {
 
   const selectedWeekStart = viewMode === 'week' ? getIsoDate(startOfWeek(selectedDate)) : ''
 
+  // Replace only Google events on range changes; cleanup prevents stale requests from updating state.
   useEffect(() => {
     let isMounted = true
     const loadGoogleCalendar = async () => {
@@ -148,6 +157,8 @@ function Calendar({ userId }: { userId: string }) {
       setSelectedGoogleCalendarId(null)
       setSelectedGoogleCalendarCanWrite(false)
       setSelectedGoogleCalendarName(null)
+      setGoogleCalendarEventsLoaded(false)
+      setGoogleAccountName(null)
       setEvents((currentEvents) => currentEvents.filter((event) => !event.googleEventId))
 
       try {
@@ -166,6 +177,8 @@ function Calendar({ userId }: { userId: string }) {
         if (!isMounted) {
           return
         }
+        // Google's primary calendar is conventionally named for the account; no extra OAuth scope is needed.
+        setGoogleAccountName(calendars.find((calendar) => calendar.primary)?.summary ?? null)
         const savedCalendarId = await getSelectedGoogleCalendarId(userId)
         if (!isMounted) return
         const selectedCalendar = resolveSelectedGoogleCalendar(calendars, savedCalendarId)
@@ -182,6 +195,7 @@ function Calendar({ userId }: { userId: string }) {
         setSelectedGoogleCalendarCanWrite(canWriteGoogleCalendar(selectedCalendar))
         setSelectedGoogleCalendarName(selectedCalendar.summary)
 
+        // The month grid always renders six weeks; Google timeMax is exclusive.
         const rangeStart = viewMode === 'week'
           ? startOfWeek(getDateFromIso(selectedWeekStart))
           : startOfWeek(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1))
@@ -197,6 +211,7 @@ function Calendar({ userId }: { userId: string }) {
             ...currentEvents.filter((event) => !event.googleEventId),
             ...googleEvents
           ])
+          setGoogleCalendarEventsLoaded(true)
         }
       } catch (error) {
         if (isMounted) {
@@ -300,6 +315,7 @@ function Calendar({ userId }: { userId: string }) {
     setShowEventForm(true)
   }
 
+  /** Require a connected, writable destination before allowing event selection. */
   const openSyncModal = () => {
     if (!googleCalendarConnected) {
       setGoogleCalendarError('Connect Google Calendar in Settings before syncing events.')
@@ -328,6 +344,7 @@ function Calendar({ userId }: { userId: string }) {
     setShowEventForm(true)
   }
 
+  /** Delete Google events remotely; remove local events from this page's state. */
   const handleDeleteEvent = async (eventId: number | string) => {
     const event = events.find((item) => item.id === eventId)
     try {
@@ -404,6 +421,7 @@ function Calendar({ userId }: { userId: string }) {
     }
   }
 
+  /** Confirm a suggested event into browser-backed reviews, not directly into Google. */
   const handleConfirmSuggestion = (suggestion: CalendarSuggestion) => {
     setSavingSuggestionId(suggestion.id)
     setSuggestionError(null)
@@ -465,6 +483,7 @@ function Calendar({ userId }: { userId: string }) {
     setEditingSuggestion(null)
   }
 
+  /** Route the form to commitments, Google create/update, or local page state. */
   const handleFormSubmit = async () => {
     if (isGoogleCalendarLoading) {
       setFormError('Wait for Google Calendar to finish refreshing before saving.')
@@ -606,6 +625,7 @@ function Calendar({ userId }: { userId: string }) {
     setSelectedDate(now)
   }
 
+  /** Project events and incomplete commitments into the shared day-grid display shape. */
   const getScheduleItemsForDay = (day: Date): CalendarScheduleItem[] => {
     const date = getIsoDate(day)
 
@@ -651,8 +671,13 @@ function Calendar({ userId }: { userId: string }) {
       {googleCalendarError && (
         <p className="calendar-integration-error" role="alert">{googleCalendarError}</p>
       )}
-      {selectedGoogleCalendarName && (
-        <p className="calendar-integration-status">Google Calendar: {selectedGoogleCalendarName}</p>
+      {googleCalendarConnected && (
+        <p className="calendar-integration-status">
+          Google Account Connected{googleAccountName ? `: ${googleAccountName}` : ''}
+          {googleCalendarEventsLoaded && selectedGoogleCalendarName && (
+            <><br />Name of Loaded Calendar: {selectedGoogleCalendarName}</>
+          )}
+        </p>
       )}
       <div className={`calendar-layout ${viewMode === 'week' ? 'week-layout' : ''}`}>
         <div className="calendar-panel">

@@ -1,3 +1,4 @@
+/** Selected-day details, upcoming planner items, and calendar suggestion review. */
 import type { Dispatch, SetStateAction } from 'react'
 import { Plus } from 'lucide-react'
 import { PlannerItemAction, PlannerItemCard } from '../../components/PlannerItemCard'
@@ -29,6 +30,7 @@ type CalendarSidebarProps = {
   onSaveSuggestion: () => void
 }
 
+/** Delegate mutations to the page and keep all-day Google editing in Google Calendar. */
 function CalendarSidebar({
   selectedDateIso,
   selectedDayEvents,

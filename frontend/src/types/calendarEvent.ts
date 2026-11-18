@@ -1,3 +1,4 @@
+/** Shared local and normalized Google event shapes used by calendar and planner views. */
 export type EventCategory = string
 export type EventPriority = 'High' | 'Medium' | 'Low'
 
@@ -10,12 +11,13 @@ export type CalendarEvent = {
   category: EventCategory
   priority: EventPriority
   description: string
+  // Google fields are present for live Google events, not ordinary On Track events.
   googleEventId?: string
   googleCalendarId?: string
   googleDurationMinutes?: number
   googleAllDay?: boolean
-  googleLastDate?: string
-  googleSourceId?: number | string
+  googleLastDate?: string // Inclusive final date for a multi-day Google event.
+  googleSourceId?: number | string // Local source ID for an add-only Google copy.
 }
 
 export type EventFormState = Omit<

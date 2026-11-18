@@ -1,3 +1,4 @@
+/** Calendar API integration tests with mocked Supabase authentication and Google responses. */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtemp, readdir, rmdir, unlink } from 'node:fs/promises'

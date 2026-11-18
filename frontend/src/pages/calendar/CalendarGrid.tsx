@@ -1,3 +1,4 @@
+/** Render the month or week grid from the page's already-prepared schedule items. */
 import type { CalendarScheduleItem, CalendarViewMode } from './types'
 import { formatFullDate, formatTime, getIsoDate } from './formatters'
 
@@ -11,6 +12,7 @@ type CalendarGridProps = {
   onSelectDate: (day: Date) => void
 }
 
+/** Display multi-day continuations and let the parent own the selected date. */
 function CalendarGrid({
   viewMode,
   monthDays,

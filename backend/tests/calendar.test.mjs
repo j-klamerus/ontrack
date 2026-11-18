@@ -1,3 +1,4 @@
+/** Backend calendar storage and Google event normalization tests; no live Google account required. */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'

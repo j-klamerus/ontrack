@@ -1,3 +1,4 @@
+/** Record add-only Google syncs per On Track user and destination calendar. */
 import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -12,10 +13,12 @@ function isSyncEntries(value: unknown): value is SyncEntries {
       (typeof source === 'string' || (typeof source === 'number' && Number.isSafeInteger(source))))
 }
 
+/** Produce a stable Google-compatible ID for retrying the same local event. */
 export function syncEventId(userId: string, calendarId: string, localEventId: LocalEventId): string {
   return createHash('sha256').update(JSON.stringify([userId, calendarId, localEventId])).digest('hex')
 }
 
+/** Serialize sync operations per user/calendar and persist source IDs with atomic replacement. */
 export class CalendarSyncStore {
   private readonly queues = new Map<string, Promise<void>>()
 
@@ -42,6 +45,7 @@ export class CalendarSyncStore {
     return value
   }
 
+  /** Allow independent calendars to proceed while serializing access to each record file. */
   private run<T>(path: string, operation: () => Promise<T>): Promise<T> {
     const result = (this.queues.get(path) ?? Promise.resolve()).then(operation)
     const settled = result.then(() => undefined, () => undefined)
@@ -57,6 +61,10 @@ export class CalendarSyncStore {
     return this.run(path, () => this.read(path))
   }
 
+  /**
+   * Create once and record the result. A recorded ID is not recreated, even if the
+   * Google event is later deleted. The caller handles recovery after an uncertain insert.
+   */
   sync(
     userId: string,
     calendarId: string,

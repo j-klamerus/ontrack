@@ -1,3 +1,7 @@
+/**
+ * Browser client for the authenticated backend Google Calendar API.
+ * The backend owns Google credentials and API calls; this module validates responses.
+ */
 import { getSupabaseClient } from './supabase'
 import type { CalendarEvent, EventPriority } from '../types/calendarEvent'
 
@@ -9,6 +13,7 @@ export type GoogleCalendarInfo = {
   timeZone: string | null
 }
 
+/** Google readers may be displayed but cannot receive new events. */
 export const canWriteGoogleCalendar = (calendar: GoogleCalendarInfo): boolean =>
   calendar.accessRole === 'writer' || calendar.accessRole === 'owner'
 
@@ -33,6 +38,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isEventPriority = (value: unknown): value is EventPriority =>
   value === 'High' || value === 'Medium' || value === 'Low'
 
+/** Reject malformed backend events or events from a different calendar. */
 function parseGoogleCalendarEvent(value: unknown, calendarId: string): CalendarEvent {
   if (
     !isRecord(value) || typeof value.googleEventId !== 'string' ||
@@ -67,6 +73,7 @@ function parseGoogleCalendarEvent(value: unknown, calendarId: string): CalendarE
   }
 }
 
+/** Attach the current Supabase session and surface backend and response errors. */
 async function requestGoogleCalendar(path: string, init?: RequestInit): Promise<unknown> {
   const { data, error } = await getSupabaseClient().auth.getSession()
   if (error) {
@@ -104,6 +111,7 @@ async function requestGoogleCalendar(path: string, init?: RequestInit): Promise<
   return responseBody
 }
 
+/** Check whether the running backend has a Google connection for this user. */
 export async function getGoogleCalendarStatus(): Promise<boolean> {
   const response = await requestGoogleCalendar('/api/google/calendar/status')
   if (!isRecord(response) || typeof response.connected !== 'boolean') {
@@ -112,6 +120,7 @@ export async function getGoogleCalendarStatus(): Promise<boolean> {
   return response.connected
 }
 
+/** Obtain and validate the Google authorization URL for the separate calendar connection. */
 export async function startGoogleCalendarConnection(): Promise<string> {
   const response = await requestGoogleCalendar('/api/google/calendar/connect')
   if (!isRecord(response) || typeof response.url !== 'string') {
@@ -125,10 +134,12 @@ export async function startGoogleCalendarConnection(): Promise<string> {
   return url.toString()
 }
 
+/** Remove the backend's in-memory connection; this does not revoke Google's authorization. */
 export async function disconnectGoogleCalendar(): Promise<void> {
   await requestGoogleCalendar('/api/google/calendar', { method: 'DELETE' })
 }
 
+/** Load the accessible calendars and their access roles from the backend. */
 export async function getGoogleCalendars(): Promise<GoogleCalendarInfo[]> {
   const response = await requestGoogleCalendar('/api/google/calendar/calendars')
   if (!isRecord(response) || !Array.isArray(response.calendars)) {
@@ -157,6 +168,7 @@ export async function getGoogleCalendars(): Promise<GoogleCalendarInfo[]> {
   })
 }
 
+/** Fetch expanded events for an exclusive end range in the browser's time zone. */
 export async function getGoogleCalendarEvents(
   calendarId: string,
   timeMin: string,
@@ -186,6 +198,7 @@ function toGoogleEventRequest(calendarId: string, event: GoogleCalendarEventInpu
   }
 }
 
+/** Convert a local date/time into an instant, preserving Google duration or defaulting to one hour. */
 export function toGoogleCalendarEventInput(event: CalendarEvent): GoogleCalendarEventInput {
   const start = new Date(`${event.date}T${event.time}:00`)
   if (Number.isNaN(start.getTime())) {
@@ -204,6 +217,7 @@ export function toGoogleCalendarEventInput(event: CalendarEvent): GoogleCalendar
   }
 }
 
+/** Request an add-only copy of one local event; the backend deduplicates retries. */
 export async function syncOnTrackEvent(calendarId: string, event: CalendarEvent): Promise<'added' | 'already-synced'> {
   if (event.googleEventId) throw new Error('Google Calendar events cannot be synced as On Track events.')
   const response = await requestGoogleCalendar('/api/google/calendar/sync-event', {
@@ -224,6 +238,7 @@ function parseSavedGoogleEvent(response: unknown, calendarId: string): CalendarE
   return parseGoogleCalendarEvent(response.event, calendarId)
 }
 
+/** Create a timed event on Google and return the normalized response. */
 export async function createGoogleCalendarEvent(
   calendarId: string,
   event: GoogleCalendarEventInput
@@ -235,6 +250,7 @@ export async function createGoogleCalendarEvent(
   return parseSavedGoogleEvent(response, calendarId)
 }
 
+/** Update a timed Google event and return the normalized response. */
 export async function updateGoogleCalendarEvent(
   calendarId: string,
   eventId: string,
@@ -250,6 +266,7 @@ export async function updateGoogleCalendarEvent(
   return parseSavedGoogleEvent(response, calendarId)
 }
 
+/** Delete the specified Google event from its calendar. */
 export async function deleteGoogleCalendarEvent(calendarId: string, eventId: string): Promise<void> {
   const query = new URLSearchParams({ calendarId })
   await requestGoogleCalendar(
@@ -277,6 +294,7 @@ async function writeCalendarSelection(calendarId: string | null, onlyIfUnset = f
   }))
 }
 
+/** Read the backend selection and migrate an old per-user browser choice only if unset. */
 export async function getSelectedGoogleCalendarId(userId: string): Promise<string | null> {
   let selection = parseCalendarSelection(await requestGoogleCalendar('/api/google/calendar/selection'))
   const legacyKey = `${selectedCalendarStorageKey}:${userId}`
@@ -288,14 +306,17 @@ export async function getSelectedGoogleCalendarId(userId: string): Promise<strin
   return selection.calendarId
 }
 
+/** Persist the calendar selected in Settings. */
 export async function saveSelectedGoogleCalendarId(calendarId: string): Promise<void> {
   await writeCalendarSelection(calendarId)
 }
 
+/** Record an explicit reset so a stale browser choice cannot be migrated again. */
 export async function resetSelectedGoogleCalendarId(): Promise<void> {
   await writeCalendarSelection(null)
 }
 
+/** Resolve a saved choice, or choose a default only when no choice is saved. */
 export function resolveSelectedGoogleCalendar(
   calendars: GoogleCalendarInfo[],
   savedCalendarId: string | null

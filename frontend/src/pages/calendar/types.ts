@@ -1,3 +1,4 @@
+/** Display-specific calendar item and view types shared by the page components. */
 import type { EventCategory } from '../../types/calendarEvent'
 import type { Priority } from '../../types/commitment'
 import type { DashboardSuggestion } from '../../types/dashboardSuggestion'

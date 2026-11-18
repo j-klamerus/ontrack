@@ -1,5 +1,7 @@
+/** Normalize Google events for the Calendar UI using the browser-supplied time zone. */
 import type { calendar_v3 } from 'googleapis'
 
+/** Check an IANA time zone before passing it to Intl.DateTimeFormat. */
 export function isValidTimeZone(value: string): boolean {
   try {
     new Intl.DateTimeFormat('en-US', { timeZone: value })
@@ -10,6 +12,10 @@ export function isValidTimeZone(value: string): boolean {
   }
 }
 
+/**
+ * Convert a Google event to On Track's date/time shape.
+ * All-day dates remain calendar dates; timed events are converted to the requested zone.
+ */
 export function normalizeGoogleCalendarEvent(
   event: calendar_v3.Schema$Event,
   calendarId: string,
@@ -39,6 +45,7 @@ export function normalizeGoogleCalendarEvent(
   const startTime = startDateTime ? Date.parse(startDateTime) : Number.NaN
   const allDay = !start && !!startDate
   let lastDate = localStart.date
+  // Google end times are exclusive; the UI expects the last occupied date to be inclusive.
   if (allDay && event.end?.date && event.end.date > localStart.date) {
     const end = new Date(`${event.end.date}T00:00:00Z`)
     if (!Number.isNaN(end.getTime())) {

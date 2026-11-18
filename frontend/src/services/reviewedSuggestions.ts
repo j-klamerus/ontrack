@@ -125,6 +125,7 @@ export const getConfirmedCommitments = (): Commitment[] =>
       : []
   )
 
+/** Return confirmed calendar suggestions from browser storage, separately from Google events. */
 export const getConfirmedCalendarEvents = (): CalendarEvent[] =>
   readReviewedSuggestions().flatMap((record) =>
     record.status === 'confirmed' && record.kind === 'Calendar event'

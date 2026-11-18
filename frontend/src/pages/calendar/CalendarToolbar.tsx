@@ -1,3 +1,4 @@
+/** Calendar navigation, view selection, refresh, and Google sync controls. */
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { getMonthName } from './formatters'
 import type { CalendarViewMode } from './types'
@@ -14,6 +15,7 @@ type CalendarToolbarProps = {
   onSyncGoogleCalendar: () => void
 }
 
+/** Render controls while leaving navigation and connection state to the page. */
 function CalendarToolbar({
   currentMonth,
   viewMode,

@@ -1,3 +1,4 @@
+/** Settings UI for connecting Google Calendar and staging the On Track calendar choice. */
 import { useEffect, useState } from 'react'
 import {
   canWriteGoogleCalendar,
@@ -16,6 +17,7 @@ type GoogleCalendarConnectionCardProps = {
   onCalendarChange: (calendarId: string) => void
 }
 
+/** Load the connection and calendars; the parent persists a changed selection on save. */
 function GoogleCalendarConnectionCard({ selectedCalendarId, selectionLoading, selectionError, onCalendarChange }: GoogleCalendarConnectionCardProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isBusy, setIsBusy] = useState(false)
@@ -85,6 +87,7 @@ function GoogleCalendarConnectionCard({ selectedCalendarId, selectionLoading, se
     }
   }
 
+  /** Disconnect this backend process without revoking the Google account grant. */
   const handleDisconnect = async () => {
     setError(null)
     setMessage(null)

@@ -207,6 +207,7 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
       }
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
       setSavedSettings(settings)
+      // The dropdown is staged locally until Save Changes persists it to the backend.
       if (calendarChanged && selectedCalendarId) {
         await saveSelectedGoogleCalendarId(selectedCalendarId)
         setCalendarChanged(false)
@@ -234,6 +235,7 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
         setSettings(defaultSettings)
         setSavedSettings(defaultSettings)
       }
+      // A confirmed reset clears the selection immediately without disconnecting Google.
       if (resetCalendar && !selectionLoading && !selectionError) {
         await resetSelectedGoogleCalendarId()
         setSelectedCalendarId(null)

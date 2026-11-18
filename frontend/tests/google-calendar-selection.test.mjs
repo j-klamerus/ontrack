@@ -1,3 +1,4 @@
+/** Frontend calendar selection, sync request, and date-matching tests using a mocked backend. */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'vite'

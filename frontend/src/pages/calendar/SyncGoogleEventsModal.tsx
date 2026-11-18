@@ -1,3 +1,4 @@
+/** Select local events for an explicit, add-only copy to a Google calendar. */
 import { useState } from 'react'
 import { syncOnTrackEvent } from '../../services/googleCalendar'
 import type { CalendarEvent } from '../../types/calendarEvent'
@@ -10,6 +11,7 @@ type Props = {
   onClose: (refresh: boolean) => void
 }
 
+/** Show individual local events and report the results of a sync attempt. */
 function SyncGoogleEventsModal({ calendarId, calendarName, events, onClose }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set())
   const [isSyncing, setIsSyncing] = useState(false)
@@ -21,6 +23,7 @@ function SyncGoogleEventsModal({ calendarId, calendarName, events, onClose }: Pr
     `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)
   )
 
+  /** Send selected events sequentially; retain failed and unsent selections for retry. */
   const syncSelected = async () => {
     setIsSyncing(true)
     setAttempted(true)

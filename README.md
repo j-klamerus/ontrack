@@ -78,6 +78,33 @@ To copy On Track calendar events to the selected writable Google Calendar, use *
 
 Calendar selection, category edits, and preference changes are applied with **Save Changes**. You will be warned before leaving Settings with unsaved changes. Reset to Defaults opens a review where you can choose which preferences, calendar selection, and individual custom categories to reset; applying those resets takes effect immediately. Removing a custom category moves local events and commitments using it to Other. It does not modify categories stored in Google Calendar events.
 
+#### Calendar setup and behavior
+
+- Enable the Google Calendar API for the Google Cloud project containing the calendar OAuth client. The app requests `calendar.calendarlist.readonly` to list calendars and `calendar.events` to view and manage events. If the OAuth app is in testing mode, the Google account must be an authorized test user. Google sign-in to On Track and connecting Google Calendar are separate authorization steps.
+- The frontend contacts `http://localhost:3000` by default. If the backend is elsewhere, set `VITE_BACKEND_URL` in `frontend/.env` to its origin and restart the frontend. Set `FRONTEND_ORIGIN` in `backend/.env` to the frontend origin, and register the exact backend callback URL in Google Cloud.
+- In Settings, connect Google Calendar, select a calendar, and click **Save Changes**. With no saved selection, On Track chooses a default from the available calendars, preferring writable calendars. A saved selection that is no longer available must be replaced explicitly. Resetting the selection does not disconnect Google; disconnecting removes only the running backend's connection, not the Google account grant.
+- The month grid requests six weeks and the week view requests the displayed week. The backend expands recurring events and converts timed events to the browser's time zone. Google all-day dates remain calendar dates; multi-day events appear on their occupied dates. Google changes are fetched on range changes or with **Refresh Google Calendar**, not continuously.
+- New calendar events added while Google is connected are created on the selected writable calendar; without a connection, new local events exist only in the current Calendar page state. Confirmed calendar suggestions are stored in browser storage, separately from Google. Local event edits and deletions are not generally persisted across reopening the page; category overrides are stored in the browser.
+- **Sync to Google** lets you select local calendar events, including demo events, and creates independent one-hour Google copies. It does not copy commitments. The original and the Google copy appear separately; later changes to either do not update the other. The backend retains the sync record even if the Google copy is deleted, so selecting that same local event again for the same calendar reports it as already synced rather than recreating it.
+
+#### Calendar implementation and testing
+
+The browser's [Calendar page](./frontend/src/pages/Calendar.tsx) combines local planner data with live Google results. Its [Google Calendar client](./frontend/src/services/googleCalendar.ts) sends the current Supabase bearer token to the backend; Google credentials are not sent to the frontend. The backend [calendar router](./backend/src/googleCalendar.ts) verifies the user, manages Google OAuth, lists and modifies events, and delegates event conversion to [calendarEvent.ts](./backend/src/calendarEvent.ts).
+
+The backend stores calendar choices and add-only sync records in separate directories under `backend/.ontrack-data`. These files are local to the backend machine and are not a shared database; the in-process write queues assume a single backend process. Sync record filenames are derived from hashed user and calendar IDs; each record maps a hashed Google event ID to its local source ID. Retain both directories when moving the backend; Google OAuth credentials still need reconnection after a restart.
+
+Run the calendar-related tests from the respective directories:
+
+```powershell
+# From backend
+npx tsx --test tests\calendar.test.mjs tests\calendar-selection-api.test.mjs
+
+# From frontend
+node --test tests\google-calendar-selection.test.mjs
+```
+
+These tests use mocked Google and Supabase responses; they do not verify a live Google connection. For a live check, connect an account, select a writable calendar, sync a chosen event, and confirm the event in that same calendar in Google.
+
 ### Test Everything is working Properly
 
 At this point everything should be setup properly in order to run the app. Follow these steps to make sure its working as expected:

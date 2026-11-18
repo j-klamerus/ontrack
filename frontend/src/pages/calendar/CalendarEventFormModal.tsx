@@ -1,3 +1,4 @@
+/** Controlled form for creating calendar events or commitments and editing events. */
 import type { Dispatch, SetStateAction } from 'react'
 import type { EventCategory, EventFormState, EventPriority } from '../../types/calendarEvent'
 
@@ -15,6 +16,7 @@ type CalendarEventFormModalProps = {
   onSubmit: () => void
 }
 
+/** Collect event fields; the Calendar page validates and saves the result. */
 function CalendarEventFormModal({
   editingId,
   formKind,

@@ -1,3 +1,4 @@
+/** Assemble local calendar data from date-relative demo fixtures and reviewed suggestions. */
 import demoCalendarEvents from '../data/demoCalendarEvents.json'
 import {
   getEventCategories,
@@ -37,6 +38,7 @@ const getIsoDate = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
+/** Validate fixtures, anchor their dates to today, and apply browser-stored category overrides. */
 export async function getCalendarEvents(): Promise<CalendarEvent[]> {
   if (!Array.isArray(demoCalendarEvents)) {
     throw new Error('The demo calendar event data is invalid.')

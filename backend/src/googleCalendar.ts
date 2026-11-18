@@ -1,3 +1,8 @@
+/**
+ * Google Calendar OAuth and API routes. Supabase identifies the On Track user;
+ * Google credentials stay in this backend process, while selections and sync records
+ * are stored locally under .ontrack-data.
+ */
 import { randomBytes } from 'node:crypto'
 import express from 'express'
 import { createClient } from '@supabase/supabase-js'
@@ -23,6 +28,7 @@ const connectedUsers = new Map<string, ReturnType<typeof createCalendarOAuthClie
 const calendarSelections = new CalendarSelectionStore(resolve('.ontrack-data', 'calendar-selections'))
 const calendarSync = new CalendarSyncStore(resolve('.ontrack-data', 'calendar-sync'))
 
+/** Build a Google OAuth client from backend-only configuration. */
 function createCalendarOAuthClient() {
   const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID?.trim()
   const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET?.trim()
@@ -35,6 +41,7 @@ function createCalendarOAuthClient() {
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri)
 }
 
+/** Validate the bearer token with Supabase; write an HTTP error when authentication fails. */
 async function getAuthenticatedUserId(
   request: express.Request,
   response: express.Response
@@ -62,6 +69,7 @@ async function getAuthenticatedUserId(
   return data.user.id
 }
 
+/** Retrieve the user's in-memory Google connection or report that reconnection is needed. */
 function getConnectedUserClient(userId: string, response: express.Response) {
   const client = connectedUsers.get(userId)
   if (!client) {
@@ -80,6 +88,7 @@ function readNonEmptyString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null
 }
 
+/** Validate the common event payload used by create, update, and add-only sync routes. */
 function parseEventInput(value: unknown) {
   if (!isRecord(value)) {
     return null
@@ -111,6 +120,7 @@ function parseEventInput(value: unknown) {
   return { summary, description, course, category, priority, startDateTime, endDateTime, timeZone }
 }
 
+/** Map On Track fields to Google event fields and private extended properties. */
 function toGoogleEventBody(event: NonNullable<ReturnType<typeof parseEventInput>>) {
   return {
     summary: event.summary,
@@ -127,6 +137,7 @@ function toGoogleEventBody(event: NonNullable<ReturnType<typeof parseEventInput>
   }
 }
 
+/** Start a separate Google Calendar OAuth flow tied to the authenticated On Track user. */
 router.get('/api/google/calendar/connect', async (request, response) => {
   const userId = await getAuthenticatedUserId(request, response)
   if (!userId) {
@@ -157,6 +168,7 @@ router.get('/api/google/calendar/connect', async (request, response) => {
   response.json({ url })
 })
 
+/** Consume a short-lived, single-use state and keep the resulting Google client in memory. */
 router.get('/auth/google/calendar/callback', async (request, response) => {
   const state = readNonEmptyString(request.query.state)
   const stateRecord = state ? pendingOAuthStates.get(state) : undefined
@@ -192,6 +204,7 @@ router.get('/auth/google/calendar/callback', async (request, response) => {
   response.redirect(`${frontendOrigin}/?calendar_connection=connected`)
 })
 
+/** Report whether this backend process has a Google client for the authenticated user. */
 router.get('/api/google/calendar/status', async (request, response) => {
   const userId = await getAuthenticatedUserId(request, response)
   if (!userId) {
@@ -201,6 +214,7 @@ router.get('/api/google/calendar/status', async (request, response) => {
   response.json({ connected: connectedUsers.has(userId) })
 })
 
+/** Remove the in-memory connection without revoking access at Google. */
 router.delete('/api/google/calendar', async (request, response) => {
   const userId = await getAuthenticatedUserId(request, response)
   if (!userId) {
@@ -211,12 +225,14 @@ router.delete('/api/google/calendar', async (request, response) => {
   response.status(204).end()
 })
 
+/** Read the stored selection, distinguishing an unset value from an explicit reset. */
 router.get('/api/google/calendar/selection', async (request, response) => {
   const userId = await getAuthenticatedUserId(request, response)
   if (!userId) return
   response.json(await calendarSelections.get(userId))
 })
 
+/** Persist a selection or reset; onlyIfUnset supports safe legacy browser migration. */
 router.put('/api/google/calendar/selection', async (request, response) => {
   const userId = await getAuthenticatedUserId(request, response)
   if (!userId) return
@@ -233,6 +249,7 @@ router.put('/api/google/calendar/selection', async (request, response) => {
   response.json(await calendarSelections.set(userId, body.calendarId, body.onlyIfUnset === true))
 })
 
+/** List every accessible Google calendar, including read-only calendars and all pages. */
 router.get('/api/google/calendar/calendars', async (request, response) => {
   const userId = await getAuthenticatedUserId(request, response)
   if (!userId) {
@@ -269,6 +286,7 @@ router.get('/api/google/calendar/calendars', async (request, response) => {
   response.json({ calendars })
 })
 
+/** Fetch and normalize all pages of expanded event instances for the requested range. */
 router.get('/api/google/calendar/events', async (request, response) => {
   const userId = await getAuthenticatedUserId(request, response)
   if (!userId) {
@@ -319,6 +337,7 @@ router.get('/api/google/calendar/events', async (request, response) => {
   response.json({ events })
 })
 
+/** Add one local event once per user/calendar without updating existing Google copies. */
 router.post('/api/google/calendar/sync-event', async (request, response) => {
   const userId = await getAuthenticatedUserId(request, response)
   if (!userId) return
@@ -355,6 +374,7 @@ router.post('/api/google/calendar/sync-event', async (request, response) => {
       return 'added'
     } catch (error) {
       if (!isRecord(error) || (error.code !== 409 && error.status !== 409)) throw error
+      // An earlier insert may have succeeded despite a lost response or failed local write.
       const { data } = await googleEvents.get({ calendarId, eventId: id })
       if (data.id !== id || data.extendedProperties?.private?.ontrackSyncId !== id) {
         throw new Error('Google Calendar returned a conflicting event ID that cannot be verified.')
@@ -365,6 +385,7 @@ router.post('/api/google/calendar/sync-event', async (request, response) => {
   response.json({ result })
 })
 
+/** Create a new timed event directly on the requested Google calendar. */
 router.post('/api/google/calendar/events', async (request, response) => {
   const userId = await getAuthenticatedUserId(request, response)
   if (!userId) {
@@ -392,6 +413,7 @@ router.post('/api/google/calendar/events', async (request, response) => {
   response.status(201).json({ event: normalizeGoogleCalendarEvent(data, calendarId, event.timeZone) })
 })
 
+/** Update a Google event and retain its local sync association in the response. */
 router.patch('/api/google/calendar/events/:eventId', async (request, response) => {
   const userId = await getAuthenticatedUserId(request, response)
   if (!userId) {
@@ -427,6 +449,7 @@ router.patch('/api/google/calendar/events/:eventId', async (request, response) =
   })
 })
 
+/** Delete a Google event; add-only sync records are intentionally retained. */
 router.delete('/api/google/calendar/events/:eventId', async (request, response) => {
   const userId = await getAuthenticatedUserId(request, response)
   if (!userId) {
