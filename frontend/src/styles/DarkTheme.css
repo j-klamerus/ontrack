@@ -1,0 +1,638 @@
+:root[data-theme='dark'] {
+  --color-surface-soft: #29495f;
+  --color-surface-muted: #254253;
+  --color-border-strong: #526d80;
+  --color-text-strong: #f4f7fa;
+  --color-text-secondary: #c7d4df;
+}
+
+:root[data-theme='dark'] .filter-button,
+:root[data-theme='dark'] .search-facets select,
+:root[data-theme='dark'] .inbox-page input,
+:root[data-theme='dark'] .inbox-page select,
+:root[data-theme='dark'] .inbox-page textarea,
+:root[data-theme='dark'] .calendar-page input,
+:root[data-theme='dark'] .calendar-page select,
+:root[data-theme='dark'] .calendar-page textarea,
+:root[data-theme='dark'] .commitments-page input,
+:root[data-theme='dark'] .commitments-page select,
+:root[data-theme='dark'] .commitments-page textarea,
+:root[data-theme='dark'] .dashboard-page input,
+:root[data-theme='dark'] .dashboard-page select,
+:root[data-theme='dark'] .dashboard-page textarea {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-surface-soft);
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .calendar-page .month-controls button,
+:root[data-theme='dark'] .calendar-page .today-button,
+:root[data-theme='dark'] .calendar-page .view-toggle button,
+:root[data-theme='dark'] .calendar-page .icon-button,
+:root[data-theme='dark'] .calendar-page .close-button {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-surface-soft);
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .calendar-page .month-picker-menu,
+:root[data-theme='dark'] .calendar-page .event-modal,
+:root[data-theme='dark'] .commitments-page .commitment-modal {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-surface);
+}
+
+:root[data-theme='dark'] .calendar-page .month-picker-heading,
+:root[data-theme='dark'] .calendar-page .month-picker-trigger,
+:root[data-theme='dark'] .calendar-page .selected-day-header h3,
+:root[data-theme='dark'] .calendar-page .upcoming-section h3,
+:root[data-theme='dark'] .calendar-page .suggested-events-panel-header h3,
+:root[data-theme='dark'] .calendar-page .event-modal-header h3,
+:root[data-theme='dark'] .calendar-page .calendar-suggestion-edit-grid label,
+:root[data-theme='dark'] .calendar-page .form-grid label {
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .calendar-page .month-picker-year,
+:root[data-theme='dark'] .calendar-page .day-header,
+:root[data-theme='dark'] .calendar-page .mini-meta,
+:root[data-theme='dark'] .calendar-page .mini-label,
+:root[data-theme='dark'] .calendar-page .day-events-more,
+:root[data-theme='dark'] .calendar-page .empty-upcoming,
+:root[data-theme='dark'] .calendar-page .no-events-card {
+  color: var(--color-text-secondary);
+}
+
+:root[data-theme='dark'] .calendar-page .month-picker-months button,
+:root[data-theme='dark'] .calendar-page .view-toggle,
+:root[data-theme='dark'] .calendar-page .day-header,
+:root[data-theme='dark'] .calendar-page .day-cell,
+:root[data-theme='dark'] .calendar-page .week-column,
+:root[data-theme='dark'] .calendar-page .mini-event,
+:root[data-theme='dark'] .calendar-page .no-events-card {
+  border-color: var(--color-border);
+  background-color: var(--color-surface-soft);
+}
+
+:root[data-theme='dark'] .calendar-page .day-cell.weekend,
+:root[data-theme='dark'] .calendar-page .week-column.weekend,
+:root[data-theme='dark'] .calendar-page .day-cell.muted,
+:root[data-theme='dark'] .calendar-page .day-cell.muted.weekend {
+  background-color: var(--color-surface-muted);
+}
+
+:root[data-theme='dark'] .calendar-page .day-cell.muted,
+:root[data-theme='dark'] .calendar-page .day-cell.muted.weekend {
+  background-color: #1b2431;
+}
+
+:root[data-theme='dark'] .calendar-page .day-cell.weekend {
+  background-color: var(--color-surface-muted);
+}
+
+:root[data-theme='dark'] .calendar-page .day-cell,
+:root[data-theme='dark'] .calendar-page .week-day-header,
+:root[data-theme='dark'] .calendar-page .mini-title,
+:root[data-theme='dark'] .calendar-page .form-grid input,
+:root[data-theme='dark'] .calendar-page .form-grid select,
+:root[data-theme='dark'] .calendar-page .form-grid textarea,
+:root[data-theme='dark'] .calendar-page .calendar-suggestion-edit-grid input,
+:root[data-theme='dark'] .calendar-page .calendar-suggestion-edit-grid select,
+:root[data-theme='dark'] .calendar-page .calendar-suggestion-edit-grid textarea {
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .calendar-page .month-grid,
+:root[data-theme='dark'] .calendar-page .day-cell,
+:root[data-theme='dark'] .calendar-page .week-column,
+:root[data-theme='dark'] .calendar-page .upcoming-section {
+  border-color: var(--color-border);
+}
+
+:root[data-theme='dark'] .calendar-page .month-picker-months button:hover,
+:root[data-theme='dark'] .calendar-page .month-picker-months button.active {
+  border-color: var(--color-primary);
+  background-color: #1d3854;
+  color: #bfdbfe;
+}
+
+:root[data-theme='dark'] .calendar-page .view-toggle button.active {
+  background-color: #31506f;
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .calendar-page .day-cell.selected {
+  background-color: rgba(28, 138, 253, 0.2);
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .calendar-page .week-column.selected-week {
+  border-color: var(--color-primary);
+  background-color: #1d3854;
+  box-shadow: inset 0 0 0 1px rgba(28, 138, 253, 0.4);
+}
+
+:root[data-theme='dark'] .commitments-page .commitment-group,
+:root[data-theme='dark'] .commitments-page .commitment-modal,
+:root[data-theme='dark'] .commitments-page .empty-state,
+:root[data-theme='dark'] .commitments-page .commitment-close-button,
+:root[data-theme='dark'] .commitments-page .commitment-modal-cancel,
+:root[data-theme='dark'] .commitments-page .checkbox-custom {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-surface-soft);
+}
+
+:root[data-theme='dark'] .commitments-page .commitment-group {
+  border-color: #3a5266;
+  background-color: #1a303f;
+}
+
+:root[data-theme='dark'] .commitments-page .commitment-card {
+  border-color: #5a7588;
+  background-color: #2b4a5d;
+  box-shadow: 0 5px 12px rgba(5, 20, 32, 0.18);
+}
+
+:root[data-theme='dark'] .commitments-page .commitment-card:hover,
+:root[data-theme='dark'] .commitments-page .commitment-card.planner-item-card-actions-open,
+:root[data-theme='dark'] .commitments-page .commitment-card.planner-item-card-selected,
+:root[data-theme='dark'] .commitments-page .commitment-card-completed {
+  border-color: #7894a7;
+  background-color: #34566a;
+}
+
+:root[data-theme='dark'] .commitments-page .commitment-summary-value,
+:root[data-theme='dark'] .commitments-page .commitment-summary-label,
+:root[data-theme='dark'] .commitments-page .commitment-modal-header h3,
+:root[data-theme='dark'] .commitments-page .commitment-form-grid label,
+:root[data-theme='dark'] .commitments-page .commitment-form-grid input,
+:root[data-theme='dark'] .commitments-page .commitment-form-grid select,
+:root[data-theme='dark'] .commitments-page .commitment-modal-cancel,
+:root[data-theme='dark'] .commitments-page .empty-state h3 {
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .commitments-page .commitment-group-empty,
+:root[data-theme='dark'] .commitments-page .empty-state p,
+:root[data-theme='dark'] .commitments-page .suggested-commitments-header p,
+:root[data-theme='dark'] .commitments-page .commitment-tracker-header p {
+  color: var(--color-text-secondary);
+}
+
+:root[data-theme='dark'] .commitments-page .search-box input {
+  border-color: var(--color-border);
+  background-color: var(--color-surface-soft);
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .commitments-page .search-box input::placeholder,
+:root[data-theme='dark'] .commitments-page .search-label {
+  color: #b9c8d6;
+}
+
+:root[data-theme='dark'] .commitments-page .search-box input:focus {
+  border-color: var(--color-primary);
+  background-color: var(--color-surface-soft);
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .dashboard-page .dashboard-panel,
+:root[data-theme='dark'] .dashboard-page .dashboard-suggestion-empty {
+  border-color: var(--color-border);
+  background-color: var(--color-surface);
+}
+
+:root[data-theme='dark'] .dashboard-page .dashboard-panel-header h3,
+:root[data-theme='dark'] .dashboard-page .suggestion-edit-form-grid label,
+:root[data-theme='dark'] .dashboard-page .suggestion-edit-form-grid input,
+:root[data-theme='dark'] .dashboard-page .suggestion-edit-form-grid select,
+:root[data-theme='dark'] .dashboard-page .suggestion-edit-form-grid textarea {
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .dashboard-page .summary-description,
+:root[data-theme='dark'] .dashboard-page .dashboard-panel-header p,
+:root[data-theme='dark'] .dashboard-page .dashboard-empty-state,
+:root[data-theme='dark'] .dashboard-page .dashboard-suggestion-empty p,
+:root[data-theme='dark'] .planner-key-row {
+  color: var(--color-text-secondary);
+}
+
+:root[data-theme='dark'] .planner-item-card,
+:root[data-theme='dark'] .planner-item-action {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-surface-soft);
+}
+
+:root[data-theme='dark'] .planner-item-card-expandable:hover,
+:root[data-theme='dark'] .planner-item-card-actions-open,
+:root[data-theme='dark'] .commitment-card:hover,
+:root[data-theme='dark'] .commitment-card-completed,
+:root[data-theme='dark'] .planner-item-card-selected {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-surface-muted);
+}
+
+:root[data-theme='dark'] .planner-item-kind,
+:root[data-theme='dark'] .planner-item-description,
+:root[data-theme='dark'] .planner-item-action {
+  color: var(--color-text-secondary);
+}
+
+:root[data-theme='dark'] .planner-item-action-confirm {
+  border-color: #28704c;
+  background-color: #163a2b;
+  color: #86efac;
+}
+
+:root[data-theme='dark'] .planner-item-action-send {
+  border-color: #315783;
+  background-color: #1d3854;
+  color: #bfdbfe;
+}
+
+:root[data-theme='dark'] .planner-item-action-delete {
+  border-color: #8f3543;
+  background-color: #3b2027;
+  color: #fecaca;
+}
+
+:root[data-theme='dark'] .planner-item-action-confirm:hover:not(:disabled) {
+  border-color: #4ade80;
+  background-color: #1f5138;
+  color: #bbf7d0;
+}
+
+:root[data-theme='dark'] .planner-item-action-send:hover:not(:disabled) {
+  border-color: #60a5fa;
+  background-color: #26496c;
+  color: #dbeafe;
+}
+
+:root[data-theme='dark'] .planner-item-action-delete:hover:not(:disabled) {
+  border-color: #ef4444;
+  background-color: #55252c;
+  color: #fee2e2;
+}
+
+:root[data-theme='dark'] .commitments-page .filter-button.active {
+  border-color: var(--color-primary);
+  background-color: #1d3854;
+  color: #bfdbfe;
+}
+
+:root[data-theme='dark'] .inbox-page .search-facets label > span,
+:root[data-theme='dark'] .inbox-page .email-meta,
+:root[data-theme='dark'] .inbox-page .email-preview,
+:root[data-theme='dark'] .inbox-page .empty-state,
+:root[data-theme='dark'] .inbox-page .message-list-empty {
+  color: var(--color-text-secondary);
+}
+
+:root[data-theme='dark'] .inbox-page .email-card,
+:root[data-theme='dark'] .inbox-page .message-card,
+:root[data-theme='dark'] .inbox-page .empty-state,
+:root[data-theme='dark'] .inbox-page .email-detail,
+:root[data-theme='dark'] .inbox-page .email-toolbar {
+  border-color: var(--color-border);
+  background-color: var(--color-surface);
+}
+
+:root[data-theme='dark'] .inbox-page .email-card h3,
+:root[data-theme='dark'] .inbox-page .message-card h3,
+:root[data-theme='dark'] .inbox-page .email-subject,
+:root[data-theme='dark'] .inbox-page .email-body {
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .settings-page .settings-card,
+:root[data-theme='dark'] .settings-page .settings-leave-dialog {
+  border-color: var(--color-border);
+  background-color: var(--color-surface);
+}
+
+:root[data-theme='dark'] .settings-page .card-header-row h3,
+:root[data-theme='dark'] .settings-page .category-name,
+:root[data-theme='dark'] .settings-page .settings-leave-header h2,
+:root[data-theme='dark'] .settings-page .toggle-label,
+:root[data-theme='dark'] .settings-page .field-group > label,
+:root[data-theme='dark'] .settings-page .select-field,
+:root[data-theme='dark'] .settings-page .category-create-form > label,
+:root[data-theme='dark'] .settings-page .strong-note {
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .settings-page .field-note,
+:root[data-theme='dark'] .settings-page .toggle-description,
+:root[data-theme='dark'] .settings-page .category-kind,
+:root[data-theme='dark'] .settings-page .settings-leave-dialog p {
+  color: var(--color-text-secondary);
+}
+
+:root[data-theme='dark'] .settings-page .category-row,
+:root[data-theme='dark'] .settings-page .toggle-row {
+  border-color: var(--color-border);
+}
+
+:root[data-theme='dark'] .settings-page .category-delete-button,
+:root[data-theme='dark'] .settings-page .settings-leave-discard-button {
+  border-color: #7f1d1d;
+  background-color: #3b2027;
+  color: #fecaca;
+}
+
+:root[data-theme='dark'] .settings-page .category-delete-button:hover,
+:root[data-theme='dark'] .settings-page .settings-leave-discard-button:hover {
+  border-color: #ef4444;
+  background-color: #55252c;
+}
+
+:root[data-theme='dark'] .settings-page .category-create-form input[type='text'],
+:root[data-theme='dark'] .settings-page .field-group input,
+:root[data-theme='dark'] .settings-page .select-field select {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-surface-soft);
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .settings-page .category-create-form input[type='color'] {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-surface-soft);
+}
+
+:root[data-theme='dark'] .settings-page .status-pill.disconnected {
+  background-color: var(--color-surface-soft);
+  color: var(--color-text-secondary);
+}
+
+:root[data-theme='dark'] .settings-page .slider {
+  background-color: #64748b;
+}
+
+:root[data-theme='dark'] .settings-page .slider::before {
+  background-color: #e5e7eb;
+}
+
+:root[data-theme='dark'] .settings-page .switch input:checked + .slider {
+  background-color: #1c8afd;
+}
+
+:root[data-theme='dark'] .settings-page .switch input:checked + .slider::before {
+  background-color: #ffffff;
+}
+
+:root[data-theme='dark'] .settings-page .save-banner {
+  background-color: #163a2b;
+  border-color: #28704c;
+  color: #bbf7d0;
+}
+
+:root[data-theme='dark'] .settings-page .save-banner-unsaved {
+  background-color: #3b3017;
+  border-color: #92741c;
+  color: #fde68a;
+}
+
+:root[data-theme='dark'] .settings-page .save-banner-error {
+  background-color: #3b2027;
+  border-color: #8f3543;
+  color: #fecaca;
+}
+
+:root[data-theme='dark'] .inbox-page .inbox-toolbar-heading h2,
+:root[data-theme='dark'] .inbox-page .sender-name,
+:root[data-theme='dark'] .inbox-page .message-header h3,
+:root[data-theme='dark'] .inbox-page .message-subject-row h4,
+:root[data-theme='dark'] .inbox-page .ai-summary,
+:root[data-theme='dark'] .inbox-page .ai-detected h5,
+:root[data-theme='dark'] .inbox-page .empty-state h3 {
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .inbox-page .inbox-toolbar-heading > div > span,
+:root[data-theme='dark'] .inbox-page .inbox-search-field,
+:root[data-theme='dark'] .inbox-page .inbox-search-field input::placeholder,
+:root[data-theme='dark'] .inbox-page .search-facets .inbox-facet > span,
+:root[data-theme='dark'] .inbox-page .meta-row,
+:root[data-theme='dark'] .inbox-page .email-preview,
+:root[data-theme='dark'] .inbox-page .detail-label,
+:root[data-theme='dark'] .inbox-page .section-label,
+:root[data-theme='dark'] .inbox-page .detail-meta,
+:root[data-theme='dark'] .inbox-page .message-meta-row,
+:root[data-theme='dark'] .inbox-page .info-card p,
+:root[data-theme='dark'] .inbox-page .ai-detected ul {
+  color: var(--color-text-secondary);
+}
+
+:root[data-theme='dark'] .inbox-page .inbox-search-field,
+:root[data-theme='dark'] .inbox-page .email-item,
+:root[data-theme='dark'] .inbox-page .message-body,
+:root[data-theme='dark'] .inbox-page .info-card,
+:root[data-theme='dark'] .inbox-page .empty-state {
+  border-color: var(--color-border);
+  background-color: var(--color-surface-soft);
+}
+
+:root[data-theme='dark'] .inbox-page .email-item,
+:root[data-theme='dark'] .inbox-page .message-body {
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .inbox-page .email-item.selected,
+:root[data-theme='dark'] .inbox-page .email-item.unread {
+  border-color: var(--color-primary);
+  background-color: #1d3854;
+}
+
+:root[data-theme='dark'] .inbox-page .inbox-search-field:focus-within {
+  border-color: var(--color-primary);
+  background-color: var(--color-surface-soft);
+}
+
+:root[data-theme='dark'] .inbox-page .inbox-search-field > button {
+  background-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+:root[data-theme='dark'] .inbox-page .filter-button {
+  border-color: var(--color-border);
+  background-color: var(--color-surface-soft);
+  color: var(--color-text-secondary);
+}
+
+:root[data-theme='dark'] .inbox-page .filter-button:hover,
+:root[data-theme='dark'] .inbox-page .filter-button.active {
+  border-color: var(--color-primary);
+  background-color: #1d3854;
+  color: #bfdbfe;
+}
+
+:root[data-theme='dark'] .inbox-page .message-header {
+  border-color: var(--color-border);
+}
+
+:root[data-theme='dark'] .inbox-page .action-button {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-surface-soft);
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .inbox-page .ai-card {
+  border-color: #315783;
+  background-color: #1d3854;
+}
+
+:root[data-theme='dark'] .inbox-page .danger-card,
+:root[data-theme='dark'] .inbox-page .warning-banner {
+  border-color: #8f3543;
+  background-color: #3b2027;
+  color: #fecaca;
+}
+
+:root[data-theme='dark'] .inbox-page .signal-tag,
+:root[data-theme='dark'] .inbox-page .detail-chip {
+  background-color: #1d3854;
+  color: #bfdbfe;
+}
+
+:root[data-theme='dark'] .inbox-page .spam-chip {
+  background-color: #3b2027;
+  color: #fecaca;
+}
+
+:root[data-theme='dark'] .total-emails .summary-number,
+:root[data-theme='dark'] .summary-total .commitment-summary-value {
+  color: #93c5fd;
+}
+
+:root[data-theme='dark'] .high-priority .summary-number,
+:root[data-theme='dark'] .summary-overdue .commitment-summary-value {
+  color: #fca5a5;
+}
+
+:root[data-theme='dark'] .commitments .summary-number,
+:root[data-theme='dark'] .summary-upcoming .commitment-summary-value {
+  color: #fcd34d;
+}
+
+:root[data-theme='dark'] .events .summary-number,
+:root[data-theme='dark'] .summary-completed .commitment-summary-value {
+  color: #6ee7b7;
+}
+
+:root[data-theme='dark'] .summary-label,
+:root[data-theme='dark'] .commitment-summary-label {
+  color: var(--color-text-secondary);
+}
+
+/* Calendar: keep the grid visually distinct and the event text highly readable. */
+:root[data-theme='dark'] .calendar-page .month-grid {
+  border-color: #3f4b5b;
+}
+
+:root[data-theme='dark'] .calendar-page .day-header {
+  border-color: #3f4b5b;
+  background-color: #29495f;
+  color: #dbe4ef;
+}
+
+:root[data-theme='dark'] .calendar-page .day-header.weekend {
+  background-color: #315268;
+  color: #e2e8f0;
+}
+
+:root[data-theme='dark'] .calendar-page .day-cell {
+  border-color: #3f4b5b;
+  background-color: #20394b;
+  color: #f8fafc;
+}
+
+:root[data-theme='dark'] .calendar-page .day-cell.weekend {
+  background-color: #29495f;
+  color: #f8fafc;
+}
+
+:root[data-theme='dark'] .calendar-page .day-cell.muted,
+:root[data-theme='dark'] .calendar-page .day-cell.muted.weekend {
+  background-color: #1a303f;
+  color: #aab8c5;
+}
+
+:root[data-theme='dark'] .calendar-page .day-cell.selected {
+  background-color: #213d5b;
+  color: #ffffff;
+}
+
+:root[data-theme='dark'] .calendar-page .day-cell.today {
+  box-shadow: inset 0 0 0 2px #60a5fa;
+}
+
+:root[data-theme='dark'] .calendar-page .day-number {
+  color: #f8fafc;
+  font-weight: 800;
+}
+
+:root[data-theme='dark'] .calendar-page .day-cell.muted .day-number {
+  color: #9ca9ba;
+}
+
+:root[data-theme='dark'] .calendar-page .day-event {
+  border: 1px solid #536172;
+  background-color: #303d4e;
+  color: #f8fafc;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+:root[data-theme='dark'] .calendar-page .day-event-title {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+:root[data-theme='dark'] .calendar-page .day-events-more {
+  color: #cbd5e1;
+}
+
+:root[data-theme='dark'] .calendar-page .week-column {
+  border-color: #3f4b5b;
+  background-color: #20394b;
+}
+
+:root[data-theme='dark'] .calendar-page .week-column.weekend {
+  background-color: #29495f;
+}
+
+:root[data-theme='dark'] .calendar-page .week-column.selected-week {
+  border-color: #60a5fa;
+  background-color: #213d5b;
+}
+
+:root[data-theme='dark'] .calendar-page .week-day-header {
+  color: #f8fafc;
+}
+
+:root[data-theme='dark'] .calendar-page .mini-event {
+  border-color: #536172;
+  background-color: #303d4e;
+  box-shadow: none;
+}
+
+:root[data-theme='dark'] .calendar-page .mini-title,
+:root[data-theme='dark'] .calendar-page .mini-meta,
+:root[data-theme='dark'] .calendar-page .no-events {
+  color: #e5edf6;
+}
+
+:root[data-theme='dark'] .calendar-page .priority-badge.priority-high {
+  background-color: #5a2a35;
+  color: #fecaca;
+}
+
+:root[data-theme='dark'] .calendar-page .priority-badge.priority-medium {
+  background-color: #544622;
+  color: #fde68a;
+}
+
+:root[data-theme='dark'] .calendar-page .priority-badge.priority-low {
+  background-color: #1f4b3b;
+  color: #a7f3d0;
+}

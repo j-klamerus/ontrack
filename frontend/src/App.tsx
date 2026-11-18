@@ -15,6 +15,7 @@ import Calendar from './pages/Calendar'
 import Settings from './pages/Settings'
 import { getEmails } from './services/emails'
 import { getDashboardSuggestions } from './services/dashboardSuggestions'
+import { SETTINGS_STORAGE_KEY } from './services/user'
 import {
   getPlannerPageChanges,
   markPlannerPageVisited,
@@ -27,14 +28,17 @@ import type { PlannerItemSelection } from './types/plannerItemSelection'
 type Theme = 'light' | 'dark'
 
 const getInitialTheme = (): Theme => {
-  const savedTheme = window.localStorage.getItem('ontrack-theme')
-  if (savedTheme === 'light' || savedTheme === 'dark') {
-    return savedTheme
+  try {
+    const savedSettings = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
+    if (savedSettings) {
+      const parsedSettings = JSON.parse(savedSettings) as { darkTheme?: boolean }
+      return parsedSettings.darkTheme === true ? 'dark' : 'light'
+    }
+  } catch {
+    return 'light'
   }
 
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
-    ? 'dark'
-    : 'light'
+  return 'light'
 }
 
 type Page = 'Dashboard' | 'Inbox' | 'Commitments' | 'Calendar' | 'Settings'
@@ -66,7 +70,6 @@ function App({ onLogOut, authError }: AppProps) {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
-    window.localStorage.setItem('ontrack-theme', theme)
   }, [theme])
 
   useEffect(() => {
@@ -231,6 +234,7 @@ function App({ onLogOut, authError }: AppProps) {
     Settings: (
       <Settings
         onLogOut={handleLogOut}
+        onThemeChange={(isDark) => setTheme(isDark ? 'dark' : 'light')}
         onUnsavedChangesChange={setSettingsHaveUnsavedChanges}
         leaveConfirmationOpen={pendingSettingsExit !== null}
         onCancelLeave={() => setPendingSettingsExit(null)}
@@ -314,14 +318,6 @@ function App({ onLogOut, authError }: AppProps) {
       <main className="main-content">
         <header className="top-bar">
           <h1>{currentPage}</h1>
-          <button
-            className="theme-toggle"
-            type="button"
-            aria-pressed={theme === 'dark'}
-            onClick={() => setTheme((currentTheme) => currentTheme === 'dark' ? 'light' : 'dark')}
-          >
-            Dark theme: {theme === 'dark' ? 'On' : 'Off'}
-          </button>
         </header>
 
         {authError && <p className="auth-error" role="alert">{authError}</p>}

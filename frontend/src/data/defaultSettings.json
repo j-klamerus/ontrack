@@ -1,5 +1,6 @@
 {
   "preferences": {
+    "darkTheme": false,
     "priorityEmailFiltering": true,
     "highlightAssignments": true,
     "highlightDeadlines": true,

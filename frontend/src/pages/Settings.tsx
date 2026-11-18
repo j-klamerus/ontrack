@@ -56,6 +56,7 @@ type SaveMessage = {
 
 type SettingsProps = {
   onLogOut: () => void
+  onThemeChange: (isDark: boolean) => void
   onUnsavedChangesChange: (hasUnsavedChanges: boolean) => void
   leaveConfirmationOpen: boolean
   onCancelLeave: () => void
@@ -64,6 +65,7 @@ type SettingsProps = {
 
 function Settings({
   onLogOut,
+  onThemeChange,
   onUnsavedChangesChange,
   leaveConfirmationOpen,
   onCancelLeave,
@@ -178,6 +180,7 @@ function Settings({
     try {
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
       setSavedSettings(settings)
+      onThemeChange(settings.darkTheme)
       setSaveMessage({ text: 'Your settings have been saved.', tone: 'success' })
       return true
     } catch {
@@ -197,6 +200,7 @@ function Settings({
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(defaultSettings))
       setSettings(defaultSettings)
       setSavedSettings(defaultSettings)
+      onThemeChange(defaultSettings.darkTheme)
       setSaveMessage({ text: 'Settings have been reset to defaults.', tone: 'success' })
     } catch {
       setSaveMessage({ text: 'Unable to reset settings in this browser.', tone: 'error' })
