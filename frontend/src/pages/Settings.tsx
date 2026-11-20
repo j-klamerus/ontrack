@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import demoUser from '../data/demoUser.json'
 import {
   addCustomEventCategory,
@@ -18,6 +18,7 @@ import { DEFAULT_PLANNER_KEY_DEFAULTS } from '../services/plannerKeyPreferences'
 import type { EventCategoryDefinition } from '../constants/eventCategories'
 import CategorySettingsCard from './settings/CategorySettingsCard'
 import PreferenceSettingsCards from './settings/PreferenceSettingsCards'
+import { getGmailConnectionStatus, startGmailConnection } from '../services/gmailAnalysis'
 import type { SettingsState } from './settings/types'
 import '../styles/Settings.css'
 
@@ -69,6 +70,29 @@ function Settings({ onLogOut }: SettingsProps) {
   const [categoryName, setCategoryName] = useState('')
   const [categoryColor, setCategoryColor] = useState('#0f766e')
   const [categoryError, setCategoryError] = useState('')
+  const [gmailConnected, setGmailConnected] = useState(false)
+  const [gmailBusy, setGmailBusy] = useState(false)
+  const [gmailError, setGmailError] = useState<string | null>(null)
+
+  useEffect(() => {
+    getGmailConnectionStatus()
+      .then(setGmailConnected)
+      .catch((error: unknown) => {
+        setGmailError(error instanceof Error ? error.message : 'Unable to check Gmail connection.')
+      })
+  }, [])
+
+  const handleConnectGmail = async () => {
+    setGmailBusy(true)
+    setGmailError(null)
+    try {
+      const authorizationUrl = await startGmailConnection()
+      window.location.assign(authorizationUrl)
+    } catch (error) {
+      setGmailError(error instanceof Error ? error.message : 'Unable to start Gmail authorization.')
+      setGmailBusy(false)
+    }
+  }
 
   const refreshCategories = () => setCategories(getEventCategoryDefinitions())
 
@@ -165,7 +189,14 @@ function Settings({ onLogOut }: SettingsProps) {
           onRemoveCategory={handleRemoveCategory}
         />
 
-        <PreferenceSettingsCards settings={settings} updateSetting={updateSetting} />
+        <PreferenceSettingsCards
+          settings={settings}
+          updateSetting={updateSetting}
+          gmailConnected={gmailConnected}
+          gmailBusy={gmailBusy}
+          gmailError={gmailError}
+          onConnectGmail={handleConnectGmail}
+        />
       </div>
 
       <div className="settings-actions">
