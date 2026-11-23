@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import demoUser from '../data/demoUser.json'
 import {
   createCustomEventCategory,
   getEventCategoryDefinitions,
@@ -22,6 +23,7 @@ import { DEFAULT_PLANNER_KEY_DEFAULTS } from '../services/plannerKeyPreferences'
 import type { EventCategoryDefinition } from '../constants/eventCategories'
 import CategorySettingsCard from './settings/CategorySettingsCard'
 import PreferenceSettingsCards from './settings/PreferenceSettingsCards'
+import { getGmailConnectionStatus, startGmailConnection } from '../services/gmailAnalysis'
 import type { SettingsState } from './settings/types'
 import type { UserProfile } from '../types/user'
 import '../styles/Settings.css'
@@ -110,6 +112,29 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
       })
     return () => { active = false }
   }, [userId])
+  const [gmailConnected, setGmailConnected] = useState(false)
+  const [gmailBusy, setGmailBusy] = useState(false)
+  const [gmailError, setGmailError] = useState<string | null>(null)
+
+  useEffect(() => {
+    getGmailConnectionStatus()
+      .then(setGmailConnected)
+      .catch((error: unknown) => {
+        setGmailError(error instanceof Error ? error.message : 'Unable to check Gmail connection.')
+      })
+  }, [])
+
+  const handleConnectGmail = async () => {
+    setGmailBusy(true)
+    setGmailError(null)
+    try {
+      const authorizationUrl = await startGmailConnection()
+      window.location.assign(authorizationUrl)
+    } catch (error) {
+      setGmailError(error instanceof Error ? error.message : 'Unable to start Gmail authorization.')
+      setGmailBusy(false)
+    }
+  }
 
   useEffect(() => {
     onDirtyChange(isDirty)
@@ -287,6 +312,12 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
           }}
           settings={settings}
           updateSetting={updateSetting}
+          settings={settings}
+          updateSetting={updateSetting}
+          gmailConnected={gmailConnected}
+          gmailBusy={gmailBusy}
+          gmailError={gmailError}
+          onConnectGmail={handleConnectGmail}
         />
       </div>
 

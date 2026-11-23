@@ -1,3 +1,8 @@
+# STILL TODO
+- As of now users must manually reconnect their gmail after the server restarts. Gmail/Google credentials need to be stored and linked to each users login on supabase. This seems pretty complicated so probably get some help from Copilot or Claude.
+- The backend now handles all the necessary api calls to get the emails and gemini response, but it only dumps it to the screen. Frontend needs work to actually display the gemini responses the way we want them shown.
+- The gemini responses need to be saved in the database and there needs to be some kind of logic implemented that checks if a given email has already been analyzed. If the email is found to have already been analyzed the stored result should be used instead of a new gemini call.
+
 # How to run the project:
 
 ## Requirements:
@@ -48,13 +53,14 @@ The dashboard and Student Profile show details from the signed-in account. Profi
 1. Basically the same process as the frontend but you will need to navigate to the backend folder instead of the frontend. I like to have a split terminal running so I can see both at the same time without having to click back and forth, you can do this by pressing "Ctrl + Shift + 5" while your cursor is inside the existing terminal.
 2. The previous step opened your split terminal in the same directory as the frontend but we need to be in the backend, so from the terminal enter "cd .." to jump backward in the file tree then enter "cd backend" to change to the backend directory.
 3. Once you have navigated to the backend you can enter "npm install" and "npm run dev" same as before.
-4. If everything worked properly you should see something similar to: 
+4. Copy `backend/.env.example` to `backend/.env` and fill in the values described below. Never commit `backend/.env` or place these secrets in frontend variables.
+5. If everything worked properly you should see something similar to:
 ~~~
 > backend@1.0.0 dev
 > tsx watch src/index.ts
 
-◇ injected env (2) from .env
-Example app listening on port 3000
+◇ injected env from .env
+On Track backend listening on port 3000
 ~~~
 appear in your terminal.
 
@@ -84,12 +90,13 @@ Calendar tests use mocked Google and Supabase responses, they do not verify a li
 
 ### Test Everything is working Properly
 
-At this point everything should be setup properly in order to run the app. Follow these steps to make sure its working as expected:
-1. Right click on the webpage that opened with the frontend and click the "inspect" option.
-2. With the inspect element window open click the "console" tab.
-3. Click the big purple "Test Backend" button on the webpage.
+#### Where to read the code
 
-If everything is working properly within a few seconds you should see an object appear in the console that contains a message that reads "Hello World!"
+- `backend/src/index.ts` defines HTTP routes, verifies the Supabase bearer session, starts/completes Google OAuth, and connects the services.
+- `backend/src/services/gmail.ts` lists Gmail message IDs, fetches full message resources, decodes MIME bodies, and normalizes message metadata.
+- `backend/src/services/gemini.ts` defines the analysis data shape, Gemini JSON schema and prompt, calls `generateContent`, then validates the response.
+- `frontend/src/services/gmailAnalysis.ts` attaches the signed-in Supabase access token to backend requests and validates the response shape.
+- `frontend/src/pages/Settings.tsx` starts Gmail consent; `frontend/src/pages/Inbox.tsx` requests analyses and displays the returned data.
 
 ### API Keys
 Note: the code that exists on the main branch doesn't utilize the gemini api so this part is only if you want to get the demo app running. To switch to the main branch navigate back to the root directory of the project i.e. the folder "ontrack" and enter "git switch small-demo" to change branches from the main branch to the demo branch. You will also need to "npm install" again in both the frontend and backend directories since the code on the small-demo branch uses additional libraries that weren't installed along with the code on the main branch. Make sure to stop the frontend and backend server before attempting to npm install again, you can stop them by clicking on the terminal window and pressing "CTRL+C".
