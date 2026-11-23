@@ -5,17 +5,20 @@ import type { DashboardSuggestion } from '../../types/dashboardSuggestion'
 
 export type CalendarSuggestion = Extract<DashboardSuggestion, { kind: 'Calendar event' }>
 
-export type CalendarScheduleItem = {
+type CalendarScheduleItemBase = {
   id: string
-  sourceId: number
   title: string
   date: string
   time: string
   allDay?: boolean
-  kind: 'Commitment' | 'Calendar event'
   color: string
   category: EventCategory
   priority: Priority
 }
+
+export type CalendarScheduleItem = CalendarScheduleItemBase & (
+  | { kind: 'Commitment'; sourceId: number }
+  | { kind: 'Calendar event'; sourceId: number | string }
+)
 
 export type CalendarViewMode = 'month' | 'week'

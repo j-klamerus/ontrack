@@ -1,5 +1,4 @@
 /** Selected-day details, upcoming planner items, and calendar suggestion review. */
-import type { Dispatch, SetStateAction } from 'react'
 import { Plus } from 'lucide-react'
 import { PlannerItemAction, PlannerItemCard } from '../../components/PlannerItemCard'
 import type { CalendarEvent } from '../../types/calendarEvent'
@@ -140,7 +139,6 @@ function CalendarSidebar({
                 title={item.title}
                 category={item.category}
                 priority={item.priority}
-                dateLabel={`${formatFullDate(item.date)} · ${formatTime(item.time)}`}
                 expandActionsOnClick={item.kind === 'Commitment'}
                 actionsPlacement="bottom"
                 actions={item.kind === 'Commitment' ? (

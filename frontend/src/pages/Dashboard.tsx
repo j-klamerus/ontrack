@@ -37,14 +37,13 @@ import '../styles/Dashboard.css'
 const eventPriorities: EventPriority[] = ['High', 'Medium', 'Low']
 
 /** Summarizes planner data and shows rule-derived email priorities only after an Inbox scan. */
-function Dashboard() {
 type DashboardProps = {
+  user: UserProfile
   onViewInCalendar: (request: PlannerItemSelection) => void
   onViewInCommitments: (request: PlannerItemSelection) => void
 }
 
-function Dashboard({ onViewInCalendar, onViewInCommitments }: DashboardProps) {
-function Dashboard({ user }: { user: UserProfile }) {
+function Dashboard({ user, onViewInCalendar, onViewInCommitments }: DashboardProps) {
   const eventCategories = getEventCategories()
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [emails, setEmails] = useState<StudentEmail[]>([])
@@ -67,9 +66,7 @@ function Dashboard({ user }: { user: UserProfile }) {
       getCalendarEvents(),
       getDashboardSuggestions()
     ])
-      .then(async ([loadedEmails, loadedCommitments, loadedEvents, loadedSuggestions, loadedUser]) => {
-        setEmails(loadedEmails.map((email) => ({ ...email, priority: null })))
-      .then(([loadedEmails, loadedCommitments, loadedEvents, loadedSuggestions]) => {
+        .then(async ([loadedEmails, loadedCommitments, loadedEvents, loadedSuggestions]) => {
         setEmails(loadedEmails)
         try {
           setSuggestedReplies(getSuggestedReplies())

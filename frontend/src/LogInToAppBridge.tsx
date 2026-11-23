@@ -8,17 +8,6 @@ const supabaseSetupError =
     'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in frontend/.env, then restart Vite.'
 
 function App() {
-    //*******************************************/
-    // This demo gate only switches screens; it does not validate credentials.
-    //
-    // CHANGE THE CONST STATEMENT BELOW TO ACCESS DASHBOARD
-    // 
-    // const [isLoggedIn, setIsLoggedIn] = useState(true)
-    //
-    // CURRENTLY, WHEN USING FALSE IT GETS TO THGE LOG IN PAGE
-    //
-    //*******************************************/
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [session, setSession] = useState<Session | null>(null)
     const [isLoading, setIsLoading] = useState(isSupabaseConfigured)
     const [authError, setAuthError] = useState<string | null>(

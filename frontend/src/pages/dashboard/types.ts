@@ -8,15 +8,16 @@ export type DashboardSummary = {
   events: number
 }
 
-export type DashboardUpcomingItem = {
+type DashboardUpcomingItemBase = {
   id: string
-  sourceId: number
   title: string
   date: string
   time: string
-} & (
-  | { kind: 'Commitment'; category: EventCategory; priority: Priority }
-  | { kind: 'Calendar event'; category: EventCategory; priority: Priority }
+}
+
+export type DashboardUpcomingItem = DashboardUpcomingItemBase & (
+  | { kind: 'Commitment'; sourceId: number; category: EventCategory; priority: Priority }
+  | { kind: 'Calendar event'; sourceId: number | string; category: EventCategory; priority: Priority }
 )
 
 export const toUpcomingCommitment = (commitment: Commitment): DashboardUpcomingItem => ({

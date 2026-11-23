@@ -16,7 +16,7 @@ import Calendar from './pages/Calendar'
 import Settings from './pages/Settings'
 import { getEmails } from './services/emails'
 import { getDashboardSuggestions } from './services/dashboardSuggestions'
-import { getUserProfile } from './services/user'
+import { getUserProfile, SETTINGS_STORAGE_KEY } from './services/user'
 import {
   getPlannerPageChanges,
   markPlannerPageVisited,
@@ -52,15 +52,14 @@ type AppProps = {
   authError: string | null
 }
 
-/**
- * Owns app navigation, unread counts, and planner-change indicators.
- * Only the active screen is mounted, so page-local state resets on navigation.
- */
-function App({ onLogOut }: AppProps) {
 function App({ user, onLogOut, authError }: AppProps) {
   const profile = getUserProfile(user)
+  const [theme, setTheme] = useState<Theme>(getInitialTheme)
   const [currentPage, setCurrentPage] = useState<Page>('Dashboard')
   const [settingsDirty, setSettingsDirty] = useState(false)
+  const [pendingSettingsExit, setPendingSettingsExit] = useState<PendingSettingsExit | null>(null)
+  const [calendarSelection, setCalendarSelection] = useState<PlannerItemSelection | null>(null)
+  const [commitmentSelection, setCommitmentSelection] = useState<PlannerItemSelection | null>(null)
   const [unreadEmailCount, setUnreadEmailCount] = useState(0)
   const [navigationError, setNavigationError] = useState<string | null>(null)
   const [plannerPageChanges, setPlannerPageChanges] = useState<PlannerPageChanges>({
@@ -141,32 +140,98 @@ function App({ user, onLogOut, authError }: AppProps) {
   }, [currentPage])
 
   useEffect(() => {
+    if (currentPage !== 'Settings' || !settingsDirty) {
+      return
+    }
+
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', warnBeforeUnload)
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload)
+  }, [currentPage, settingsDirty])
+
+  useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' })
     document.querySelector('.page-viewport')?.scrollTo({ top: 0, behavior: 'instant' })
   }, [currentPage])
 
-  const confirmLeavingSettings = () =>
-    currentPage !== 'Settings' || !settingsDirty || window.confirm('Discard unsaved settings changes?')
+  const navigateToPage = (page: Page) => {
+    if (page === currentPage) return
+    if (currentPage === 'Settings' && settingsDirty) {
+      setPendingSettingsExit({ type: 'navigate', page })
+      return
+    }
+    setCurrentPage(page)
+  }
 
-  const navigateTo = (page: Page) => {
-    if (page !== currentPage && confirmLeavingSettings()) {
-      setCurrentPage(page)
+  const handleViewInCalendar = (request: PlannerItemSelection) => {
+    setCalendarSelection(request)
+    navigateToPage('Calendar')
+  }
+
+  const handleViewInCommitments = (request: PlannerItemSelection) => {
+    setCommitmentSelection(request)
+    navigateToPage('Commitments')
+  }
+
+  const handleLogOut = () => {
+    if (currentPage === 'Settings' && settingsDirty) {
+      setPendingSettingsExit({ type: 'logout' })
+      return
+    }
+    onLogOut()
+  }
+
+  const finishSettingsExit = () => {
+    if (!pendingSettingsExit) return
+    const exit = pendingSettingsExit
+    setSettingsDirty(false)
+    setPendingSettingsExit(null)
+    if (exit.type === 'logout') {
+      onLogOut()
+    } else {
+      setCurrentPage(exit.page)
     }
   }
 
   const pages = {
-    Dashboard: <Dashboard user={profile} />,
+    Dashboard: (
+      <Dashboard
+        user={profile}
+        onViewInCalendar={handleViewInCalendar}
+        onViewInCommitments={handleViewInCommitments}
+      />
+    ),
     Inbox: <Inbox onUnreadCountChange={setUnreadEmailCount} />,
-    Commitments: <Commitments />,
-    Calendar: <Calendar userId={user.id} />,
+    Commitments: (
+      <Commitments
+        onViewInCalendar={handleViewInCalendar}
+        selectionRequest={commitmentSelection}
+        onSelectionHandled={() => setCommitmentSelection(null)}
+      />
+    ),
+    Calendar: (
+      <Calendar
+        userId={user.id}
+        selectionRequest={calendarSelection}
+        onSelectionHandled={() => setCalendarSelection(null)}
+        onViewInCommitments={handleViewInCommitments}
+      />
+    ),
     Settings: (
       <Settings
         user={profile}
         userId={user.id}
         onDirtyChange={setSettingsDirty}
-        onLogOut={() => {
-          if (confirmLeavingSettings()) onLogOut()
-        }}
+        onLogOut={handleLogOut}
+        onThemeChange={(isDark) => setTheme(isDark ? 'dark' : 'light')}
+        onUnsavedChangesChange={setSettingsDirty}
+        leaveConfirmationOpen={pendingSettingsExit !== null}
+        onCancelLeave={() => setPendingSettingsExit(null)}
+        onLeaveAnyway={finishSettingsExit}
       />
     )
   }
@@ -199,7 +264,7 @@ function App({ user, onLogOut, authError }: AppProps) {
                 }`}
                 aria-current={currentPage === page ? 'page' : undefined}
                 aria-label={plannerPage && plannerPageChanges[plannerPage] ? `${page}, new changes` : undefined}
-                onClick={() => navigateTo(page)}
+                onClick={() => navigateToPage(page)}
               >
                 <Icon size={20} strokeWidth={1.8} />
                 <span>{page}</span>
@@ -235,7 +300,7 @@ function App({ user, onLogOut, authError }: AppProps) {
           <button
             className={`nav-item ${currentPage === 'Settings' ? 'active' : ''}`}
             aria-current={currentPage === 'Settings' ? 'page' : undefined}
-            onClick={() => navigateTo('Settings')}
+            onClick={() => navigateToPage('Settings')}
           >
             <SettingsIcon size={20} strokeWidth={1.8} />
             <span>Settings</span>

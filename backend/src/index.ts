@@ -6,16 +6,15 @@ import { google } from 'googleapis'
 import { randomUUID } from 'node:crypto'
 import { analyzeEmails } from './services/gemini.js'
 import { fetchRecentEmails } from './services/gmail.js'
+import {
+  evaluateEmailRules,
+  type EmailPriorityRule,
+  type EmailRule,
+  type EmailSpamRule,
+  type RuleEvaluationEmail,
+} from './emailRuleEvaluator.js'
+import googleCalendarRouter from './googleCalendar.js'
 
-import { google } from "googleapis";
-import googleCalendarRouter from "./googleCalendar.js";
-
-const app = express()
-const port = process.env.PORT || 3000;
-const frontendOrigin = process.env.FRONTEND_ORIGIN?.trim() || 'http://localhost:5173'
-
-//get env vars
-const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI } = process.env;
 const {
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
@@ -42,32 +41,21 @@ for (const [name, value] of Object.entries(requiredEnvironment)) {
   }
 }
 
-// LEGACY: Earlier OAuth prototype using CLIENT_ID names; the active client below uses GOOGLE_* variables.
-/*const oauth2Client = new google.auth.OAuth2(
-    process.env.CLIENT_ID,
-    process.env.CLIENT_SECRET,
-    process.env.REDIRECT_URL
-);*/
-app.use(cors({ origin: frontendOrigin }))
-app.use(express.json())
-// Calendar OAuth and routes are separate from the legacy Gmail OAuth flow below.
-app.use(googleCalendarRouter)
 const app = express()
 const supabase = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!)
 const googleScopes = ['https://www.googleapis.com/auth/gmail.readonly']
 const oauthPendingLifetimeMs = 10 * 60 * 1000
+const port = Number(PORT)
 
-// For this first version, connected Google credentials and pending OAuth state live
-// only in this process. Replace these Maps with encrypted persistent storage later.
+// Gmail connections and pending OAuth state are process-local for this first version.
 const pendingAuthorizations = new Map<string, { userId: string; expiresAt: number }>()
 const gmailRefreshTokens = new Map<string, string>()
 
-app.use(cors())
-app.use(express.json({ limit: '1mb' }))
-type AuthenticatedRequest = Request & { userId?: string }
-
 app.use(cors({ origin: FRONTEND_URL }))
 app.use(express.json({ limit: '1mb' }))
+app.use(googleCalendarRouter)
+
+type AuthenticatedRequest = Request & { userId?: string }
 
 /** Verify the Supabase bearer token and attach the verified user ID to the request. */
 async function requireSignedInUser(
@@ -95,34 +83,10 @@ app.get('/', (_req, res) => {
   res.json({ message: 'On Track backend is running.' })
 })
 
-app.get("/testAuth", (req, res) => {
-  const url = oauth2.generateAuthUrl({
-    access_type: 'offline',
-    scope:scopes
-  });
-  res.send(`<a href="${url}"> Auth with Google </a>`)
-})
-
-app.get("/auth/google/callback", async (req, res) => {
-  const { code } = req.query;
-  if (typeof code !== 'string') {
-    res.status(400).send('Missing authorization code.')
-  const code = req.query.code;
-  if (typeof code !== 'string') {
-    res.status(400).send('Google did not return an authorization code.')
-    return
-  }
-
-  const { tokens } = await oauth2.getToken(code);
-  oauth2.setCredentials(tokens);
-  await readEmails(oauth2, res);
-})
-
 // Validate the scan payload, evaluate its rules, and return backend-defined group ordering.
 app.post('/api/email-rules/evaluate', (req, res) => {
   const body: unknown = req.body
 
-  // Validate request data at the API boundary before compiling user-provided regexes.
   if (
     !isRecord(body) ||
     !Array.isArray(body.emails) ||
@@ -169,25 +133,11 @@ app.post('/api/email-rules/evaluate', (req, res) => {
     })
   }
 })
+
 app.get('/api/gmail/status', requireSignedInUser, (req: AuthenticatedRequest, res) => {
   res.json({ connected: Boolean(req.userId && gmailRefreshTokens.has(req.userId)) })
 })
 
-async function readEmails(auth: InstanceType<typeof google.auth.OAuth2>, res: express.Response) {
-    const gmail = google.gmail({ version: 'v1', auth });
-    const response = await gmail.users.messages.list({
-        userId:'me',
-        maxResults:30
-    });
-
-    const messages = response.data.messages;
-
-    if(!messages){
-        res.send('There are no messages');
-        return;
-    }
-    
-    const mails = await Promise.all(messages.map(async (message) => `<li>${await getEmail(message.id, gmail)}</li>`))
 /** Start Google consent after proving which On Track user initiated it. */
 app.get('/auth/google/start', requireSignedInUser, (req: AuthenticatedRequest, res) => {
   const userId = req.userId
@@ -216,7 +166,7 @@ app.get('/auth/google/start', requireSignedInUser, (req: AuthenticatedRequest, r
   res.json({ authorizationUrl })
 })
 
-/** Google redirects here after consent; validate one-time state before exchanging code. */
+/** Consume a single-use state before exchanging the Gmail OAuth code. */
 app.get('/auth/google/callback', async (req, res) => {
   const { code, state, error } = req.query
   if (error) {
@@ -229,7 +179,7 @@ app.get('/auth/google/callback', async (req, res) => {
   }
 
   const pending = pendingAuthorizations.get(state)
-  pendingAuthorizations.delete(state) // State is one-use even when expired.
+  pendingAuthorizations.delete(state)
   if (!pending || pending.expiresAt <= Date.now()) {
     res.status(400).send('This Gmail authorization request expired. Return to On Track and try again.')
     return
@@ -243,34 +193,7 @@ app.get('/auth/google/callback', async (req, res) => {
       res.status(400).send('Google did not provide offline access. Please reconnect and grant access.')
       return
     }
-    
-    const mails = await Promise.all(
-        messages
-            .filter((message) => typeof message.id === 'string')
-            .map(async (message) => `<li>${await getEmail(message.id, gmail)}</li>`)
-    )
-    
-    res.send(`<h2>Messages</h2><ul>${mails.join('')}</ul>`)
-    return;
-}
 
-async function getEmail(emailId: string | null | undefined, gmail: gmail_v1.Gmail): Promise<string> {
-    if (!emailId) {
-      throw new Error('Gmail returned a message without an ID.')
-    }
-
-    const response = await gmail.users.messages.get({ id: emailId, userId: 'me' });
-    const email = response.data;
-    
-    // Gmail messages may omit the payload or standard headers.
-    const headers = email.payload?.headers ?? []
-    const subject = headers.find((header) => header.name?.toLowerCase() === 'subject')?.value ?? '(no subject)'
-    const from = headers.find((header) => header.name?.toLowerCase() === 'from')?.value ?? '(unknown sender)'
-    const headers = email.payload?.headers ?? [];
-    const subject = headers.find((header: { name?: string | null }) => header.name === 'Subject')?.value ?? '';
-    const from = headers.find((header: { name?: string | null }) => header.name === 'From')?.value ?? '';
-
-    // Store only the refresh token needed to obtain short-lived access tokens.
     gmailRefreshTokens.set(pending.userId, refreshToken)
     res.redirect(`${FRONTEND_URL}/?gmail=connected`)
   } catch (error) {
@@ -279,7 +202,7 @@ async function getEmail(emailId: string | null | undefined, gmail: gmail_v1.Gmai
   }
 })
 
-/** Fetch a small recent batch and return Gemini's structured analysis without storing it. */
+/** Fetch a bounded Gmail batch and return Gemini's structured analysis. */
 app.post('/api/emails/analyze', requireSignedInUser, async (req: AuthenticatedRequest, res) => {
   const userId = req.userId
   if (!userId) {
@@ -330,15 +253,11 @@ function createGmailClient(refreshToken: string) {
   return google.gmail({ version: 'v1', auth })
 }
 
-const oauth2 = generateOAuthClient();
-
 type JsonRecord = Record<string, unknown>
 
-// Narrow arbitrary request values to plain JSON objects before inspecting their fields.
 const isRecord = (value: unknown): value is JsonRecord =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
-// Check each untrusted rule before it reaches the regex evaluator.
 const isEmailRule = (value: unknown): value is EmailRule =>
   isRecord(value) &&
   typeof value.id === 'string' &&
@@ -354,7 +273,6 @@ const isEmailRule = (value: unknown): value is EmailRule =>
   value.label.trim().length > 0 &&
   value.label.length <= 60
 
-// Validate priority rules separately so they cannot be mistaken for category labels.
 const isEmailPriorityRule = (value: unknown): value is EmailPriorityRule =>
   isRecord(value) &&
   typeof value.id === 'string' &&
@@ -368,7 +286,6 @@ const isEmailPriorityRule = (value: unknown): value is EmailPriorityRule =>
   value.pattern.length <= 200 &&
   (value.priority === 'High' || value.priority === 'Medium' || value.priority === 'Low')
 
-// Spam rules share the same match fields without category or priority outcomes.
 const isEmailSpamRule = (value: unknown): value is EmailSpamRule =>
   isRecord(value) &&
   typeof value.id === 'string' &&
@@ -381,13 +298,11 @@ const isEmailSpamRule = (value: unknown): value is EmailSpamRule =>
   value.pattern.trim().length > 0 &&
   value.pattern.length <= 200
 
-// Blocked sender entries are exact email addresses rather than domain-wide patterns.
 const isBlockedSender = (value: unknown): value is string =>
   typeof value === 'string' &&
   value.length <= 320 &&
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
 
-// Restrict scan email fields and sizes at the API boundary.
 const isRuleEvaluationEmail = (value: unknown): value is RuleEvaluationEmail =>
   isRecord(value) &&
   typeof value.id === 'number' &&
@@ -403,18 +318,14 @@ const isRuleEvaluationEmail = (value: unknown): value is RuleEvaluationEmail =>
   typeof value.date === 'string' &&
   value.date.length <= 100
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
-})
-app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
   const message = error instanceof Error ? error.message : 'Unknown server error'
   console.error('Backend request failed:', message)
-  res.status(500).json({ error: 'The backend could not complete the request. Check the backend terminal for details.' })
+  res.status(500).json({
+    error: 'The backend could not complete the request. Check the backend terminal for details.',
+  })
 })
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
-})
-app.listen(Number(PORT), () => {
   console.log(`On Track backend listening on port ${PORT}`)
 })

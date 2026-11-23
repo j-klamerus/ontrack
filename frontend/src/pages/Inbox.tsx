@@ -31,7 +31,6 @@ import {
   signalOptions,
   type EmailSort,
 } from './inbox/types'
-import type { EmailFilter } from './inbox/types'
 import { analyzeGmail, type GmailAnalysis } from '../services/gmailAnalysis'
 
 type InboxProps = {
