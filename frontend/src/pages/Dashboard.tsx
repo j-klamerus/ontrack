@@ -15,6 +15,10 @@ import { getCalendarEvents } from '../services/calendarEvents'
 import { getCommitments } from '../services/commitments'
 import { getDashboardSuggestions } from '../services/dashboardSuggestions'
 import { getEmails } from '../services/emails'
+import { getEmailRules } from '../services/emailRules'
+import { getEmailPriorityRules } from '../services/emailPriorityRules'
+import { getEmailSpamSettings } from '../services/emailSpamSettings'
+import { createInboxScanSignature, getSavedInboxScanState } from '../services/inboxState'
 import { getSuggestedReplies } from '../services/suggestedReplies'
 import {
   confirmDashboardSuggestion,
@@ -32,6 +36,8 @@ import '../styles/Dashboard.css'
 
 const eventPriorities: EventPriority[] = ['High', 'Medium', 'Low']
 
+/** Summarizes planner data and shows rule-derived email priorities only after an Inbox scan. */
+function Dashboard() {
 type DashboardProps = {
   onViewInCalendar: (request: PlannerItemSelection) => void
   onViewInCommitments: (request: PlannerItemSelection) => void
@@ -50,6 +56,7 @@ function Dashboard({ user }: { user: UserProfile }) {
   const [confirmedSuggestions, setConfirmedSuggestions] = useState<DashboardUpcomingItem[]>([])
   const [editingSuggestion, setEditingSuggestion] = useState<DashboardSuggestion | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [priorityError, setPriorityError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [savingSuggestionId, setSavingSuggestionId] = useState<number | null>(null)
 
@@ -60,6 +67,8 @@ function Dashboard({ user }: { user: UserProfile }) {
       getCalendarEvents(),
       getDashboardSuggestions()
     ])
+      .then(async ([loadedEmails, loadedCommitments, loadedEvents, loadedSuggestions, loadedUser]) => {
+        setEmails(loadedEmails.map((email) => ({ ...email, priority: null })))
       .then(([loadedEmails, loadedCommitments, loadedEvents, loadedSuggestions]) => {
         setEmails(loadedEmails)
         try {
@@ -72,10 +81,47 @@ function Dashboard({ user }: { user: UserProfile }) {
         setSuggestions(loadedSuggestions)
         setSummary({
           totalEmails: loadedEmails.length,
-          highPriorityEmails: loadedEmails.filter((email) => email.priority === 'High').length,
+          highPriorityEmails: null,
           commitments: loadedCommitments.length,
           events: loadedEvents.length
         })
+
+        try {
+          const emailRules = getEmailRules()
+          const priorityRules = getEmailPriorityRules()
+          const spamSettings = getEmailSpamSettings()
+          const scanSignature = await createInboxScanSignature(
+            loadedEmails,
+            emailRules,
+            priorityRules,
+            spamSettings.rules,
+            spamSettings.blockedSenders
+          )
+          const savedScanState = getSavedInboxScanState(scanSignature)
+          if (savedScanState) {
+            const prioritiesByEmailId = new Map(
+                savedScanState.evaluations.map((evaluation) => [evaluation.emailId, evaluation.priority])
+            )
+            const prioritiesCleared = savedScanState.classificationCleared
+            setEmails(loadedEmails.map((email) => ({
+                ...email,
+                priority: prioritiesCleared ? null : prioritiesByEmailId.get(email.id) ?? null
+            })))
+            setSummary((current) =>
+                current
+                  ? {
+                      ...current,
+                      highPriorityEmails: prioritiesCleared
+                        ? 0
+                        : savedScanState.evaluations.filter((email) => email.priority === 'High').length
+                    }
+                  : current
+            )
+          }
+          setPriorityError(null)
+        } catch (error) {
+          setPriorityError(error instanceof Error ? error.message : 'Unable to calculate high-priority emails.')
+        }
       })
       .catch((error: unknown) => {
         setLoadError(error instanceof Error ? error.message : 'Unable to load dashboard data.')
@@ -190,6 +236,11 @@ function Dashboard({ user }: { user: UserProfile }) {
         </p>
 
         {actionError && <p className="suggestion-action-error" role="alert">{actionError}</p>}
+        {priorityError && (
+          <p className="suggestion-action-error" role="alert">
+            Could not calculate the High Priority count: {priorityError}
+          </p>
+        )}
 
         <SummaryCards summary={summary} />
 

@@ -72,6 +72,8 @@ const createEmptyForm = (selectedDate: Date): EventFormState => ({
   description: ''
 })
 
+/** Coordinates calendar views, planner items, and reviewable event suggestions. */
+function Calendar() {
 type CalendarProps = {
   selectionRequest: PlannerItemSelection | null
   onSelectionHandled: () => void

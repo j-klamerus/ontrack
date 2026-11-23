@@ -16,7 +16,9 @@ function SummaryCards({ summary }: SummaryCardsProps) {
 
       <div className="summary-card high-priority">
         <AlertCircle className="summary-icon" size={30} strokeWidth={1.8} />
-        <span className="summary-number">{summary.highPriorityEmails.toLocaleString()}</span>
+        <span className="summary-number">
+          {summary.highPriorityEmails === null ? '--' : summary.highPriorityEmails.toLocaleString()}
+        </span>
         <span className="summary-label">High Priority</span>
       </div>
 

@@ -82,9 +82,11 @@ function SuggestedReplyCard({ email, reply, onResolve, onSave }: SuggestedReplyC
           {email.signals.map((signal) => (
             <span className="planner-item-category" key={signal}>{signal}</span>
           ))}
-          <span className={`priority-badge priority-${email.priority.toLowerCase()}`}>
-            {email.priority}
-          </span>
+          {email.priority && (
+            <span className={`priority-badge priority-${email.priority.toLowerCase()}`}>
+              {email.priority}
+            </span>
+          )}
         </div>
         <h4 className="planner-item-title">{email.subject}</h4>
         <p className="planner-item-subtitle">To: {email.sender}</p>

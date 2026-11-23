@@ -52,6 +52,11 @@ type AppProps = {
   authError: string | null
 }
 
+/**
+ * Owns app navigation, unread counts, and planner-change indicators.
+ * Only the active screen is mounted, so page-local state resets on navigation.
+ */
+function App({ onLogOut }: AppProps) {
 function App({ user, onLogOut, authError }: AppProps) {
   const profile = getUserProfile(user)
   const [currentPage, setCurrentPage] = useState<Page>('Dashboard')

@@ -42,6 +42,12 @@ for (const [name, value] of Object.entries(requiredEnvironment)) {
   }
 }
 
+// LEGACY: Earlier OAuth prototype using CLIENT_ID names; the active client below uses GOOGLE_* variables.
+/*const oauth2Client = new google.auth.OAuth2(
+    process.env.CLIENT_ID,
+    process.env.CLIENT_SECRET,
+    process.env.REDIRECT_URL
+);*/
 app.use(cors({ origin: frontendOrigin }))
 app.use(express.json())
 // Calendar OAuth and routes are separate from the legacy Gmail OAuth flow below.
@@ -56,6 +62,8 @@ const oauthPendingLifetimeMs = 10 * 60 * 1000
 const pendingAuthorizations = new Map<string, { userId: string; expiresAt: number }>()
 const gmailRefreshTokens = new Map<string, string>()
 
+app.use(cors())
+app.use(express.json({ limit: '1mb' }))
 type AuthenticatedRequest = Request & { userId?: string }
 
 app.use(cors({ origin: FRONTEND_URL }))
@@ -96,6 +104,9 @@ app.get("/testAuth", (req, res) => {
 })
 
 app.get("/auth/google/callback", async (req, res) => {
+  const { code } = req.query;
+  if (typeof code !== 'string') {
+    res.status(400).send('Missing authorization code.')
   const code = req.query.code;
   if (typeof code !== 'string') {
     res.status(400).send('Google did not return an authorization code.')
@@ -104,12 +115,79 @@ app.get("/auth/google/callback", async (req, res) => {
 
   const { tokens } = await oauth2.getToken(code);
   oauth2.setCredentials(tokens);
-  readEmails(oauth2,res);
+  await readEmails(oauth2, res);
+})
+
+// Validate the scan payload, evaluate its rules, and return backend-defined group ordering.
+app.post('/api/email-rules/evaluate', (req, res) => {
+  const body: unknown = req.body
+
+  // Validate request data at the API boundary before compiling user-provided regexes.
+  if (
+    !isRecord(body) ||
+    !Array.isArray(body.emails) ||
+    !Array.isArray(body.rules) ||
+    (body.priorityRules !== undefined && !Array.isArray(body.priorityRules)) ||
+    (body.spamRules !== undefined && !Array.isArray(body.spamRules)) ||
+    (body.blockedSenders !== undefined && !Array.isArray(body.blockedSenders))
+  ) {
+    res.status(400).json({ error: 'Request must include email and category rule arrays, with optional priority, spam rule, and blocked sender arrays.' })
+    return
+  }
+
+  const priorityRules = Array.isArray(body.priorityRules) ? body.priorityRules : []
+  const spamRules = Array.isArray(body.spamRules) ? body.spamRules : []
+  const blockedSenders = Array.isArray(body.blockedSenders) ? body.blockedSenders : []
+  if (
+    body.emails.length > 100 ||
+    body.rules.length > 50 ||
+    priorityRules.length > 50 ||
+    spamRules.length > 50 ||
+    blockedSenders.length > 200
+  ) {
+    res.status(400).json({ error: 'Evaluation supports up to 100 emails, 50 rules per category, priority, or spam group, and 200 blocked senders.' })
+    return
+  }
+
+  if (
+    !body.emails.every(isRuleEvaluationEmail) ||
+    !body.rules.every(isEmailRule) ||
+    !priorityRules.every(isEmailPriorityRule) ||
+    !spamRules.every(isEmailSpamRule) ||
+    !blockedSenders.every(isBlockedSender)
+  ) {
+    res.status(400).json({ error: 'Email, rule, or blocked sender data has an invalid format.' })
+    return
+  }
+
+  try {
+    const results = evaluateEmailRules(body.emails, body.rules, priorityRules, spamRules, blockedSenders)
+    res.json({ results })
+  } catch (error) {
+    res.status(400).json({
+      error: error instanceof Error ? error.message : 'Unable to evaluate email rules.'
+    })
+  }
 })
 app.get('/api/gmail/status', requireSignedInUser, (req: AuthenticatedRequest, res) => {
   res.json({ connected: Boolean(req.userId && gmailRefreshTokens.has(req.userId)) })
 })
 
+async function readEmails(auth: InstanceType<typeof google.auth.OAuth2>, res: express.Response) {
+    const gmail = google.gmail({ version: 'v1', auth });
+    const response = await gmail.users.messages.list({
+        userId:'me',
+        maxResults:30
+    });
+
+    const messages = response.data.messages;
+
+    if(!messages){
+        res.send('There are no messages');
+        return;
+    }
+    
+    const mails = await Promise.all(messages.map(async (message) => `<li>${await getEmail(message.id, gmail)}</li>`))
 /** Start Google consent after proving which On Track user initiated it. */
 app.get('/auth/google/start', requireSignedInUser, (req: AuthenticatedRequest, res) => {
   const userId = req.userId
@@ -176,11 +254,18 @@ app.get('/auth/google/callback', async (req, res) => {
     return;
 }
 
-//should define types insead of using any, but this works for now
-async function getEmail(emailId : any,gmail: any){
-    const response = await gmail.users.messages.get({id:emailId,userId:'me'});
+async function getEmail(emailId: string | null | undefined, gmail: gmail_v1.Gmail): Promise<string> {
+    if (!emailId) {
+      throw new Error('Gmail returned a message without an ID.')
+    }
+
+    const response = await gmail.users.messages.get({ id: emailId, userId: 'me' });
     const email = response.data;
     
+    // Gmail messages may omit the payload or standard headers.
+    const headers = email.payload?.headers ?? []
+    const subject = headers.find((header) => header.name?.toLowerCase() === 'subject')?.value ?? '(no subject)'
+    const from = headers.find((header) => header.name?.toLowerCase() === 'from')?.value ?? '(unknown sender)'
     const headers = email.payload?.headers ?? [];
     const subject = headers.find((header: { name?: string | null }) => header.name === 'Subject')?.value ?? '';
     const from = headers.find((header: { name?: string | null }) => header.name === 'From')?.value ?? '';
@@ -247,6 +332,80 @@ function createGmailClient(refreshToken: string) {
 
 const oauth2 = generateOAuthClient();
 
+type JsonRecord = Record<string, unknown>
+
+// Narrow arbitrary request values to plain JSON objects before inspecting their fields.
+const isRecord = (value: unknown): value is JsonRecord =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+// Check each untrusted rule before it reaches the regex evaluator.
+const isEmailRule = (value: unknown): value is EmailRule =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  value.id.length > 0 &&
+  value.id.length <= 100 &&
+  typeof value.enabled === 'boolean' &&
+  (value.field === 'sender' || value.field === 'email' || value.field === 'subject' || value.field === 'body') &&
+  (value.operator === 'contains' || value.operator === 'regex') &&
+  typeof value.pattern === 'string' &&
+  value.pattern.trim().length > 0 &&
+  value.pattern.length <= 200 &&
+  typeof value.label === 'string' &&
+  value.label.trim().length > 0 &&
+  value.label.length <= 60
+
+// Validate priority rules separately so they cannot be mistaken for category labels.
+const isEmailPriorityRule = (value: unknown): value is EmailPriorityRule =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  value.id.length > 0 &&
+  value.id.length <= 100 &&
+  typeof value.enabled === 'boolean' &&
+  (value.field === 'sender' || value.field === 'email' || value.field === 'subject' || value.field === 'body') &&
+  (value.operator === 'contains' || value.operator === 'regex') &&
+  typeof value.pattern === 'string' &&
+  value.pattern.trim().length > 0 &&
+  value.pattern.length <= 200 &&
+  (value.priority === 'High' || value.priority === 'Medium' || value.priority === 'Low')
+
+// Spam rules share the same match fields without category or priority outcomes.
+const isEmailSpamRule = (value: unknown): value is EmailSpamRule =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  value.id.length > 0 &&
+  value.id.length <= 100 &&
+  typeof value.enabled === 'boolean' &&
+  (value.field === 'sender' || value.field === 'email' || value.field === 'subject' || value.field === 'body') &&
+  (value.operator === 'contains' || value.operator === 'regex') &&
+  typeof value.pattern === 'string' &&
+  value.pattern.trim().length > 0 &&
+  value.pattern.length <= 200
+
+// Blocked sender entries are exact email addresses rather than domain-wide patterns.
+const isBlockedSender = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  value.length <= 320 &&
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+
+// Restrict scan email fields and sizes at the API boundary.
+const isRuleEvaluationEmail = (value: unknown): value is RuleEvaluationEmail =>
+  isRecord(value) &&
+  typeof value.id === 'number' &&
+  Number.isSafeInteger(value.id) &&
+  typeof value.sender === 'string' &&
+  value.sender.length <= 500 &&
+  typeof value.email === 'string' &&
+  value.email.length <= 500 &&
+  typeof value.subject === 'string' &&
+  value.subject.length <= 1000 &&
+  typeof value.body === 'string' &&
+  value.body.length <= 20000 &&
+  typeof value.date === 'string' &&
+  value.date.length <= 100
+
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`)
+})
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const message = error instanceof Error ? error.message : 'Unknown server error'
   console.error('Backend request failed:', message)

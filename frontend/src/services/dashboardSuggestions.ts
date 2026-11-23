@@ -52,6 +52,7 @@ const getIsoDate = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
+/** Returns unreviewed fixture suggestions with dates relative to the local current day. */
 export async function getDashboardSuggestions(): Promise<DashboardSuggestion[]> {
   if (!Array.isArray(demoSuggestions) || !demoSuggestions.every(isDemoSuggestion)) {
     throw new Error('The demo dashboard suggestion data is invalid.')

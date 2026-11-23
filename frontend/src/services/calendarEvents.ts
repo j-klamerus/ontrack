@@ -38,6 +38,7 @@ const getIsoDate = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
+/** Builds the event list from relative-date fixtures and confirmed suggestions. */
 /** Validate fixtures, anchor their dates to today, and apply browser-stored category overrides. */
 export async function getCalendarEvents(): Promise<CalendarEvent[]> {
   if (!Array.isArray(demoCalendarEvents)) {
