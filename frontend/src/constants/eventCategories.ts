@@ -1,4 +1,6 @@
 import type { EventCategory } from '../types/calendarEvent'
+import defaultSettingsData from '../data/defaultSettings.json'
+import demoSettingsData from '../data/demoSettings.json'
 
 export type EventCategoryDefinition = {
   name: EventCategory
@@ -20,14 +22,7 @@ type CategoryOverride = {
 const CATEGORY_STORAGE_KEY = 'ontrack-event-categories'
 const CATEGORY_OVERRIDES_STORAGE_KEY = 'ontrack-category-overrides'
 
-const defaultCategories: StoredCategory[] = [
-  { name: 'Assignment', color: '#1c8afd' },
-  { name: 'Exam', color: '#d92d20' },
-  { name: 'Meeting', color: '#7c3aed' },
-  { name: 'Appointment', color: '#14b8a6' },
-  { name: 'Deadline', color: '#f59e0b' },
-  { name: 'Other', color: '#64748b' }
-]
+const defaultCategories: StoredCategory[] = defaultSettingsData.categories
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -38,7 +33,7 @@ const isHexColor = (value: unknown): value is string =>
 const readCustomCategories = (): StoredCategory[] => {
   const saved = localStorage.getItem(CATEGORY_STORAGE_KEY)
   if (!saved) {
-    return []
+    return demoSettingsData.categories
   }
 
   let parsed: unknown

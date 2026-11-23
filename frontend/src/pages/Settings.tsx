@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
+import { CheckCircle2 } from 'lucide-react'
 import demoUser from '../data/demoUser.json'
+import defaultSettingsData from '../data/defaultSettings.json'
+import demoSettingsData from '../data/demoSettings.json'
 import {
   createCustomEventCategory,
   getEventCategoryDefinitions,
@@ -28,7 +31,16 @@ import type { SettingsState } from './settings/types'
 import type { UserProfile } from '../types/user'
 import '../styles/Settings.css'
 
+const isReminderTiming = (value: string): value is SettingsState['reminderTiming'] =>
+  value === '15 minutes before' || value === '1 hour before' || value === '1 day before'
+
 const defaultSettings: SettingsState = {
+  studentName: demoUser.name,
+  studentEmail: demoUser.email,
+  ...defaultSettingsData.preferences,
+  reminderTiming: isReminderTiming(defaultSettingsData.preferences.reminderTiming)
+    ? defaultSettingsData.preferences.reminderTiming
+    : '1 hour before',
   priorityEmailFiltering: true,
   highlightAssignments: true,
   highlightDeadlines: true,
@@ -43,20 +55,51 @@ const defaultSettings: SettingsState = {
   plannerKeyDefaults: DEFAULT_PLANNER_KEY_DEFAULTS
 }
 
+const demoSettings: SettingsState = {
+  ...defaultSettings,
+  ...demoSettingsData.preferences,
+  reminderTiming: isReminderTiming(demoSettingsData.preferences.reminderTiming)
+    ? demoSettingsData.preferences.reminderTiming
+    : defaultSettings.reminderTiming,
+  plannerKeyDefaults: {
+    ...DEFAULT_PLANNER_KEY_DEFAULTS,
+    ...demoSettingsData.plannerKeyDefaults
+  }
+}
+
+type SaveMessage = {
+  text: string
+  tone: 'success' | 'error' | 'unsaved'
+}
+
 type SettingsProps = {
   user: UserProfile
   userId: string
   onDirtyChange: (dirty: boolean) => void
   onLogOut: () => void
+  onThemeChange: (isDark: boolean) => void
+  onUnsavedChangesChange: (hasUnsavedChanges: boolean) => void
+  leaveConfirmationOpen: boolean
+  onCancelLeave: () => void
+  onLeaveAnyway: () => void
 }
 
+function Settings({
+  onLogOut,
+  onThemeChange,
+  onUnsavedChangesChange,
+  leaveConfirmationOpen,
+  onCancelLeave,
+  onLeaveAnyway
+}: SettingsProps) {
+  const [initialSettings] = useState<SettingsState>(() => {
 function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
   const [settings, setSettings] = useState<SettingsState>(() => {
     try {
       const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY)
 
       if (!storedSettings) {
-        return defaultSettings
+        return demoSettings
       }
 
       const parsedSettings = JSON.parse(storedSettings) as Partial<SettingsState> & {
@@ -66,17 +109,21 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
       delete parsedSettings.studentName
       delete parsedSettings.studentEmail
       return {
-        ...defaultSettings,
+        ...demoSettings,
         ...parsedSettings,
         plannerKeyDefaults: {
-          ...DEFAULT_PLANNER_KEY_DEFAULTS,
+          ...demoSettings.plannerKeyDefaults,
           ...(parsedSettings.plannerKeyDefaults ?? {})
         }
       }
     } catch {
-      return defaultSettings
+      return demoSettings
     }
   })
+  const [settings, setSettings] = useState(initialSettings)
+  const [savedSettings, setSavedSettings] = useState(initialSettings)
+  const [saveMessage, setSaveMessage] = useState<SaveMessage | null>(null)
+  const [categories, setCategories] = useState<EventCategoryDefinition[]>(getEventCategoryDefinitions)
   const [savedSettings, setSavedSettings] = useState(settings)
   const [saveMessage, setSaveMessage] = useState('')
   const [savedCategories, setSavedCategories] = useState<EventCategoryDefinition[]>(getEventCategoryDefinitions)
@@ -136,6 +183,8 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
     }
   }
 
+  const hasUnsavedChanges = JSON.stringify(settings) !== JSON.stringify(savedSettings)
+  const refreshCategories = () => setCategories(getEventCategoryDefinitions())
   useEffect(() => {
     onDirtyChange(isDirty)
   }, [isDirty, onDirtyChange])
@@ -151,6 +200,25 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
     window.addEventListener('beforeunload', warnBeforeUnload)
     return () => window.removeEventListener('beforeunload', warnBeforeUnload)
   }, [isDirty])
+
+  useEffect(() => {
+    onUnsavedChangesChange(hasUnsavedChanges)
+  }, [hasUnsavedChanges, onUnsavedChangesChange])
+
+  useEffect(() => {
+    if (!leaveConfirmationOpen) {
+      return
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onCancelLeave()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [leaveConfirmationOpen, onCancelLeave])
 
   const handleAddCategory = () => {
     try {
@@ -179,6 +247,7 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
       ...currentSettings,
       [key]: value
     }))
+    setSaveMessage({ text: 'You have unsaved changes.', tone: 'unsaved' })
   }
 
   const persistCategoryChanges = async (target: EventCategoryDefinition[], confirmRemoval: boolean) => {
@@ -232,6 +301,30 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
       }
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
       setSavedSettings(settings)
+      onThemeChange(settings.darkTheme)
+      setSaveMessage({ text: 'Your settings have been saved.', tone: 'success' })
+      return true
+    } catch {
+      setSaveMessage({ text: 'Unable to save settings in this browser.', tone: 'error' })
+      return false
+    }
+  }
+
+  const handleSaveAndLeave = () => {
+    if (handleSave()) {
+      onLeaveAnyway()
+    }
+  }
+
+  const handleReset = () => {
+    try {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(defaultSettings))
+      setSettings(defaultSettings)
+      setSavedSettings(defaultSettings)
+      onThemeChange(defaultSettings.darkTheme)
+      setSaveMessage({ text: 'Settings have been reset to defaults.', tone: 'success' })
+    } catch {
+      setSaveMessage({ text: 'Unable to reset settings in this browser.', tone: 'error' })
       // The dropdown is staged locally until Save Changes persists it to the backend.
       if (calendarChanged && selectedCalendarId) {
         await saveSelectedGoogleCalendarId(selectedCalendarId)
@@ -278,15 +371,23 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
   const handleRestoreSuggestions = () => {
     try {
       resetDashboardSuggestionReviews()
-      setSaveMessage('Suggestions restored. Reopen Dashboard, Commitments, or Calendar to review them again.')
+      setSaveMessage({
+        text: 'Suggestions restored. Reopen Dashboard, Commitments, or Calendar to review them again.',
+        tone: 'success'
+      })
     } catch {
-      setSaveMessage('Unable to restore suggestions in this browser.')
+      setSaveMessage({ text: 'Unable to restore suggestions in this browser.', tone: 'error' })
     }
   }
 
   return (
     <section className="settings-page">
-      {saveMessage && <div className="save-banner">{saveMessage}</div>}
+      {saveMessage && (
+        <div className={`save-banner save-banner-${saveMessage.tone}`} role="status" aria-live="polite">
+          {saveMessage.tone === 'success' && <CheckCircle2 size={18} aria-hidden="true" />}
+          <span>{saveMessage.text}</span>
+        </div>
+      )}
 
       <div className="settings-grid">
         <CategorySettingsCard
@@ -392,10 +493,43 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
           Reset to Defaults
         </button>
 
-        <button type="button" className="primary-button" disabled={isSaving || reviewReset} onClick={handleSave}>
-          Save Changes
+        <button
+          type="button"
+          className="primary-button"
+          onClick={handleSave}
+          disabled={!hasUnsavedChanges}
+        >
+          {hasUnsavedChanges ? 'Save Changes' : 'Changes Saved'}
         </button>
       </div>
+
+      {leaveConfirmationOpen && (
+        <div className="settings-leave-backdrop" onClick={onCancelLeave}>
+          <div
+            className="settings-leave-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settings-leave-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="settings-leave-header">
+              <h2 id="settings-leave-title">Unsaved changes</h2>
+            </div>
+            <p>Your settings haven&apos;t been saved. What would you like to do?</p>
+            <div className="settings-leave-actions">
+              <button type="button" className="secondary-button" onClick={onCancelLeave}>
+                Cancel
+              </button>
+              <button type="button" className="settings-leave-discard-button" onClick={onLeaveAnyway}>
+                Leave Anyway
+              </button>
+              <button type="button" className="primary-button" onClick={handleSaveAndLeave}>
+                Save and Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

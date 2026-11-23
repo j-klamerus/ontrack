@@ -30,6 +30,20 @@ function PreferenceSettingsCards({
     <>
       <div className="settings-card">
         <div className="card-header-row">
+          <h3>Appearance</h3>
+        </div>
+        <div className="toggle-stack">
+          <ToggleRow
+            label="Dark theme"
+            description="Use a darker color scheme throughout OnTrack."
+            checked={settings.darkTheme}
+            onChange={(checked) => updateSetting('darkTheme', checked)}
+          />
+        </div>
+      </div>
+
+      <div className="settings-card">
+        <div className="card-header-row">
           <h3>Planner Key Defaults</h3>
         </div>
         <p className="field-note">

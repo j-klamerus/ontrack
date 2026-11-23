@@ -3,6 +3,9 @@ import type { PlannerKeyDefaults } from '../../services/plannerKeyPreferences'
 export type ReminderTiming = '15 minutes before' | '1 hour before' | '1 day before'
 
 export type SettingsState = {
+  studentName: string
+  studentEmail: string
+  darkTheme: boolean
   priorityEmailFiltering: boolean
   highlightAssignments: boolean
   highlightDeadlines: boolean

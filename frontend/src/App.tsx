@@ -24,9 +24,27 @@ import {
   type PlannerPage,
   type PlannerPageChanges
 } from './services/plannerNavigation'
+import type { PlannerItemSelection } from './types/plannerItemSelection'
+
+type Theme = 'light' | 'dark'
+
+const getInitialTheme = (): Theme => {
+  try {
+    const savedSettings = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
+    if (savedSettings) {
+      const parsedSettings = JSON.parse(savedSettings) as { darkTheme?: boolean }
+      return parsedSettings.darkTheme === true ? 'dark' : 'light'
+    }
+  } catch {
+    return 'light'
+  }
+
+  return 'light'
+}
 
 type Page = 'Dashboard' | 'Inbox' | 'Commitments' | 'Calendar' | 'Settings'
 type SuggestionCounts = Record<PlannerPage, number>
+type PendingSettingsExit = { type: 'navigate'; page: Page } | { type: 'logout' }
 
 type AppProps = {
   user: User
@@ -48,6 +66,10 @@ function App({ user, onLogOut, authError }: AppProps) {
     calendar: 0,
     commitments: 0
   })
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
 
   useEffect(() => {
     let isMounted = true
@@ -115,7 +137,7 @@ function App({ user, onLogOut, authError }: AppProps) {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' })
-    document.querySelector('.main-content')?.scrollTo({ top: 0, behavior: 'instant' })
+    document.querySelector('.page-viewport')?.scrollTo({ top: 0, behavior: 'instant' })
   }, [currentPage])
 
   const confirmLeavingSettings = () =>
@@ -222,7 +244,9 @@ function App({ user, onLogOut, authError }: AppProps) {
         </header>
 
         {authError && <p className="auth-error" role="alert">{authError}</p>}
-        {pages[currentPage]}
+        <div className="page-viewport">
+          {pages[currentPage]}
+        </div>
       </main>
     </div>
   )

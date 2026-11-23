@@ -8,6 +8,7 @@ import CalendarEventFormModal from './calendar/CalendarEventFormModal'
 import CommitmentFormModal from './commitments/CommitmentFormModal'
 import CalendarGrid from './calendar/CalendarGrid'
 import CalendarSidebar from './calendar/CalendarSidebar'
+import CalendarSuggestionsPanel from './calendar/CalendarSuggestionsPanel'
 import CalendarToolbar from './calendar/CalendarToolbar'
 import SyncGoogleEventsModal from './calendar/SyncGoogleEventsModal'
 import {
@@ -49,6 +50,7 @@ import {
   saveItemCategoryOverride
 } from '../constants/eventCategories'
 import type { CalendarEvent, EventFormState, EventPriority } from '../types/calendarEvent'
+import type { PlannerItemSelection } from '../types/plannerItemSelection'
 import {
   addCommitment,
   deleteCommitment,
@@ -70,11 +72,23 @@ const createEmptyForm = (selectedDate: Date): EventFormState => ({
   description: ''
 })
 
+type CalendarProps = {
+  selectionRequest: PlannerItemSelection | null
+  onSelectionHandled: () => void
+  onViewInCommitments: (request: PlannerItemSelection) => void
+}
+
+function Calendar({ selectionRequest, onSelectionHandled, onViewInCommitments }: CalendarProps) {
 /** Combine local events and commitments with the current live Google event range. */
 function Calendar({ userId }: { userId: string }) {
   const categoryOptions = getEventCategories()
-  const [currentMonth, setCurrentMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
-  const [selectedDate, setSelectedDate] = useState(() => new Date())
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const date = selectionRequest ? getDateFromIso(selectionRequest.date) : new Date()
+    return new Date(date.getFullYear(), date.getMonth(), 1)
+  })
+  const [selectedDate, setSelectedDate] = useState(() =>
+    selectionRequest ? getDateFromIso(selectionRequest.date) : new Date()
+  )
   const [viewMode, setViewMode] = useState<CalendarViewMode>('month')
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [commitments, setCommitments] = useState<Commitment[]>([])
@@ -102,6 +116,11 @@ function Calendar({ userId }: { userId: string }) {
   const [editingSuggestion, setEditingSuggestion] = useState<CalendarSuggestion | null>(null)
   const [editingCommitment, setEditingCommitment] = useState<Commitment | null>(null)
   const [commitmentFormError, setCommitmentFormError] = useState<string | null>(null)
+  const [selectedCalendarItem, setSelectedCalendarItem] = useState<Pick<PlannerItemSelection, 'kind' | 'id'> | null>(() =>
+    selectionRequest
+      ? { kind: selectionRequest.kind, id: selectionRequest.id }
+      : null
+  )
 
   // Load browser-backed planner data separately so Google refreshes preserve local edits.
   useEffect(() => {
@@ -232,6 +251,20 @@ function Calendar({ userId }: { userId: string }) {
     }
   }, [currentMonth, googleRefresh, selectedWeekStart, userId, viewMode])
 
+  useEffect(() => {
+    if (!selectionRequest || isLoading) {
+      return
+    }
+
+    const selectedCardId = selectionRequest.kind === 'Calendar event'
+      ? `calendar-event-card-${selectionRequest.id}`
+      : `calendar-commitment-card-${selectionRequest.id}`
+    document
+      .getElementById(selectedCardId)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    onSelectionHandled()
+  }, [isLoading, onSelectionHandled, selectionRequest])
+
   const selectedDateIso = getIsoDate(selectedDate)
 
   const monthDays = useMemo(() => {
@@ -262,6 +295,8 @@ function Calendar({ userId }: { userId: string }) {
     const items: CalendarScheduleItem[] = [
       ...events.map((event) => ({
         id: `event-${event.id}`,
+        sourceId: event.id,
+        title: event.title,
         title: event.googleSourceId !== undefined ? `${event.title} (Google copy)` : event.title,
         date: event.date,
         time: event.time,
@@ -275,6 +310,7 @@ function Calendar({ userId }: { userId: string }) {
         .filter((commitment) => !commitment.completed)
         .map((commitment) => ({
           id: `commitment-${commitment.id}`,
+          sourceId: commitment.id,
           title: commitment.name,
           date: commitment.dueDate,
           time: commitment.dueTime,
@@ -302,9 +338,13 @@ function Calendar({ userId }: { userId: string }) {
   const selectedDayCommitments = useMemo(
     () =>
       commitments
-        .filter((commitment) => commitment.dueDate === selectedDateIso && !commitment.completed)
+        .filter((commitment) =>
+          commitment.dueDate === selectedDateIso &&
+          (!commitment.completed ||
+            (selectedCalendarItem?.kind === 'Commitment' && selectedCalendarItem.id === commitment.id))
+        )
         .sort((left, right) => left.dueTime.localeCompare(right.dueTime)),
-    [commitments, selectedDateIso]
+    [commitments, selectedCalendarItem, selectedDateIso]
   )
 
   const openAddForm = () => {
@@ -619,10 +659,20 @@ function Calendar({ userId }: { userId: string }) {
     setSelectedDate(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 1))
   }
 
+  const handleMonthSelect = (year: number, month: number) => {
+    setCurrentMonth(new Date(year, month, 1))
+  }
+
   const jumpToToday = () => {
     const now = new Date()
     setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1))
     setSelectedDate(now)
+    setSelectedCalendarItem(null)
+  }
+
+  const handleSelectDate = (date: Date) => {
+    setSelectedDate(date)
+    setSelectedCalendarItem(null)
   }
 
   /** Project events and incomplete commitments into the shared day-grid display shape. */
@@ -634,6 +684,8 @@ function Calendar({ userId }: { userId: string }) {
         .filter((event) => isEventOnDate(event, date))
         .map((event) => ({
           id: `event-${event.id}`,
+          sourceId: event.id,
+          title: event.title,
           title: event.googleSourceId !== undefined ? `${event.title} (Google copy)` : event.title,
           date: event.date,
           time: event.time,
@@ -647,6 +699,7 @@ function Calendar({ userId }: { userId: string }) {
         .filter((commitment) => commitment.dueDate === date && !commitment.completed)
         .map((commitment) => ({
           id: `commitment-${commitment.id}`,
+          sourceId: commitment.id,
           title: commitment.name,
           date: commitment.dueDate,
           time: commitment.dueTime,
@@ -685,6 +738,7 @@ function Calendar({ userId }: { userId: string }) {
             currentMonth={currentMonth}
             viewMode={viewMode}
             onMonthChange={handleMonthChange}
+            onMonthSelect={handleMonthSelect}
             onJumpToToday={jumpToToday}
             onViewModeChange={setViewMode}
             googleCalendarName={selectedGoogleCalendarName}
@@ -702,7 +756,7 @@ function Calendar({ userId }: { userId: string }) {
             currentMonth={currentMonth}
             selectedDateIso={selectedDateIso}
             getItemsForDay={getScheduleItemsForDay}
-            onSelectDate={setSelectedDate}
+            onSelectDate={handleSelectDate}
           />
         </div>
 
@@ -711,24 +765,29 @@ function Calendar({ userId }: { userId: string }) {
           selectedDayEvents={selectedDayEvents}
           selectedDayCommitments={selectedDayCommitments}
           upcomingItems={upcomingItems}
-          suggestions={suggestions}
-          categoryOptions={categoryOptions}
-          priorityOptions={priorityOptions}
-          suggestionError={suggestionError}
-          savingSuggestionId={savingSuggestionId}
-          editingSuggestion={editingSuggestion}
-          onEditingSuggestionChange={setEditingSuggestion}
           onAddEvent={openAddForm}
           isGoogleCalendarLoading={isGoogleCalendarLoading}
           onEditEvent={openEditForm}
           onDeleteEvent={handleDeleteEvent}
           onEditCommitment={openEditCommitment}
           onDeleteCommitment={handleDeleteCommitment}
+          onViewInCommitments={onViewInCommitments}
+          selectedCalendarItem={selectedCalendarItem}
+        />
+      </div>
+
+      <CalendarSuggestionsPanel
+        suggestions={suggestions}
+        categoryOptions={categoryOptions}
+        priorityOptions={priorityOptions}
+        suggestionError={suggestionError}
+        savingSuggestionId={savingSuggestionId}
+        editingSuggestion={editingSuggestion}
+        onEditingSuggestionChange={setEditingSuggestion}
           onConfirmSuggestion={handleConfirmSuggestion}
           onDismissSuggestion={handleDismissSuggestion}
           onSaveSuggestion={handleSaveSuggestion}
-        />
-      </div>
+      />
 
       {showEventForm && (
         <CalendarEventFormModal

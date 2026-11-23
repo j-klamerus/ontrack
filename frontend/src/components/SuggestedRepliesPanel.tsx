@@ -1,4 +1,3 @@
-import { Mail } from 'lucide-react'
 import SuggestedReplyCard from './SuggestedReplyCard'
 import { getSuggestedReplies } from '../services/suggestedReplies'
 import type { StudentEmail } from '../types/email'
@@ -48,14 +47,8 @@ function SuggestedRepliesPanel({
           ))}
         </div>
       ) : (
-        <div className="suggested-replies-empty">
-          <span className="suggested-replies-empty-icon" aria-hidden="true">
-            <Mail size={19} />
-          </span>
-          <div>
-            <strong>No suggested replies yet</strong>
-            <p>Generate a reply from an email when you need a draft.</p>
-          </div>
+        <div className="dashboard-suggestion-empty">
+          <p>No suggested replies to review.</p>
         </div>
       )}
     </section>

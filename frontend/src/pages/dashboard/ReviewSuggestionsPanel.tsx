@@ -7,6 +7,9 @@ import type { Priority } from '../../types/commitment'
 import { formatDateTime } from './formatters'
 
 type ReviewSuggestionsPanelProps = {
+  title: string
+  headingId: string
+  emptyMessage: string
   suggestions: DashboardSuggestion[]
   emails: StudentEmail[]
   eventCategories: EventCategory[]
@@ -20,6 +23,9 @@ type ReviewSuggestionsPanelProps = {
 }
 
 function ReviewSuggestionsPanel({
+  title,
+  headingId,
+  emptyMessage,
   suggestions,
   emails,
   eventCategories,
@@ -32,11 +38,11 @@ function ReviewSuggestionsPanel({
   onSave
 }: ReviewSuggestionsPanelProps) {
   return (
-    <section className="dashboard-panel" aria-labelledby="review-heading">
+    <section className="dashboard-panel" aria-labelledby={headingId}>
       <div className="dashboard-panel-header">
         <div>
-          <h3 id="review-heading">Needs your review</h3>
-          <p>Check these sample AI suggestions before adding them.</p>
+          <h3 id={headingId}>{title}</h3>
+          <p>Review these suggestions before adding them.</p>
         </div>
         <span className="panel-count">{suggestions.length}</span>
       </div>
@@ -61,7 +67,7 @@ function ReviewSuggestionsPanel({
                 description={suggestion.description}
                 isSuggestion
                 isEditing={isEditing}
-                actionsPlacement="right"
+                actionsPlacement="bottom"
                 actions={isEditing ? (
                   <>
                     <PlannerItemAction kind="save" onClick={onSave} />
@@ -246,7 +252,9 @@ function ReviewSuggestionsPanel({
           })}
         </div>
       ) : (
-        <p className="dashboard-empty-state">You’re all caught up on suggestions.</p>
+        <div className="dashboard-suggestion-empty">
+          <p>{emptyMessage}</p>
+        </div>
       )}
     </section>
   )

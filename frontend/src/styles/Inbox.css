@@ -19,7 +19,7 @@ body:has(.inbox-page)::-webkit-scrollbar {
   display: grid;
   grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
   gap: 24px;
-  height: calc(100vh - 80px - var(--page-padding) - var(--page-padding));
+  height: calc(100vh - var(--top-bar-height) - var(--page-padding) - var(--page-padding));
   min-height: 480px;
 }
 
