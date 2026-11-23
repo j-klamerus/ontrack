@@ -33,12 +33,12 @@ import '../styles/Dashboard.css'
 const eventPriorities: EventPriority[] = ['High', 'Medium', 'Low']
 
 type DashboardProps = {
+  user: UserProfile
   onViewInCalendar: (request: PlannerItemSelection) => void
   onViewInCommitments: (request: PlannerItemSelection) => void
 }
 
-function Dashboard({ onViewInCalendar, onViewInCommitments }: DashboardProps) {
-function Dashboard({ user }: { user: UserProfile }) {
+function Dashboard({ user, onViewInCalendar, onViewInCommitments }: DashboardProps) {
   const eventCategories = getEventCategories()
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [emails, setEmails] = useState<StudentEmail[]>([])

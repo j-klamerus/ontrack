@@ -1,5 +1,5 @@
 export type PlannerItemSelection = {
   kind: 'Calendar event' | 'Commitment'
-  id: number
+  id: number | string
   date: string
 }

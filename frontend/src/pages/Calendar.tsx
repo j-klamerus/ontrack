@@ -73,14 +73,18 @@ const createEmptyForm = (selectedDate: Date): EventFormState => ({
 })
 
 type CalendarProps = {
+  userId: string
   selectionRequest: PlannerItemSelection | null
   onSelectionHandled: () => void
   onViewInCommitments: (request: PlannerItemSelection) => void
 }
 
-function Calendar({ selectionRequest, onSelectionHandled, onViewInCommitments }: CalendarProps) {
-/** Combine local events and commitments with the current live Google event range. */
-function Calendar({ userId }: { userId: string }) {
+function Calendar({
+  userId,
+  selectionRequest,
+  onSelectionHandled,
+  onViewInCommitments
+}: CalendarProps) {
   const categoryOptions = getEventCategories()
   const [currentMonth, setCurrentMonth] = useState(() => {
     const date = selectionRequest ? getDateFromIso(selectionRequest.date) : new Date()
@@ -296,7 +300,6 @@ function Calendar({ userId }: { userId: string }) {
       ...events.map((event) => ({
         id: `event-${event.id}`,
         sourceId: event.id,
-        title: event.title,
         title: event.googleSourceId !== undefined ? `${event.title} (Google copy)` : event.title,
         date: event.date,
         time: event.time,
@@ -685,7 +688,6 @@ function Calendar({ userId }: { userId: string }) {
         .map((event) => ({
           id: `event-${event.id}`,
           sourceId: event.id,
-          title: event.title,
           title: event.googleSourceId !== undefined ? `${event.title} (Google copy)` : event.title,
           date: event.date,
           time: event.time,

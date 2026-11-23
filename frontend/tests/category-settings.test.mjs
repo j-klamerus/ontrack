@@ -17,26 +17,26 @@ test('category removal preserves local commitments and suggestion records', asyn
     const commitments = await server.ssrLoadModule('/src/services/commitments.ts')
     const reviews = await server.ssrLoadModule('/src/services/reviewedSuggestions.ts')
     const defaults = categories.getEventCategoryDefinitions()
-    const project = categories.createCustomEventCategory(' Project ', '#123456', defaults)
+    const project = categories.createCustomEventCategory(' Research Project ', '#123456', defaults)
     assert.equal(values.has('ontrack-event-categories'), false)
     assert.throws(() => categories.createCustomEventCategory('assignment', '#123456', defaults), /already exists/)
     categories.saveCustomEventCategories([project])
 
     const commitment = {
-      id: 901, name: 'Project work', course: 'Test', dueDate: '2026-12-01',
-      dueTime: '09:00', category: 'Project', priority: 'High', completed: false, sourceEmail: ''
+      id: 901, name: 'Research project work', course: 'Test', dueDate: '2026-12-01',
+      dueTime: '09:00', category: 'Research Project', priority: 'High', completed: false, sourceEmail: ''
     }
     commitments.addCommitment(commitment)
     commitments.updateCommitment({ ...commitment, name: 'Updated project' })
     reviews.confirmDashboardSuggestion({
       id: 902, kind: 'Calendar event', title: 'Reviewed project', course: 'Test',
-      date: '2026-12-01', time: '10:00', category: 'Project', priority: 'High', description: ''
+      date: '2026-12-01', time: '10:00', category: 'Research Project', priority: 'High', description: ''
     }, '')
-    categories.saveItemCategoryOverride('commitment', 901, 'Project')
+    categories.saveItemCategoryOverride('commitment', 901, 'Research Project')
 
-    categories.moveCategoryOverridesToOther('Project')
-    reviews.moveReviewedSuggestionCategoryToOther('Project')
-    commitments.moveCommitmentCategoryToOther('Project')
+    categories.moveCategoryOverridesToOther('Research Project')
+    reviews.moveReviewedSuggestionCategoryToOther('Research Project')
+    commitments.moveCommitmentCategoryToOther('Research Project')
     categories.saveCustomEventCategories([])
 
     const loaded = await commitments.getCommitments()

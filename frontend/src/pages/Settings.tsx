@@ -48,7 +48,6 @@ const defaultSettings: SettingsState = {
   spamWarnings: true,
   deadlineReminders: true,
   importantEmailNotifications: true,
-  reminderTiming: '1 hour before',
   aiEmailSummaries: true,
   aiDeadlineDetection: true,
   emailAnalysisEnabled: true,
@@ -85,6 +84,9 @@ type SettingsProps = {
 }
 
 function Settings({
+  user,
+  userId,
+  onDirtyChange,
   onLogOut,
   onThemeChange,
   onUnsavedChangesChange,
@@ -92,8 +94,6 @@ function Settings({
   onCancelLeave,
   onLeaveAnyway
 }: SettingsProps) {
-  const [initialSettings] = useState<SettingsState>(() => {
-function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
   const [settings, setSettings] = useState<SettingsState>(() => {
     try {
       const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY)
@@ -120,14 +120,10 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
       return demoSettings
     }
   })
-  const [settings, setSettings] = useState(initialSettings)
-  const [savedSettings, setSavedSettings] = useState(initialSettings)
+  const [savedSettings, setSavedSettings] = useState(settings)
   const [saveMessage, setSaveMessage] = useState<SaveMessage | null>(null)
   const [categories, setCategories] = useState<EventCategoryDefinition[]>(getEventCategoryDefinitions)
-  const [savedSettings, setSavedSettings] = useState(settings)
-  const [saveMessage, setSaveMessage] = useState('')
   const [savedCategories, setSavedCategories] = useState<EventCategoryDefinition[]>(getEventCategoryDefinitions)
-  const [categories, setCategories] = useState<EventCategoryDefinition[]>(savedCategories)
   const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null)
   const [selectionLoading, setSelectionLoading] = useState(true)
   const [selectionError, setSelectionError] = useState<string | null>(null)
@@ -183,8 +179,6 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
     }
   }
 
-  const hasUnsavedChanges = JSON.stringify(settings) !== JSON.stringify(savedSettings)
-  const refreshCategories = () => setCategories(getEventCategoryDefinitions())
   useEffect(() => {
     onDirtyChange(isDirty)
   }, [isDirty, onDirtyChange])
@@ -202,8 +196,8 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
   }, [isDirty])
 
   useEffect(() => {
-    onUnsavedChangesChange(hasUnsavedChanges)
-  }, [hasUnsavedChanges, onUnsavedChangesChange])
+    onUnsavedChangesChange(isDirty)
+  }, [isDirty, onUnsavedChangesChange])
 
   useEffect(() => {
     if (!leaveConfirmationOpen) {
@@ -226,7 +220,7 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
       setCategories((current) => [...current, category])
       setCategoryName('')
       setCategoryError('')
-      setSaveMessage('Category added to your changes. Select Save Changes to apply it.')
+      setSaveMessage({ text: 'Category added to your changes. Select Save Changes to apply it.', tone: 'unsaved' })
     } catch (error) {
       setCategoryError(error instanceof Error ? error.message : 'Unable to add this category.')
     }
@@ -239,7 +233,7 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
 
     setCategories((current) => current.filter((item) => item.name !== category.name))
     setCategoryError('')
-    setSaveMessage('Category removal staged. Select Save Changes to apply it.')
+    setSaveMessage({ text: 'Category removal staged. Select Save Changes to apply it.', tone: 'unsaved' })
   }
 
   const updateSetting = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
@@ -299,42 +293,29 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
       if (JSON.stringify(categories) !== JSON.stringify(savedCategories)) {
         if (!await persistCategoryChanges(categories, true)) return
       }
+      if (calendarChanged && selectedCalendarId) {
+        await saveSelectedGoogleCalendarId(selectedCalendarId)
+      }
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
       setSavedSettings(settings)
+      setCalendarChanged(false)
       onThemeChange(settings.darkTheme)
       setSaveMessage({ text: 'Your settings have been saved.', tone: 'success' })
       return true
-    } catch {
-      setSaveMessage({ text: 'Unable to save settings in this browser.', tone: 'error' })
-      return false
-    }
-  }
-
-  const handleSaveAndLeave = () => {
-    if (handleSave()) {
-      onLeaveAnyway()
-    }
-  }
-
-  const handleReset = () => {
-    try {
-      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(defaultSettings))
-      setSettings(defaultSettings)
-      setSavedSettings(defaultSettings)
-      onThemeChange(defaultSettings.darkTheme)
-      setSaveMessage({ text: 'Settings have been reset to defaults.', tone: 'success' })
-    } catch {
-      setSaveMessage({ text: 'Unable to reset settings in this browser.', tone: 'error' })
-      // The dropdown is staged locally until Save Changes persists it to the backend.
-      if (calendarChanged && selectedCalendarId) {
-        await saveSelectedGoogleCalendarId(selectedCalendarId)
-        setCalendarChanged(false)
-      }
-      setSaveMessage('Changes saved. Preferences and categories are stored in this browser.')
     } catch (error) {
-      setSaveMessage(`${error instanceof Error ? error.message : 'Unable to save changes.'} Some changes may have been saved; review and try again.`)
+      setSaveMessage({
+        text: error instanceof Error ? error.message : 'Unable to save settings.',
+        tone: 'error'
+      })
+      return false
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleSaveAndLeave = async () => {
+    if (await handleSave()) {
+      onLeaveAnyway()
     }
   }
 
@@ -352,6 +333,7 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
         localStorage.removeItem(SETTINGS_STORAGE_KEY)
         setSettings(defaultSettings)
         setSavedSettings(defaultSettings)
+        onThemeChange(defaultSettings.darkTheme)
       }
       // A confirmed reset clears the selection immediately without disconnecting Google.
       if (resetCalendar && !selectionLoading && !selectionError) {
@@ -360,9 +342,12 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
         setCalendarChanged(false)
       }
       setReviewReset(false)
-      setSaveMessage('Selected resets applied. Save any remaining changes.')
+      setSaveMessage({ text: 'Selected resets applied. Save any remaining changes.', tone: 'success' })
     } catch (error) {
-      setSaveMessage(`${error instanceof Error ? error.message : 'Unable to reset settings.'} Some resets may have been applied; review and try again.`)
+      setSaveMessage({
+        text: `${error instanceof Error ? error.message : 'Unable to reset settings.'} Some resets may have been applied; review and try again.`,
+        tone: 'error'
+      })
     } finally {
       setIsSaving(false)
     }
@@ -409,10 +394,8 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
           onCalendarChange={(calendarId) => {
             setSelectedCalendarId(calendarId)
             setCalendarChanged(true)
-            setSaveMessage('Calendar selection staged. Select Save Changes to apply it.')
+            setSaveMessage({ text: 'Calendar selection staged. Select Save Changes to apply it.', tone: 'unsaved' })
           }}
-          settings={settings}
-          updateSetting={updateSetting}
           settings={settings}
           updateSetting={updateSetting}
           gmailConnected={gmailConnected}
@@ -497,9 +480,9 @@ function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
           type="button"
           className="primary-button"
           onClick={handleSave}
-          disabled={!hasUnsavedChanges}
+          disabled={!isDirty || isSaving}
         >
-          {hasUnsavedChanges ? 'Save Changes' : 'Changes Saved'}
+          {isDirty ? 'Save Changes' : 'Changes Saved'}
         </button>
       </div>
 

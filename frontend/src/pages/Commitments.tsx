@@ -363,7 +363,11 @@ function Commitments({
       <CommitmentTracker
         commitments={commitments}
         onAddCommitment={openAddCommitment}
-        selectedCommitmentId={selectionRequest?.kind === 'Commitment' ? selectionRequest.id : null}
+        selectedCommitmentId={
+          selectionRequest?.kind === 'Commitment' && typeof selectionRequest.id === 'number'
+            ? selectionRequest.id
+            : null
+        }
         activeCommitments={visibleActiveCommitments}
         completedCommitments={completedCommitments}
         categories={eventCategories}

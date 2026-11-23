@@ -17,8 +17,12 @@ type PreferenceSettingsCardsProps = {
   onConnectGmail: () => void
 }
 
-function PreferenceSettingsCards({ user, selectedCalendarId, selectionLoading, selectionError, onCalendarChange, settings, updateSetting }: PreferenceSettingsCardsProps) {
 function PreferenceSettingsCards({
+  user,
+  selectedCalendarId,
+  selectionLoading,
+  selectionError,
+  onCalendarChange,
   settings,
   updateSetting,
   gmailConnected,
