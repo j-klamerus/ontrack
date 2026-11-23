@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { User } from '@supabase/supabase-js'
 import {
   LayoutDashboard,
   Mail,
@@ -15,7 +16,7 @@ import Calendar from './pages/Calendar'
 import Settings from './pages/Settings'
 import { getEmails } from './services/emails'
 import { getDashboardSuggestions } from './services/dashboardSuggestions'
-import { SETTINGS_STORAGE_KEY } from './services/user'
+import { getUserProfile } from './services/user'
 import {
   getPlannerPageChanges,
   markPlannerPageVisited,
@@ -46,17 +47,15 @@ type SuggestionCounts = Record<PlannerPage, number>
 type PendingSettingsExit = { type: 'navigate'; page: Page } | { type: 'logout' }
 
 type AppProps = {
+  user: User
   onLogOut: () => void
   authError: string | null
 }
 
-function App({ onLogOut, authError }: AppProps) {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme)
+function App({ user, onLogOut, authError }: AppProps) {
+  const profile = getUserProfile(user)
   const [currentPage, setCurrentPage] = useState<Page>('Dashboard')
-  const [calendarSelection, setCalendarSelection] = useState<PlannerItemSelection | null>(null)
-  const [commitmentSelection, setCommitmentSelection] = useState<PlannerItemSelection | null>(null)
-  const [settingsHaveUnsavedChanges, setSettingsHaveUnsavedChanges] = useState(false)
-  const [pendingSettingsExit, setPendingSettingsExit] = useState<PendingSettingsExit | null>(null)
+  const [settingsDirty, setSettingsDirty] = useState(false)
   const [unreadEmailCount, setUnreadEmailCount] = useState(0)
   const [navigationError, setNavigationError] = useState<string | null>(null)
   const [plannerPageChanges, setPlannerPageChanges] = useState<PlannerPageChanges>({
@@ -141,104 +140,28 @@ function App({ onLogOut, authError }: AppProps) {
     document.querySelector('.page-viewport')?.scrollTo({ top: 0, behavior: 'instant' })
   }, [currentPage])
 
-  useEffect(() => {
-    if (currentPage !== 'Settings' || !settingsHaveUnsavedChanges) {
-      return
-    }
+  const confirmLeavingSettings = () =>
+    currentPage !== 'Settings' || !settingsDirty || window.confirm('Discard unsaved settings changes?')
 
-    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault()
-      event.returnValue = ''
-    }
-
-    window.addEventListener('beforeunload', warnBeforeUnload)
-    return () => window.removeEventListener('beforeunload', warnBeforeUnload)
-  }, [currentPage, settingsHaveUnsavedChanges])
-
-  const navigateToPage = (page: Page) => {
-    if (page === currentPage) {
-      return
-    }
-
-    if (currentPage === 'Settings' && settingsHaveUnsavedChanges) {
-      setPendingSettingsExit({ type: 'navigate', page })
-      return
-    }
-
-    setCurrentPage(page)
-  }
-
-  const handleViewInCalendar = (request: PlannerItemSelection) => {
-    setCalendarSelection(request)
-    setCurrentPage('Calendar')
-  }
-
-  const handleViewInCommitments = (request: PlannerItemSelection) => {
-    setCommitmentSelection(request)
-    setCurrentPage('Commitments')
-  }
-
-  const handleCalendarSelectionHandled = () => {
-    setCalendarSelection(null)
-  }
-
-  const handleCommitmentSelectionHandled = () => {
-    setCommitmentSelection(null)
-  }
-
-  const handleLogOut = () => {
-    if (currentPage === 'Settings' && settingsHaveUnsavedChanges) {
-      setPendingSettingsExit({ type: 'logout' })
-      return
-    }
-
-    onLogOut()
-  }
-
-  const finishSettingsExit = () => {
-    if (!pendingSettingsExit) {
-      return
-    }
-
-    setSettingsHaveUnsavedChanges(false)
-    setPendingSettingsExit(null)
-    if (pendingSettingsExit.type === 'logout') {
-      onLogOut()
-    } else {
-      setCurrentPage(pendingSettingsExit.page)
+  const navigateTo = (page: Page) => {
+    if (page !== currentPage && confirmLeavingSettings()) {
+      setCurrentPage(page)
     }
   }
 
   const pages = {
-    Dashboard: (
-      <Dashboard
-        onViewInCalendar={handleViewInCalendar}
-        onViewInCommitments={handleViewInCommitments}
-      />
-    ),
+    Dashboard: <Dashboard user={profile} />,
     Inbox: <Inbox onUnreadCountChange={setUnreadEmailCount} />,
-    Commitments: (
-      <Commitments
-        onViewInCalendar={handleViewInCalendar}
-        selectionRequest={commitmentSelection}
-        onSelectionHandled={handleCommitmentSelectionHandled}
-      />
-    ),
-    Calendar: (
-      <Calendar
-        selectionRequest={calendarSelection}
-        onSelectionHandled={handleCalendarSelectionHandled}
-        onViewInCommitments={handleViewInCommitments}
-      />
-    ),
+    Commitments: <Commitments />,
+    Calendar: <Calendar userId={user.id} />,
     Settings: (
       <Settings
-        onLogOut={handleLogOut}
-        onThemeChange={(isDark) => setTheme(isDark ? 'dark' : 'light')}
-        onUnsavedChangesChange={setSettingsHaveUnsavedChanges}
-        leaveConfirmationOpen={pendingSettingsExit !== null}
-        onCancelLeave={() => setPendingSettingsExit(null)}
-        onLeaveAnyway={finishSettingsExit}
+        user={profile}
+        userId={user.id}
+        onDirtyChange={setSettingsDirty}
+        onLogOut={() => {
+          if (confirmLeavingSettings()) onLogOut()
+        }}
       />
     )
   }
@@ -271,7 +194,7 @@ function App({ onLogOut, authError }: AppProps) {
                 }`}
                 aria-current={currentPage === page ? 'page' : undefined}
                 aria-label={plannerPage && plannerPageChanges[plannerPage] ? `${page}, new changes` : undefined}
-                onClick={() => navigateToPage(page)}
+                onClick={() => navigateTo(page)}
               >
                 <Icon size={20} strokeWidth={1.8} />
                 <span>{page}</span>
@@ -307,7 +230,7 @@ function App({ onLogOut, authError }: AppProps) {
           <button
             className={`nav-item ${currentPage === 'Settings' ? 'active' : ''}`}
             aria-current={currentPage === 'Settings' ? 'page' : undefined}
-            onClick={() => navigateToPage('Settings')}
+            onClick={() => navigateTo('Settings')}
           >
             <SettingsIcon size={20} strokeWidth={1.8} />
             <span>Settings</span>

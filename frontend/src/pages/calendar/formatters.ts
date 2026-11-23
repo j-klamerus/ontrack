@@ -1,3 +1,11 @@
+/** Local-date utilities shared by the calendar grid, sidebar, and event forms. */
+import type { CalendarEvent } from '../../types/calendarEvent'
+
+/** Match any occupied day of a Google multi-day event, or the single local event date. */
+export const isEventOnDate = (event: CalendarEvent, date: string) =>
+  event.date <= date && (event.googleLastDate ?? event.date) >= date
+
+/** Format the browser-local calendar date without converting it to UTC. */
 export const getIsoDate = (date: Date) => {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -6,8 +14,10 @@ export const getIsoDate = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
+// Use local noon rather than UTC parsing to keep the intended calendar date.
 export const getDateFromIso = (isoDate: string) => new Date(`${isoDate}T12:00:00`)
 
+/** Return local midnight on the Sunday starting the date's displayed week. */
 export const startOfWeek = (date: Date) => {
   const result = new Date(date)
   result.setHours(0, 0, 0, 0)

@@ -4,24 +4,31 @@ import demoUser from '../data/demoUser.json'
 import defaultSettingsData from '../data/defaultSettings.json'
 import demoSettingsData from '../data/demoSettings.json'
 import {
-  addCustomEventCategory,
+  createCustomEventCategory,
   getEventCategoryDefinitions,
   moveCategoryOverridesToOther,
-  removeCustomEventCategory
+  saveCustomEventCategories
 } from '../constants/eventCategories'
 import {
   moveReviewedSuggestionCategoryToOther,
   resetDashboardSuggestionReviews
 } from '../services/reviewedSuggestions'
 import { getCalendarEvents } from '../services/calendarEvents'
-import { getCommitments } from '../services/commitments'
+import { getCommitments, moveCommitmentCategoryToOther } from '../services/commitments'
+import {
+  getSelectedGoogleCalendarId,
+  resetSelectedGoogleCalendarId,
+  saveSelectedGoogleCalendarId
+} from '../services/googleCalendar'
 import { recordPlannerPageChange } from '../services/plannerNavigation'
 import { SETTINGS_STORAGE_KEY } from '../services/user'
 import { DEFAULT_PLANNER_KEY_DEFAULTS } from '../services/plannerKeyPreferences'
 import type { EventCategoryDefinition } from '../constants/eventCategories'
 import CategorySettingsCard from './settings/CategorySettingsCard'
 import PreferenceSettingsCards from './settings/PreferenceSettingsCards'
+import { getGmailConnectionStatus, startGmailConnection } from '../services/gmailAnalysis'
 import type { SettingsState } from './settings/types'
+import type { UserProfile } from '../types/user'
 import '../styles/Settings.css'
 
 const isReminderTiming = (value: string): value is SettingsState['reminderTiming'] =>
@@ -34,6 +41,17 @@ const defaultSettings: SettingsState = {
   reminderTiming: isReminderTiming(defaultSettingsData.preferences.reminderTiming)
     ? defaultSettingsData.preferences.reminderTiming
     : '1 hour before',
+  priorityEmailFiltering: true,
+  highlightAssignments: true,
+  highlightDeadlines: true,
+  highlightImportant: true,
+  spamWarnings: true,
+  deadlineReminders: true,
+  importantEmailNotifications: true,
+  reminderTiming: '1 hour before',
+  aiEmailSummaries: true,
+  aiDeadlineDetection: true,
+  emailAnalysisEnabled: true,
   plannerKeyDefaults: DEFAULT_PLANNER_KEY_DEFAULTS
 }
 
@@ -55,6 +73,9 @@ type SaveMessage = {
 }
 
 type SettingsProps = {
+  user: UserProfile
+  userId: string
+  onDirtyChange: (dirty: boolean) => void
   onLogOut: () => void
   onThemeChange: (isDark: boolean) => void
   onUnsavedChangesChange: (hasUnsavedChanges: boolean) => void
@@ -72,6 +93,8 @@ function Settings({
   onLeaveAnyway
 }: SettingsProps) {
   const [initialSettings] = useState<SettingsState>(() => {
+function Settings({ user, userId, onDirtyChange, onLogOut }: SettingsProps) {
+  const [settings, setSettings] = useState<SettingsState>(() => {
     try {
       const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY)
 
@@ -79,7 +102,12 @@ function Settings({
         return demoSettings
       }
 
-      const parsedSettings = JSON.parse(storedSettings) as Partial<SettingsState>
+      const parsedSettings = JSON.parse(storedSettings) as Partial<SettingsState> & {
+        studentName?: unknown
+        studentEmail?: unknown
+      }
+      delete parsedSettings.studentName
+      delete parsedSettings.studentEmail
       return {
         ...demoSettings,
         ...parsedSettings,
@@ -96,12 +124,82 @@ function Settings({
   const [savedSettings, setSavedSettings] = useState(initialSettings)
   const [saveMessage, setSaveMessage] = useState<SaveMessage | null>(null)
   const [categories, setCategories] = useState<EventCategoryDefinition[]>(getEventCategoryDefinitions)
+  const [savedSettings, setSavedSettings] = useState(settings)
+  const [saveMessage, setSaveMessage] = useState('')
+  const [savedCategories, setSavedCategories] = useState<EventCategoryDefinition[]>(getEventCategoryDefinitions)
+  const [categories, setCategories] = useState<EventCategoryDefinition[]>(savedCategories)
+  const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null)
+  const [selectionLoading, setSelectionLoading] = useState(true)
+  const [selectionError, setSelectionError] = useState<string | null>(null)
+  const [calendarChanged, setCalendarChanged] = useState(false)
   const [categoryName, setCategoryName] = useState('')
   const [categoryColor, setCategoryColor] = useState('#0f766e')
   const [categoryError, setCategoryError] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [reviewReset, setReviewReset] = useState(false)
+  const [resetPreferences, setResetPreferences] = useState(true)
+  const [resetCalendar, setResetCalendar] = useState(true)
+  const [resetCategories, setResetCategories] = useState<string[]>([])
+  const isDirty = calendarChanged ||
+    JSON.stringify(settings) !== JSON.stringify(savedSettings) ||
+    JSON.stringify(categories) !== JSON.stringify(savedCategories) ||
+    categoryName.trim().length > 0
+
+  useEffect(() => {
+    let active = true
+    getSelectedGoogleCalendarId(userId)
+      .then((calendarId) => {
+        if (active) setSelectedCalendarId(calendarId)
+      })
+      .catch((error: unknown) => {
+        if (active) setSelectionError(error instanceof Error ? error.message : 'Unable to load your calendar choice.')
+      })
+      .finally(() => {
+        if (active) setSelectionLoading(false)
+      })
+    return () => { active = false }
+  }, [userId])
+  const [gmailConnected, setGmailConnected] = useState(false)
+  const [gmailBusy, setGmailBusy] = useState(false)
+  const [gmailError, setGmailError] = useState<string | null>(null)
+
+  useEffect(() => {
+    getGmailConnectionStatus()
+      .then(setGmailConnected)
+      .catch((error: unknown) => {
+        setGmailError(error instanceof Error ? error.message : 'Unable to check Gmail connection.')
+      })
+  }, [])
+
+  const handleConnectGmail = async () => {
+    setGmailBusy(true)
+    setGmailError(null)
+    try {
+      const authorizationUrl = await startGmailConnection()
+      window.location.assign(authorizationUrl)
+    } catch (error) {
+      setGmailError(error instanceof Error ? error.message : 'Unable to start Gmail authorization.')
+      setGmailBusy(false)
+    }
+  }
 
   const hasUnsavedChanges = JSON.stringify(settings) !== JSON.stringify(savedSettings)
   const refreshCategories = () => setCategories(getEventCategoryDefinitions())
+  useEffect(() => {
+    onDirtyChange(isDirty)
+  }, [isDirty, onDirtyChange])
+
+  useEffect(() => () => onDirtyChange(false), [onDirtyChange])
+
+  useEffect(() => {
+    if (!isDirty) return
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warnBeforeUnload)
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload)
+  }, [isDirty])
 
   useEffect(() => {
     onUnsavedChangesChange(hasUnsavedChanges)
@@ -124,48 +222,24 @@ function Settings({
 
   const handleAddCategory = () => {
     try {
-      addCustomEventCategory(categoryName, categoryColor)
-      refreshCategories()
+      const category = createCustomEventCategory(categoryName, categoryColor, categories)
+      setCategories((current) => [...current, category])
       setCategoryName('')
       setCategoryError('')
+      setSaveMessage('Category added to your changes. Select Save Changes to apply it.')
     } catch (error) {
       setCategoryError(error instanceof Error ? error.message : 'Unable to add this category.')
     }
   }
 
-  const handleRemoveCategory = async (category: EventCategoryDefinition) => {
+  const handleRemoveCategory = (category: EventCategoryDefinition) => {
     if (!category.isCustom) {
       return
     }
 
-    try {
-      const [events, commitments] = await Promise.all([getCalendarEvents(), getCommitments()])
-      const affectedEventCount = events.filter((item) => item.category === category.name).length
-      const affectedCommitmentCount = commitments.filter((item) => item.category === category.name).length
-      const affectedCount = affectedEventCount + affectedCommitmentCount
-      const affectedItems = affectedCount === 1 ? '1 item' : `${affectedCount} items`
-      const warning = affectedCount > 0
-        ? ` ${affectedItems} use this category and will be reassigned to Other.`
-        : ''
-
-      if (!window.confirm(`Delete "${category.name}"?${warning}`)) {
-        return
-      }
-
-      moveCategoryOverridesToOther(category.name)
-      moveReviewedSuggestionCategoryToOther(category.name)
-      removeCustomEventCategory(category.name)
-      refreshCategories()
-      if (affectedEventCount > 0) {
-        recordPlannerPageChange('calendar')
-      }
-      if (affectedCommitmentCount > 0) {
-        recordPlannerPageChange('commitments')
-      }
-      setCategoryError('')
-    } catch (error) {
-      setCategoryError(error instanceof Error ? error.message : 'Unable to remove this category.')
-    }
+    setCategories((current) => current.filter((item) => item.name !== category.name))
+    setCategoryError('')
+    setSaveMessage('Category removal staged. Select Save Changes to apply it.')
   }
 
   const updateSetting = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
@@ -176,8 +250,55 @@ function Settings({
     setSaveMessage({ text: 'You have unsaved changes.', tone: 'unsaved' })
   }
 
-  const handleSave = () => {
+  const persistCategoryChanges = async (target: EventCategoryDefinition[], confirmRemoval: boolean) => {
+    const stored = getEventCategoryDefinitions()
+    if (JSON.stringify(stored) !== JSON.stringify(savedCategories)) {
+      throw new Error('Categories changed in another tab. Reopen Settings before saving.')
+    }
+
+    const removed = stored.filter((category) =>
+      category.isCustom && !target.some((item) => item.name === category.name)
+    )
+    if (removed.length > 0) {
+      const [events, commitments] = await Promise.all([getCalendarEvents(), getCommitments()])
+      const names = new Set(removed.map((category) => category.name))
+      const eventCount = events.filter((event) => names.has(event.category)).length
+      const commitmentCount = commitments.filter((commitment) => names.has(commitment.category)).length
+      if (confirmRemoval && !window.confirm(
+        `Remove ${removed.map((category) => `"${category.name}"`).join(', ')}? ` +
+        `${eventCount + commitmentCount} local events and commitments will be reassigned to Other.`
+      )) {
+        return false
+      }
+
+      if (JSON.stringify(getEventCategoryDefinitions()) !== JSON.stringify(stored)) {
+        throw new Error('Categories changed in another tab. Reopen Settings before saving.')
+      }
+
+      for (const category of removed) {
+        moveCategoryOverridesToOther(category.name)
+        moveReviewedSuggestionCategoryToOther(category.name)
+        moveCommitmentCategoryToOther(category.name)
+      }
+      if (eventCount > 0) recordPlannerPageChange('calendar')
+      if (commitmentCount > 0) recordPlannerPageChange('commitments')
+    }
+
+    saveCustomEventCategories(target.filter((category) => category.isCustom))
+    setSavedCategories(target)
+    return true
+  }
+
+  const handleSave = async () => {
+    if (categoryName.trim()) {
+      setCategoryError('Add the category or clear its name before saving.')
+      return
+    }
+    setIsSaving(true)
     try {
+      if (JSON.stringify(categories) !== JSON.stringify(savedCategories)) {
+        if (!await persistCategoryChanges(categories, true)) return
+      }
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
       setSavedSettings(settings)
       onThemeChange(settings.darkTheme)
@@ -204,6 +325,46 @@ function Settings({
       setSaveMessage({ text: 'Settings have been reset to defaults.', tone: 'success' })
     } catch {
       setSaveMessage({ text: 'Unable to reset settings in this browser.', tone: 'error' })
+      // The dropdown is staged locally until Save Changes persists it to the backend.
+      if (calendarChanged && selectedCalendarId) {
+        await saveSelectedGoogleCalendarId(selectedCalendarId)
+        setCalendarChanged(false)
+      }
+      setSaveMessage('Changes saved. Preferences and categories are stored in this browser.')
+    } catch (error) {
+      setSaveMessage(`${error instanceof Error ? error.message : 'Unable to save changes.'} Some changes may have been saved; review and try again.`)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleReset = async () => {
+    setIsSaving(true)
+    try {
+      if (resetCategories.length > 0) {
+        const target = savedCategories.filter((category) => !resetCategories.includes(category.name))
+        if (JSON.stringify(target) !== JSON.stringify(savedCategories)) {
+          await persistCategoryChanges(target, false)
+        }
+        setCategories((current) => current.filter((category) => !resetCategories.includes(category.name)))
+      }
+      if (resetPreferences) {
+        localStorage.removeItem(SETTINGS_STORAGE_KEY)
+        setSettings(defaultSettings)
+        setSavedSettings(defaultSettings)
+      }
+      // A confirmed reset clears the selection immediately without disconnecting Google.
+      if (resetCalendar && !selectionLoading && !selectionError) {
+        await resetSelectedGoogleCalendarId()
+        setSelectedCalendarId(null)
+        setCalendarChanged(false)
+      }
+      setReviewReset(false)
+      setSaveMessage('Selected resets applied. Save any remaining changes.')
+    } catch (error) {
+      setSaveMessage(`${error instanceof Error ? error.message : 'Unable to reset settings.'} Some resets may have been applied; review and try again.`)
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -240,8 +401,74 @@ function Settings({
           onRemoveCategory={handleRemoveCategory}
         />
 
-        <PreferenceSettingsCards settings={settings} updateSetting={updateSetting} />
+        <PreferenceSettingsCards
+          user={user}
+          selectedCalendarId={selectedCalendarId}
+          selectionLoading={selectionLoading}
+          selectionError={selectionError}
+          onCalendarChange={(calendarId) => {
+            setSelectedCalendarId(calendarId)
+            setCalendarChanged(true)
+            setSaveMessage('Calendar selection staged. Select Save Changes to apply it.')
+          }}
+          settings={settings}
+          updateSetting={updateSetting}
+          settings={settings}
+          updateSetting={updateSetting}
+          gmailConnected={gmailConnected}
+          gmailBusy={gmailBusy}
+          gmailError={gmailError}
+          onConnectGmail={handleConnectGmail}
+        />
       </div>
+
+      {reviewReset && (
+        <section className="settings-card reset-review" aria-labelledby="reset-review-heading">
+          <h3 id="reset-review-heading">Review resets</h3>
+          <p>Choose what to reset. Applying these choices takes effect immediately.</p>
+          <div className="reset-options">
+            <label>
+              <input type="checkbox" checked={resetPreferences} onChange={(event) => setResetPreferences(event.target.checked)} />
+              Reset preference switches and planner key defaults
+            </label>
+            <label>
+              <input type="checkbox" checked={resetCalendar && !selectionLoading && !selectionError} disabled={selectionLoading || !!selectionError} onChange={(event) => setResetCalendar(event.target.checked)} />
+              Reset the On Track calendar choice (does not disconnect Google Calendar)
+            </label>
+            {[...savedCategories, ...categories]
+              .filter((category, index, all) =>
+                category.isCustom && all.findIndex((item) => item.name === category.name) === index
+              )
+              .map((category) => (
+                <label key={category.name}>
+                  <input
+                    type="checkbox"
+                    checked={resetCategories.includes(category.name)}
+                    onChange={(event) => setResetCategories((current) =>
+                      event.target.checked
+                        ? [...current, category.name]
+                        : current.filter((name) => name !== category.name)
+                    )}
+                  />
+                  Remove {category.name}; local events and commitments using it will move to Other
+                </label>
+              ))}
+          </div>
+          <div className="reset-review-actions">
+            <button type="button" className="secondary-button" disabled={isSaving} onClick={() => setReviewReset(false)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="primary-button"
+              disabled={isSaving || (!resetPreferences && !(resetCalendar && !selectionLoading && !selectionError) && resetCategories.length === 0)}
+              onClick={handleReset}
+            >
+              Apply selected resets
+            </button>
+          </div>
+        </section>
+      )}
 
       <div className="settings-actions">
         <button type="button" className="settings-logout-button" onClick={onLogOut}>
@@ -252,7 +479,17 @@ function Settings({
           Restore Suggestions
         </button>
 
-        <button type="button" className="secondary-button" onClick={handleReset}>
+        <button
+          type="button"
+          className="secondary-button"
+          disabled={isSaving || reviewReset}
+          onClick={() => {
+            setResetPreferences(true)
+            setResetCalendar(true)
+            setResetCategories([])
+            setReviewReset(true)
+          }}
+        >
           Reset to Defaults
         </button>
 
