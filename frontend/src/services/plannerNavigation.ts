@@ -1,3 +1,4 @@
+// Tracks unseen planner changes and notifies the app shell to refresh its badges.
 export type PlannerPage = 'calendar' | 'commitments'
 export type PlannerPageChanges = Record<PlannerPage, boolean>
 
@@ -39,6 +40,7 @@ export function getPlannerPageChanges(): PlannerPageChanges {
   }
 }
 
+/** Stores change indicators and dispatches an event for same-tab listeners. */
 const saveChanges = (changes: PlannerPageChanges) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(changes))
   window.dispatchEvent(new Event(PLANNER_NAVIGATION_EVENT))
@@ -49,6 +51,7 @@ export function recordPlannerPageChange(page: PlannerPage): void {
   saveChanges({ ...changes, [page]: true })
 }
 
+/** Clears a page's change indicator when the user navigates to it. */
 export function markPlannerPageVisited(page: PlannerPage): void {
   const changes = getPlannerPageChanges()
   if (!changes[page]) {

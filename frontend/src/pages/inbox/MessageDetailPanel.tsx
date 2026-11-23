@@ -1,9 +1,11 @@
+// Detail view for a selected email, including category signals derived by an Inbox scan.
 import SuggestedReplyCard from '../../components/SuggestedReplyCard'
 import type { StudentEmail } from '../../types/email'
 import { formatDate } from './types'
 
 type MessageDetailPanelProps = {
   email: StudentEmail | null
+  isScanned: boolean
   suggestedReply: string | null
   replyError: string | null
   onToggleRead: (id: number) => void
@@ -14,8 +16,10 @@ type MessageDetailPanelProps = {
   onSaveReply: (emailId: number, reply: string) => void
 }
 
+/** Displays the selected message and its current scan-derived signal tags. */
 function MessageDetailPanel({
   email,
+  isScanned,
   suggestedReply,
   replyError,
   onToggleRead,
@@ -55,11 +59,18 @@ function MessageDetailPanel({
 
           <div className="message-meta-row">
             <span>{formatDate(email.date)}</span>
-            <span className={`priority-badge priority-${email.priority.toLowerCase()}`}>
-              {email.priority}
-            </span>
+            {email.priority ? (
+              <span className={`priority-badge priority-${email.priority.toLowerCase()}`}>
+                {email.priority}
+              </span>
+            ) : isScanned ? (
+              <span className="priority-badge priority-none">No priority detected</span>
+            ) : null}
+            {email.spamDetected && (
+              <span className="detail-chip spam-detected-chip">Spam detected</span>
+            )}
             {email.important && <span className="detail-chip">Important</span>}
-            {email.spam && <span className="detail-chip spam-chip">Spam</span>}
+            {email.spam && !email.spamDetected && <span className="detail-chip spam-chip">Spam</span>}
           </div>
 
           <div className="signal-tags">
@@ -71,6 +82,13 @@ function MessageDetailPanel({
           {email.warning && (
             <div className="warning-banner" role="alert">
               <strong>Scam warning:</strong> {email.warning}
+            </div>
+          )}
+
+          {email.spamDetected && (
+            <div className="info-card danger-card">
+              <span className="section-label">Spam detection</span>
+              <p>This message matched an enabled spam rule or blocked sender. It has not been moved automatically.</p>
             </div>
           )}
 

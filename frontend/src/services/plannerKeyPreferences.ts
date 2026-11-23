@@ -13,6 +13,7 @@ export const DEFAULT_PLANNER_KEY_DEFAULTS: PlannerKeyDefaults = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
+/** Reads whether a planner key panel should start expanded on the requested page. */
 export function getPlannerKeyDefaultOpen(
   page: PlannerKeyPage
 ): boolean {

@@ -25,6 +25,9 @@ import { SETTINGS_STORAGE_KEY } from '../services/user'
 import { DEFAULT_PLANNER_KEY_DEFAULTS } from '../services/plannerKeyPreferences'
 import type { EventCategoryDefinition } from '../constants/eventCategories'
 import CategorySettingsCard from './settings/CategorySettingsCard'
+import EmailRulesCard from './settings/EmailRulesCard'
+import EmailPriorityRulesCard from './settings/EmailPriorityRulesCard'
+import EmailSpamSettingsCard from './settings/EmailSpamSettingsCard'
 import PreferenceSettingsCards from './settings/PreferenceSettingsCards'
 import { getGmailConnectionStatus, startGmailConnection } from '../services/gmailAnalysis'
 import type { SettingsState } from './settings/types'
@@ -83,6 +86,7 @@ type SettingsProps = {
   onLeaveAnyway: () => void
 }
 
+/** Saves general preferences here; categories and email rules manage their own storage. */
 function Settings({
   user,
   userId,
@@ -386,6 +390,10 @@ function Settings({
           onRemoveCategory={handleRemoveCategory}
         />
 
+        {/* Rules have their own storage and save lifecycle, separate from general preferences. */}
+        <EmailRulesCard />
+        <EmailPriorityRulesCard />
+        <EmailSpamSettingsCard />
         <PreferenceSettingsCards
           user={user}
           selectedCalendarId={selectedCalendarId}

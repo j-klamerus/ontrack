@@ -1,3 +1,4 @@
+// Manages planner category definitions and per-event/commitment category overrides.
 import type { EventCategory } from '../types/calendarEvent'
 import defaultSettingsData from '../data/defaultSettings.json'
 import demoSettingsData from '../data/demoSettings.json'

@@ -29,6 +29,7 @@ import type { StudentEmail } from '../types/email'
 import type { PlannerItemSelection } from '../types/plannerItemSelection'
 import '../styles/Commitments.css'
 
+/** Coordinates commitment filtering, editing, and suggestion review. */
 type CommitmentsProps = {
   onViewInCalendar: (request: PlannerItemSelection) => void
   selectionRequest: PlannerItemSelection | null

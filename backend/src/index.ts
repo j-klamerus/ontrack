@@ -6,6 +6,13 @@ import { google } from 'googleapis'
 import { randomUUID } from 'node:crypto'
 import { analyzeEmails } from './services/gemini.js'
 import { fetchRecentEmails } from './services/gmail.js'
+import {
+  evaluateEmailRules,
+  type EmailPriorityRule,
+  type EmailRule,
+  type EmailSpamRule,
+  type RuleEvaluationEmail,
+} from './emailRuleEvaluator.js'
 import googleCalendarRouter from './googleCalendar.js'
 
 const {
@@ -74,6 +81,57 @@ async function requireSignedInUser(
 
 app.get('/', (_req, res) => {
   res.json({ message: 'On Track backend is running.' })
+})
+
+// Validate the scan payload, evaluate its rules, and return backend-defined group ordering.
+app.post('/api/email-rules/evaluate', (req, res) => {
+  const body: unknown = req.body
+
+  if (
+    !isRecord(body) ||
+    !Array.isArray(body.emails) ||
+    !Array.isArray(body.rules) ||
+    (body.priorityRules !== undefined && !Array.isArray(body.priorityRules)) ||
+    (body.spamRules !== undefined && !Array.isArray(body.spamRules)) ||
+    (body.blockedSenders !== undefined && !Array.isArray(body.blockedSenders))
+  ) {
+    res.status(400).json({ error: 'Request must include email and category rule arrays, with optional priority, spam rule, and blocked sender arrays.' })
+    return
+  }
+
+  const priorityRules = Array.isArray(body.priorityRules) ? body.priorityRules : []
+  const spamRules = Array.isArray(body.spamRules) ? body.spamRules : []
+  const blockedSenders = Array.isArray(body.blockedSenders) ? body.blockedSenders : []
+  if (
+    body.emails.length > 100 ||
+    body.rules.length > 50 ||
+    priorityRules.length > 50 ||
+    spamRules.length > 50 ||
+    blockedSenders.length > 200
+  ) {
+    res.status(400).json({ error: 'Evaluation supports up to 100 emails, 50 rules per category, priority, or spam group, and 200 blocked senders.' })
+    return
+  }
+
+  if (
+    !body.emails.every(isRuleEvaluationEmail) ||
+    !body.rules.every(isEmailRule) ||
+    !priorityRules.every(isEmailPriorityRule) ||
+    !spamRules.every(isEmailSpamRule) ||
+    !blockedSenders.every(isBlockedSender)
+  ) {
+    res.status(400).json({ error: 'Email, rule, or blocked sender data has an invalid format.' })
+    return
+  }
+
+  try {
+    const results = evaluateEmailRules(body.emails, body.rules, priorityRules, spamRules, blockedSenders)
+    res.json({ results })
+  } catch (error) {
+    res.status(400).json({
+      error: error instanceof Error ? error.message : 'Unable to evaluate email rules.'
+    })
+  }
 })
 
 app.get('/api/gmail/status', requireSignedInUser, (req: AuthenticatedRequest, res) => {
@@ -194,6 +252,71 @@ function createGmailClient(refreshToken: string) {
   auth.setCredentials({ refresh_token: refreshToken })
   return google.gmail({ version: 'v1', auth })
 }
+
+type JsonRecord = Record<string, unknown>
+
+const isRecord = (value: unknown): value is JsonRecord =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const isEmailRule = (value: unknown): value is EmailRule =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  value.id.length > 0 &&
+  value.id.length <= 100 &&
+  typeof value.enabled === 'boolean' &&
+  (value.field === 'sender' || value.field === 'email' || value.field === 'subject' || value.field === 'body') &&
+  (value.operator === 'contains' || value.operator === 'regex') &&
+  typeof value.pattern === 'string' &&
+  value.pattern.trim().length > 0 &&
+  value.pattern.length <= 200 &&
+  typeof value.label === 'string' &&
+  value.label.trim().length > 0 &&
+  value.label.length <= 60
+
+const isEmailPriorityRule = (value: unknown): value is EmailPriorityRule =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  value.id.length > 0 &&
+  value.id.length <= 100 &&
+  typeof value.enabled === 'boolean' &&
+  (value.field === 'sender' || value.field === 'email' || value.field === 'subject' || value.field === 'body') &&
+  (value.operator === 'contains' || value.operator === 'regex') &&
+  typeof value.pattern === 'string' &&
+  value.pattern.trim().length > 0 &&
+  value.pattern.length <= 200 &&
+  (value.priority === 'High' || value.priority === 'Medium' || value.priority === 'Low')
+
+const isEmailSpamRule = (value: unknown): value is EmailSpamRule =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  value.id.length > 0 &&
+  value.id.length <= 100 &&
+  typeof value.enabled === 'boolean' &&
+  (value.field === 'sender' || value.field === 'email' || value.field === 'subject' || value.field === 'body') &&
+  (value.operator === 'contains' || value.operator === 'regex') &&
+  typeof value.pattern === 'string' &&
+  value.pattern.trim().length > 0 &&
+  value.pattern.length <= 200
+
+const isBlockedSender = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  value.length <= 320 &&
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+
+const isRuleEvaluationEmail = (value: unknown): value is RuleEvaluationEmail =>
+  isRecord(value) &&
+  typeof value.id === 'number' &&
+  Number.isSafeInteger(value.id) &&
+  typeof value.sender === 'string' &&
+  value.sender.length <= 500 &&
+  typeof value.email === 'string' &&
+  value.email.length <= 500 &&
+  typeof value.subject === 'string' &&
+  value.subject.length <= 1000 &&
+  typeof value.body === 'string' &&
+  value.body.length <= 20000 &&
+  typeof value.date === 'string' &&
+  value.date.length <= 100
 
 app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
   const message = error instanceof Error ? error.message : 'Unknown server error'
