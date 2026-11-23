@@ -7,6 +7,15 @@ import { randomUUID } from 'node:crypto'
 import { analyzeEmails } from './services/gemini.js'
 import { fetchRecentEmails } from './services/gmail.js'
 
+import { google } from "googleapis";
+import googleCalendarRouter from "./googleCalendar.js";
+
+const app = express()
+const port = process.env.PORT || 3000;
+const frontendOrigin = process.env.FRONTEND_ORIGIN?.trim() || 'http://localhost:5173'
+
+//get env vars
+const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI } = process.env;
 const {
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
@@ -33,6 +42,10 @@ for (const [name, value] of Object.entries(requiredEnvironment)) {
   }
 }
 
+app.use(cors({ origin: frontendOrigin }))
+app.use(express.json())
+// Calendar OAuth and routes are separate from the legacy Gmail OAuth flow below.
+app.use(googleCalendarRouter)
 const app = express()
 const supabase = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!)
 const googleScopes = ['https://www.googleapis.com/auth/gmail.readonly']
@@ -74,6 +87,25 @@ app.get('/', (_req, res) => {
   res.json({ message: 'On Track backend is running.' })
 })
 
+app.get("/testAuth", (req, res) => {
+  const url = oauth2.generateAuthUrl({
+    access_type: 'offline',
+    scope:scopes
+  });
+  res.send(`<a href="${url}"> Auth with Google </a>`)
+})
+
+app.get("/auth/google/callback", async (req, res) => {
+  const code = req.query.code;
+  if (typeof code !== 'string') {
+    res.status(400).send('Google did not return an authorization code.')
+    return
+  }
+
+  const { tokens } = await oauth2.getToken(code);
+  oauth2.setCredentials(tokens);
+  readEmails(oauth2,res);
+})
 app.get('/api/gmail/status', requireSignedInUser, (req: AuthenticatedRequest, res) => {
   res.json({ connected: Boolean(req.userId && gmailRefreshTokens.has(req.userId)) })
 })
@@ -133,6 +165,25 @@ app.get('/auth/google/callback', async (req, res) => {
       res.status(400).send('Google did not provide offline access. Please reconnect and grant access.')
       return
     }
+    
+    const mails = await Promise.all(
+        messages
+            .filter((message) => typeof message.id === 'string')
+            .map(async (message) => `<li>${await getEmail(message.id, gmail)}</li>`)
+    )
+    
+    res.send(`<h2>Messages</h2><ul>${mails.join('')}</ul>`)
+    return;
+}
+
+//should define types insead of using any, but this works for now
+async function getEmail(emailId : any,gmail: any){
+    const response = await gmail.users.messages.get({id:emailId,userId:'me'});
+    const email = response.data;
+    
+    const headers = email.payload?.headers ?? [];
+    const subject = headers.find((header: { name?: string | null }) => header.name === 'Subject')?.value ?? '';
+    const from = headers.find((header: { name?: string | null }) => header.name === 'From')?.value ?? '';
 
     // Store only the refresh token needed to obtain short-lived access tokens.
     gmailRefreshTokens.set(pending.userId, refreshToken)
@@ -194,6 +245,17 @@ function createGmailClient(refreshToken: string) {
   return google.gmail({ version: 'v1', auth })
 }
 
+const oauth2 = generateOAuthClient();
+
+app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const message = error instanceof Error ? error.message : 'Unknown server error'
+  console.error('Backend request failed:', message)
+  res.status(500).json({ error: 'The backend could not complete the request. Check the backend terminal for details.' })
+})
+
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`)
+})
 app.listen(Number(PORT), () => {
   console.log(`On Track backend listening on port ${PORT}`)
 })

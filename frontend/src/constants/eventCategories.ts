@@ -13,7 +13,7 @@ type StoredCategory = {
 
 type CategoryOverride = {
   kind: 'event' | 'commitment'
-  id: number
+  id: number | string
   category: EventCategory
 }
 
@@ -91,7 +91,7 @@ const readCategoryOverrides = (): CategoryOverride[] => {
     !parsed.every((item) =>
       isRecord(item) &&
       (item.kind === 'event' || item.kind === 'commitment') &&
-      typeof item.id === 'number' &&
+      (typeof item.id === 'number' || (item.kind === 'event' && typeof item.id === 'string')) &&
       typeof item.category === 'string'
     )
   ) {
@@ -113,7 +113,11 @@ export const getEventCategoryColor = (name: EventCategory): string =>
   getEventCategoryDefinitions().find((category) => category.name === name)?.color ??
   defaultCategories[defaultCategories.length - 1].color
 
-export function addCustomEventCategory(name: string, color: string): void {
+export function createCustomEventCategory(
+  name: string,
+  color: string,
+  categories: EventCategoryDefinition[]
+): EventCategoryDefinition {
   const trimmedName = name.trim()
   if (!trimmedName) {
     throw new Error('Enter a category name.')
@@ -125,41 +129,37 @@ export function addCustomEventCategory(name: string, color: string): void {
     throw new Error('Choose a valid category color.')
   }
 
-  const categories = readCustomCategories()
   if (
-    [...defaultCategories, ...categories].some(
+    categories.some(
       (category) => category.name.toLowerCase() === trimmedName.toLowerCase()
     )
   ) {
     throw new Error('A category with this name already exists.')
   }
 
-  localStorage.setItem(
-    CATEGORY_STORAGE_KEY,
-    JSON.stringify([...categories, { name: trimmedName, color }])
-  )
+  return { name: trimmedName, color, isCustom: true }
 }
 
-export function removeCustomEventCategory(name: string): void {
-  const categories = readCustomCategories()
-  if (!categories.some((category) => category.name === name)) {
-    throw new Error('That custom category could not be found.')
+export function saveCustomEventCategories(categories: EventCategoryDefinition[]): void {
+  let validated = defaultCategories.map((category) => ({ ...category, isCustom: false }))
+  for (const category of categories) {
+    validated = [...validated, createCustomEventCategory(category.name, category.color, validated)]
   }
   localStorage.setItem(
     CATEGORY_STORAGE_KEY,
-    JSON.stringify(categories.filter((category) => category.name !== name))
+    JSON.stringify(validated.filter((category) => category.isCustom).map(({ name, color }) => ({ name, color })))
   )
 }
 
 export const getItemCategoryOverride = (
   kind: CategoryOverride['kind'],
-  id: number
+  id: CategoryOverride['id']
 ): EventCategory | undefined =>
   readCategoryOverrides().find((item) => item.kind === kind && item.id === id)?.category
 
 export function saveItemCategoryOverride(
   kind: CategoryOverride['kind'],
-  id: number,
+  id: CategoryOverride['id'],
   category: EventCategory
 ): void {
   const overrides = readCategoryOverrides()

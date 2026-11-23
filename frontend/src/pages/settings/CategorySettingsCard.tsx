@@ -28,7 +28,7 @@ function CategorySettingsCard({
         <div>
           <h3>Event &amp; Commitment Categories</h3>
           <p className="field-note">
-            Categories are shared by events and commitments. Other is the default category.
+            Categories are shared by events and commitments. Changes apply when you select Save Changes.
           </p>
         </div>
       </div>

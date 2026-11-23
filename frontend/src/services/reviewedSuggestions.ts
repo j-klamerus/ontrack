@@ -45,14 +45,17 @@ const isCommitment = (value: unknown): value is Commitment =>
 
 const isCalendarEvent = (value: unknown): value is CalendarEvent =>
   isRecord(value) &&
-  typeof value.id === 'number' &&
+  (typeof value.id === 'number' || typeof value.id === 'string') &&
   typeof value.title === 'string' &&
   typeof value.course === 'string' &&
   typeof value.date === 'string' &&
   typeof value.time === 'string' &&
   isEventCategory(value.category) &&
   (value.priority === 'High' || value.priority === 'Medium' || value.priority === 'Low') &&
-  typeof value.description === 'string'
+  typeof value.description === 'string' &&
+  (value.googleEventId === undefined || typeof value.googleEventId === 'string') &&
+  (value.googleCalendarId === undefined || typeof value.googleCalendarId === 'string') &&
+  (value.googleDurationMinutes === undefined || typeof value.googleDurationMinutes === 'number')
 
 const isReviewedSuggestion = (value: unknown): value is ReviewedSuggestion => {
   if (!isRecord(value) || typeof value.suggestionId !== 'number') {
@@ -122,6 +125,7 @@ export const getConfirmedCommitments = (): Commitment[] =>
       : []
   )
 
+/** Return confirmed calendar suggestions from browser storage, separately from Google events. */
 export const getConfirmedCalendarEvents = (): CalendarEvent[] =>
   readReviewedSuggestions().flatMap((record) =>
     record.status === 'confirmed' && record.kind === 'Calendar event'
@@ -165,7 +169,9 @@ export function confirmDashboardSuggestion(
       return []
     }
 
-    return record.kind === 'Commitment' ? [record.commitment.id] : [record.event.id]
+    return record.kind === 'Commitment'
+      ? [record.commitment.id]
+      : typeof record.event.id === 'number' ? [record.event.id] : []
   })) + 1
 
   const reviewedRecord: ReviewedSuggestion = suggestion.kind === 'Commitment'

@@ -22,6 +22,26 @@
   box-shadow: var(--shadow-card);
 }
 
+.settings-page button {
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease,
+    transform 100ms ease, box-shadow 100ms ease;
+}
+
+.settings-page button:not(:disabled):active {
+  transform: translateY(2px);
+  box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-page button {
+    transition: none;
+  }
+
+  .settings-page button:not(:disabled):active {
+    transform: none;
+  }
+}
+
 .category-settings-card {
   grid-column: 1 / -1;
 }
@@ -195,6 +215,10 @@
   gap: 16px;
 }
 
+.field-group + .field-note {
+  margin: 16px 0 0;
+}
+
 .settings-page .field-group > label,
 .settings-page .select-field {
   display: flex;
@@ -314,11 +338,42 @@
   margin-top: 18px;
 }
 
+.select-field + .field-note {
+  margin-top: 12px;
+}
+
 .settings-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
   margin-top: 24px;
+}
+
+.reset-review {
+  margin-top: 24px;
+}
+
+.reset-review h3 {
+  margin: 0;
+}
+
+.reset-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reset-options label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.reset-review-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
 }
 
 .settings-logout-button {

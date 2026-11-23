@@ -1,7 +1,14 @@
 import type { SettingsState } from './types'
+import type { UserProfile } from '../../types/user'
 import ToggleRow from './ToggleRow'
+import GoogleCalendarConnectionCard from './GoogleCalendarConnectionCard'
 
 type PreferenceSettingsCardsProps = {
+  user: UserProfile
+  selectedCalendarId: string | null
+  selectionLoading: boolean
+  selectionError: string | null
+  onCalendarChange: (calendarId: string) => void
   settings: SettingsState
   updateSetting: <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void
   gmailConnected: boolean
@@ -10,6 +17,7 @@ type PreferenceSettingsCardsProps = {
   onConnectGmail: () => void
 }
 
+function PreferenceSettingsCards({ user, selectedCalendarId, selectionLoading, selectionError, onCalendarChange, settings, updateSetting }: PreferenceSettingsCardsProps) {
 function PreferenceSettingsCards({
   settings,
   updateSetting,
@@ -74,8 +82,9 @@ function PreferenceSettingsCards({
             <input
               id="student-name"
               type="text"
-              value={settings.studentName}
-              onChange={(event) => updateSetting('studentName', event.target.value)}
+              value={user.name}
+              placeholder="Not available"
+              readOnly
             />
           </label>
           <label htmlFor="student-email">
@@ -83,11 +92,13 @@ function PreferenceSettingsCards({
             <input
               id="student-email"
               type="email"
-              value={settings.studentEmail}
-              onChange={(event) => updateSetting('studentEmail', event.target.value)}
+              value={user.email}
+              placeholder="Not available"
+              readOnly
             />
           </label>
         </div>
+        <p className="field-note">Profile details come from your signed-in account.</p>
       </div>
 
       <div className="settings-card">
@@ -106,18 +117,12 @@ function PreferenceSettingsCards({
         {gmailError && <p className="settings-error" role="alert">{gmailError}</p>}
       </div>
 
-      <div className="settings-card">
-        <div className="card-header-row">
-          <h3>Google Calendar Connection</h3>
-          <span className="status-pill disconnected">Not connected</span>
-        </div>
-        <p className="field-note">
-          Calendar integration is not active yet. This area is reserved for future Google Calendar sync.
-        </p>
-        <button type="button" className="secondary-button">
-          Connect Calendar (demo placeholder)
-        </button>
-      </div>
+      <GoogleCalendarConnectionCard
+        selectedCalendarId={selectedCalendarId}
+        selectionLoading={selectionLoading}
+        selectionError={selectionError}
+        onCalendarChange={onCalendarChange}
+      />
 
       <div className="settings-card">
         <div className="card-header-row">
@@ -223,7 +228,7 @@ function PreferenceSettingsCards({
           onChange={(checked) => updateSetting('emailAnalysisEnabled', checked)}
         />
         <p className="field-note">
-          No real Gmail or Google Calendar data is currently accessed. Demo processing only.
+          Gmail analysis uses demo data only. Google Calendar data is accessed when you connect a calendar.
         </p>
       </div>
     </>

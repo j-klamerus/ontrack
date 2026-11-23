@@ -75,7 +75,7 @@ function App() {
     }
 
     if (session) {
-        return <AppStart onLogOut={handleLogOut} authError={authError} />
+        return <AppStart key={session.user.id} user={session.user} onLogOut={handleLogOut} authError={authError} />
     }
 
     return (

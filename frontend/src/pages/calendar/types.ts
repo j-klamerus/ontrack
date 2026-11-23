@@ -1,3 +1,4 @@
+/** Display-specific calendar item and view types shared by the page components. */
 import type { EventCategory } from '../../types/calendarEvent'
 import type { Priority } from '../../types/commitment'
 import type { DashboardSuggestion } from '../../types/dashboardSuggestion'
@@ -9,6 +10,7 @@ export type CalendarScheduleItem = {
   title: string
   date: string
   time: string
+  allDay?: boolean
   kind: 'Commitment' | 'Calendar event'
   color: string
   category: EventCategory
