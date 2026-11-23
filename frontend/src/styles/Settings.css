@@ -1,4 +1,7 @@
 .save-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 20px;
   background: #e8f9f0;
   border: 1px solid #8ad8b0;
@@ -6,6 +9,79 @@
   border-radius: 12px;
   padding: 12px 14px;
   font-weight: 600;
+}
+
+.save-banner-unsaved {
+  background: #fffbeb;
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.save-banner-error {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.settings-actions .primary-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.settings-leave-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.settings-leave-dialog {
+  width: min(520px, 100%);
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-modal);
+}
+
+.settings-leave-header h2 {
+  margin: 0;
+  color: #133048;
+  font-size: 24px;
+}
+
+.settings-leave-dialog p {
+  margin: 14px 0 0;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.settings-leave-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.settings-leave-discard-button {
+  padding: 10px 14px;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-control);
+  background: #fff;
+  color: #b91c1c;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.settings-leave-discard-button:hover {
+  border-color: #fca5a5;
+  background: #fef2f2;
 }
 
 .settings-grid {
@@ -484,6 +560,24 @@
   color: #b91c1c;
   font-size: 13px;
   line-height: 1.5;
+.settings-page button {
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease,
+    transform 100ms ease, box-shadow 100ms ease;
+}
+
+.settings-page button:not(:disabled):active {
+  transform: translateY(2px);
+  box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-page button {
+    transition: none;
+  }
+
+  .settings-page button:not(:disabled):active {
+    transform: none;
+  }
 }
 
 .category-settings-card {
@@ -647,10 +741,24 @@
   color: #475569;
 }
 
+.status-pill.connected {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.settings-error {
+  color: #b42318;
+  font-size: 13px;
+}
+
 .field-group {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.field-group + .field-note {
+  margin: 16px 0 0;
 }
 
 .settings-page .field-group > label,
@@ -772,6 +880,10 @@
   margin-top: 18px;
 }
 
+.select-field + .field-note {
+  margin-top: 12px;
+}
+
 .settings-actions {
   display: flex;
   justify-content: flex-end;
@@ -779,13 +891,40 @@
   margin-top: 24px;
 }
 
+.reset-review {
+  margin-top: 24px;
+}
+
+.reset-review h3 {
+  margin: 0;
+}
+
+.reset-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reset-options label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.reset-review-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
 .settings-logout-button {
   margin-right: auto;
   padding: 10px 14px;
-  border: 1px solid #fecaca;
+  border: 1px solid #dc2626;
   border-radius: var(--radius-control);
-  background: #fff;
-  color: #b91c1c;
+  background: #dc2626;
+  color: #fff;
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -793,8 +932,8 @@
 }
 
 .settings-logout-button:hover {
-  border-color: #fca5a5;
-  background: #fef2f2;
+  border-color: #b91c1c;
+  background: #b91c1c;
 }
 
 .settings-logout-button:focus-visible {

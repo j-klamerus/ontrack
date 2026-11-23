@@ -1,3 +1,4 @@
+/** Assemble local calendar data from date-relative demo fixtures and reviewed suggestions. */
 import demoCalendarEvents from '../data/demoCalendarEvents.json'
 import {
   getEventCategories,
@@ -38,15 +39,21 @@ const getIsoDate = (date: Date) => {
 }
 
 /** Builds the event list from relative-date fixtures and confirmed suggestions. */
+/** Validate fixtures, anchor their dates to today, and apply browser-stored category overrides. */
 export async function getCalendarEvents(): Promise<CalendarEvent[]> {
-  if (!Array.isArray(demoCalendarEvents) || !demoCalendarEvents.every(isDemoCalendarEvent)) {
+  if (!Array.isArray(demoCalendarEvents)) {
     throw new Error('The demo calendar event data is invalid.')
   }
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const fixtureEvents = demoCalendarEvents.map(({ dateOffsetDays, ...event }) => {
+  const fixtureEvents = demoCalendarEvents.map((value) => {
+    if (!isDemoCalendarEvent(value)) {
+      throw new Error('The demo calendar event data is invalid.')
+    }
+
+    const { dateOffsetDays, ...event } = value
     const date = new Date(today)
     date.setDate(date.getDate() + dateOffsetDays)
 

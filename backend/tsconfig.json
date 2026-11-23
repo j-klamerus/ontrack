@@ -2,6 +2,7 @@
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
     // Emit runnable JavaScript and declarations under dist for the start script.
+    // File Layout
     "rootDir": "./src",
     "outDir": "./dist",
 
@@ -9,7 +10,7 @@
     // See also https://aka.ms/tsconfig/module
     "module": "nodenext",
     "target": "esnext",
-    "types": [],
+    "types": ["node"],
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],

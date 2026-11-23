@@ -31,6 +31,8 @@ import {
   signalOptions,
   type EmailSort,
 } from './inbox/types'
+import type { EmailFilter } from './inbox/types'
+import { analyzeGmail, type GmailAnalysis } from '../services/gmailAnalysis'
 
 type InboxProps = {
   onUnreadCountChange: (count: number) => void
@@ -68,6 +70,9 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   const [suggestedReplies, setSuggestedReplies] = useState<Record<string, string>>({})
   const [replyError, setReplyError] = useState<string | null>(null)
   const { searchTerm, activeFilter, priorityFilter, signalFilter, selectedId } = viewState
+  const [gmailAnalyses, setGmailAnalyses] = useState<GmailAnalysis[] | null>(null)
+  const [isAnalyzingGmail, setIsAnalyzingGmail] = useState(false)
+  const [gmailAnalysisError, setGmailAnalysisError] = useState<string | null>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -530,6 +535,22 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
     setReplyError(null)
   }
 
+  const handleAnalyzeGmail = async () => {
+    setIsAnalyzingGmail(true)
+    setGmailAnalysisError(null)
+    try {
+      setGmailAnalyses(await analyzeGmail(10))
+    } catch (error) {
+      setGmailAnalysisError(error instanceof Error ? error.message : 'Unable to analyze Gmail messages.')
+    } finally {
+      setIsAnalyzingGmail(false)
+    }
+  }
+
+  if (isLoading) {
+    return <section className="inbox-page" role="status">Loading emails...</section>
+  }
+
   if (loadError) {
     return <section className="inbox-page" role="alert">{loadError}</section>
   }
@@ -540,6 +561,47 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
 
   return (
     <section className="inbox-page">
+      <div className="gmail-analysis-toolbar">
+        <div>
+          <strong>Live Gmail analysis</strong>
+          <span>Fetches up to 10 recent messages. Their content is sent to Google Gemini for analysis; results are not saved.</span>
+        </div>
+        <button type="button" className="action-button" onClick={handleAnalyzeGmail} disabled={isAnalyzingGmail}>
+          {isAnalyzingGmail ? 'Analyzing...' : 'Analyze Gmail'}
+        </button>
+      </div>
+      {gmailAnalysisError && <p className="gmail-analysis-error" role="alert">{gmailAnalysisError}</p>}
+      {gmailAnalyses && (
+        <div className="gmail-analysis-results" aria-live="polite">
+          <h2>Gemini results ({gmailAnalyses.length})</h2>
+          {gmailAnalyses.map((email) => (
+            <article className="gmail-analysis-card" key={email.id}>
+              <div className="gmail-analysis-heading">
+                <div>
+                  <h3>{email.subject}</h3>
+                  <p>{email.sender}{email.receivedAt ? ` · ${email.receivedAt}` : ''}</p>
+                </div>
+                <span className={`priority-badge priority-${email.priority.toLowerCase()}`}>{email.priority}</span>
+              </div>
+              <p>{email.summary}</p>
+              <div className="signal-tags">
+                {email.signals.map((signal) => <span className="signal-tag" key={signal}>{signal}</span>)}
+                <span className="signal-tag">Scam likelihood: {Math.round(email.spamLikelihood * 100)}%</span>
+              </div>
+              {email.commitments.length > 0 && (
+                <div>
+                  <strong>Suggested commitments</strong>
+                  <ul>{email.commitments.map((item, index) => (
+                    <li key={`${email.id}-${index}`}>
+                      {item.title}{item.dueAt ? ` — ${item.dueAt}` : ' — no date stated'}
+                    </li>
+                  ))}</ul>
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
       <div className="inbox-shell">
         <EmailListPanel
           emails={emails}

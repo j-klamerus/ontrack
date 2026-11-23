@@ -1,8 +1,7 @@
 // Uses the demo profile as defaults and stores editable fields with app preferences.
 import demoUser from '../data/demoUser.json'
+import type { User } from '@supabase/supabase-js'
 import type { UserProfile } from '../types/user'
-
-type JsonRecord = Record<string, unknown>
 
 export const SETTINGS_STORAGE_KEY = 'ontrack-demo-settings'
 
@@ -41,9 +40,16 @@ export async function getUserProfile(): Promise<UserProfile> {
   if (typeof name !== 'string' || typeof email !== 'string') {
     throw new Error('Saved user profile is invalid.')
   }
+export function getUserProfile(user: User): UserProfile {
+  const fullName: unknown = user.user_metadata?.full_name
+  const name: unknown = user.user_metadata?.name
 
   return {
-    name: name.trim() || demoUser.name,
-    email: email.trim() || demoUser.email
+    name: typeof fullName === 'string' && fullName.trim()
+      ? fullName.trim()
+      : typeof name === 'string'
+        ? name.trim()
+        : '',
+    email: user.email?.trim() ?? ''
   }
 }

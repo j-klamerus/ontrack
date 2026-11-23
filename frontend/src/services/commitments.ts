@@ -177,6 +177,18 @@ export function updateCommitment(commitment: Commitment): void {
 }
 
 /** Deletes one commitment by delegating to the batch deletion path. */
+export function moveCommitmentCategoryToOther(category: EventCategory): void {
+  for (const key of [CUSTOM_COMMITMENTS_KEY, COMMITMENT_OVERRIDES_KEY]) {
+    const saved = localStorage.getItem(key)
+    if (saved) {
+      const commitments = readCommitmentArray(key)
+      localStorage.setItem(key, JSON.stringify(commitments.map((commitment) =>
+        commitment.category === category ? { ...commitment, category: 'Other' } : commitment
+      )))
+    }
+  }
+}
+
 export function deleteCommitment(commitmentId: number): void {
   deleteCommitments([commitmentId])
 }

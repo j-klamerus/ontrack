@@ -6,14 +6,6 @@
   margin-bottom: 24px;
 }
 
-.commitments-intro > button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  flex: 0 0 auto;
-}
-
 .commitment-action-error {
   margin: -8px 0 16px;
   color: #b91c1c;
@@ -288,6 +280,20 @@
   margin-bottom: 16px;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--color-border);
+}
+
+.commitment-tracker-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.commitment-tracker-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
 }
 
 .suggested-commitment-list {
@@ -570,6 +576,15 @@
 
   .commitment-tracker .search-facets {
     flex: 1 1 auto;
+  }
+
+  .commitment-tracker-header {
+    flex-direction: column;
+  }
+
+  .commitment-tracker-header-actions {
+    align-self: stretch;
+    justify-content: space-between;
   }
 
   .filter-button {

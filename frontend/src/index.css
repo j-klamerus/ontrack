@@ -2,6 +2,7 @@
   font-family: Arial, sans-serif;
   color: var(--color-text);
   background: var(--color-page);
+  color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -22,6 +23,20 @@
   --shadow-card: 0 8px 18px rgba(19, 48, 72, 0.04);
   --shadow-modal: 0 18px 42px rgba(15, 23, 42, 0.18);
   --page-padding: 32px;
+  --top-bar-height: 80px;
+}
+
+:root[data-theme='dark'] {
+  --color-ink: #f4f7fa;
+  --color-text: #e7eef5;
+  --color-muted: #b5c3d2;
+  --color-page: #182937;
+  --color-surface: #20394b;
+  --color-border: #3a5266;
+  --color-control-border: #4d667a;
+  --shadow-card: 0 8px 18px rgba(5, 20, 32, 0.16);
+  --shadow-modal: 0 18px 42px rgba(5, 20, 32, 0.28);
+  color-scheme: dark;
 }
 
 * {
@@ -32,10 +47,19 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 button {
   font: inherit;
+}
+
+button:not(:disabled):hover {
+  filter: brightness(0.9);
+}
+
+button:not(:disabled):active {
+  scale: 0.98;
 }
 
 .primary-button,
@@ -224,7 +248,7 @@ button {
 .commitments-page,
 .calendar-page,
 .settings-page {
-  min-height: calc(100vh - 80px);
+  min-height: calc(100vh - var(--top-bar-height));
   padding: var(--page-padding);
   background-color: var(--color-page);
 }
@@ -252,6 +276,7 @@ button {
 @media (max-width: 640px) {
   :root {
     --page-padding: 16px;
+    --top-bar-height: 64px;
   }
 
   .summary-container h2 {

@@ -61,7 +61,7 @@ function SuggestedCommitmentsPanel({
                 description={suggestion.description}
                 isSuggestion
                 isEditing={isEditing}
-                actionsPlacement="right"
+                actionsPlacement="bottom"
                 actions={isEditing ? (
                   <>
                     <PlannerItemAction kind="save" onClick={onSave} />
