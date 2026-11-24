@@ -30,6 +30,7 @@ type EmailListPanelProps = {
   sortError: string | null
   persistenceError: string | null
   hasActiveSearchFilters: boolean
+  isLiveGmail: boolean
   onSelectEmail: (id: number) => void
   onSearchChange: (value: string) => void
   onFilterChange: (value: EmailFilter) => void
@@ -62,6 +63,7 @@ function EmailListPanel({
   sortError,
   persistenceError,
   hasActiveSearchFilters,
+  isLiveGmail,
   onSelectEmail,
   onSearchChange,
   onFilterChange,
@@ -86,7 +88,7 @@ function EmailListPanel({
               type="button"
               className="action-button scan-emails-button"
               onClick={onScanEmails}
-              disabled={isScanning}
+              disabled={isScanning || emails.length === 0}
             >
               <Search size={15} aria-hidden="true" />
               {isScanning ? 'Scanning...' : hasScanResults ? 'Rescan emails' : 'Scan emails'}
@@ -102,15 +104,17 @@ function EmailListPanel({
                 Clear categories &amp; priorities
               </button>
             )}
-            <button
-              type="button"
-              className="action-button mark-all-read-button"
-              onClick={onMarkAllRead}
-              disabled={!emails.some((email) => !email.read)}
-            >
-              <CheckCheck size={15} strokeWidth={2.2} />
-              Mark all read
-            </button>
+            {!isLiveGmail && (
+              <button
+                type="button"
+                className="action-button mark-all-read-button"
+                onClick={onMarkAllRead}
+                disabled={!emails.some((email) => !email.read)}
+              >
+                <CheckCheck size={15} strokeWidth={2.2} />
+                Mark all read
+              </button>
+            )}
           </div>
         </div>
         {scanError && <p className="inbox-scan-error" role="alert">{scanError}</p>}
@@ -119,7 +123,7 @@ function EmailListPanel({
         {classificationCleared && (
           <p className="inbox-scan-note">Categories and priorities were cleared. Spam detections remain visible.</p>
         )}
-        {!hasScanResults && !scanError && (
+        {emails.length > 0 && !hasScanResults && !scanError && (
           <p className="inbox-scan-note">Categories, tags, priorities, and spam matches are added when you scan emails.</p>
         )}
 
@@ -225,9 +229,9 @@ function EmailListPanel({
                   {!email.read && <span className="unread-dot" aria-label="Unread email" />}
                 </div>
 
-                {(labelsByEmailId.get(email.id) ?? []).length > 0 && (
+                {(labelsByEmailId.get(email.id) ?? (email.source === 'gmail' ? email.signals : [])).length > 0 && (
                   <div className="email-rule-labels">
-                    {(labelsByEmailId.get(email.id) ?? []).map((label) => (
+                    {(labelsByEmailId.get(email.id) ?? (email.source === 'gmail' ? email.signals : [])).map((label) => (
                       <span className="email-rule-label" key={label}>{label}</span>
                     ))}
                   </div>
@@ -255,8 +259,21 @@ function EmailListPanel({
           </section>
         )) : (
           <div className="empty-state">
-            <h3>No matching emails</h3>
-            <p>Try another keyword or switch to a different inbox filter.</p>
+            {emails.length === 0 ? (
+              <>
+                <h3>{isLiveGmail ? 'No Gmail messages found' : 'No scanned emails yet'}</h3>
+                <p>
+                  {isLiveGmail
+                    ? 'Gmail returned no recent messages. Try Analyze Gmail again later.'
+                    : 'Use Analyze Gmail above to fetch messages. The sample emails are no longer shown.'}
+                </p>
+              </>
+            ) : (
+              <>
+                <h3>No matching emails</h3>
+                <p>Try another keyword or switch to a different inbox filter.</p>
+              </>
+            )}
           </div>
         )}
       </div>

@@ -2,6 +2,7 @@ import type { EmailPriority, EmailSignal, StudentEmail } from '../types/email'
 import type { EmailPriorityRule, EmailRule, EmailSpamRule } from '../types/emailRule'
 import type { EmailRuleEvaluation } from './emailRuleEvaluation'
 import type { EmailFilter, PriorityFilter } from '../pages/inbox/types'
+import { getUserDataItem, removeUserDataItem, setUserDataItem } from './userData'
 
 const INBOX_VIEW_STORAGE_KEY = 'ontrack-inbox-view'
 const INBOX_SCAN_STORAGE_KEY = 'ontrack-inbox-scan'
@@ -77,7 +78,7 @@ const parseSavedValue = (serialized: string, errorMessage: string): unknown => {
 
 /** Loads saved Inbox view controls, or returns null when none have been saved. */
 export function getInboxViewState(): InboxViewState | null {
-  const savedState = localStorage.getItem(INBOX_VIEW_STORAGE_KEY)
+  const savedState = getUserDataItem(INBOX_VIEW_STORAGE_KEY)
   if (savedState === null) {
     return null
   }
@@ -112,7 +113,7 @@ export function getInboxViewState(): InboxViewState | null {
 
 /** Saves the current Inbox search, filters, and selected message. */
 export function saveInboxViewState(state: InboxViewState): void {
-  localStorage.setItem(INBOX_VIEW_STORAGE_KEY, JSON.stringify(state))
+  setUserDataItem(INBOX_VIEW_STORAGE_KEY, JSON.stringify(state))
 }
 
 /** Creates a local digest of only the email and rules used by classification. */
@@ -136,7 +137,7 @@ export async function createInboxScanSignature(
 
 /** Loads scan results only when their input signature still matches the current rules and emails. */
 export function getSavedInboxScanState(sourceSignature: string): SavedInboxScanState | null {
-  const savedState = localStorage.getItem(INBOX_SCAN_STORAGE_KEY)
+  const savedState = getUserDataItem(INBOX_SCAN_STORAGE_KEY)
   if (savedState === null) {
     return null
   }
@@ -154,7 +155,7 @@ export function getSavedInboxScanState(sourceSignature: string): SavedInboxScanS
   }
 
   if (parsedState.sourceSignature !== sourceSignature) {
-    localStorage.removeItem(INBOX_SCAN_STORAGE_KEY)
+    removeUserDataItem(INBOX_SCAN_STORAGE_KEY)
     return null
   }
 
@@ -171,7 +172,7 @@ export function saveInboxScanState(
   classificationCleared: boolean,
   sourceSignature: string
 ): void {
-  localStorage.setItem(
+  setUserDataItem(
     INBOX_SCAN_STORAGE_KEY,
     JSON.stringify({
       version: 1,

@@ -1,14 +1,12 @@
 import type { Dispatch, SetStateAction } from 'react'
 import { PlannerItemAction, PlannerItemCard } from '../../components/PlannerItemCard'
 import type { EventCategory } from '../../types/calendarEvent'
-import type { StudentEmail } from '../../types/email'
 import type { CommitmentSuggestion } from './types'
 import { formatDueDate } from './utils'
 import { priorityOptions } from './types'
 
 type SuggestedCommitmentsPanelProps = {
   suggestions: CommitmentSuggestion[]
-  emails: StudentEmail[]
   categories: EventCategory[]
   editingSuggestion: CommitmentSuggestion | null
   savingSuggestionId: number | null
@@ -21,7 +19,6 @@ type SuggestedCommitmentsPanelProps = {
 
 function SuggestedCommitmentsPanel({
   suggestions,
-  emails,
   categories,
   editingSuggestion,
   savingSuggestionId,
@@ -46,7 +43,6 @@ function SuggestedCommitmentsPanel({
       {suggestions.length > 0 ? (
         <div className="suggested-commitment-list">
           {suggestions.map((suggestion) => {
-            const sourceEmail = emails.find((email) => email.id === suggestion.sourceEmailId)
             const isEditing = editingSuggestion?.id === suggestion.id
 
             return (
@@ -57,7 +53,9 @@ function SuggestedCommitmentsPanel({
                 category={suggestion.category}
                 priority={suggestion.priority}
                 dateLabel={`Due ${formatDueDate(suggestion.date, suggestion.time)}`}
-                subtitle={sourceEmail ? `From: ${sourceEmail.subject}` : undefined}
+                subtitle={suggestion.sourceEmail
+                  ? `From: ${suggestion.sourceEmail}`
+                  : undefined}
                 description={suggestion.description}
                 isSuggestion
                 isEditing={isEditing}

@@ -11,10 +11,6 @@ type PreferenceSettingsCardsProps = {
   onCalendarChange: (calendarId: string) => void
   settings: SettingsState
   updateSetting: <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void
-  gmailConnected: boolean
-  gmailBusy: boolean
-  gmailError: string | null
-  onConnectGmail: () => void
 }
 
 function PreferenceSettingsCards({
@@ -24,11 +20,7 @@ function PreferenceSettingsCards({
   selectionError,
   onCalendarChange,
   settings,
-  updateSetting,
-  gmailConnected,
-  gmailBusy,
-  gmailError,
-  onConnectGmail
+  updateSetting
 }: PreferenceSettingsCardsProps) {
   return (
     <>
@@ -117,22 +109,6 @@ function PreferenceSettingsCards({
           </label>
         </div>
         <p className="field-note">Profile details come from your signed-in account.</p>
-      </div>
-
-      <div className="settings-card">
-        <div className="card-header-row">
-          <h3>Gmail Connection</h3>
-          <span className={`status-pill ${gmailConnected ? 'connected' : 'disconnected'}`}>
-            {gmailConnected ? 'Connected' : 'Not connected'}
-          </span>
-        </div>
-        <p className="field-note">
-          Connect a Google account to let On Track read a small batch of messages for analysis. Gmail access is separate from app sign-in.
-        </p>
-        <button type="button" className="secondary-button" onClick={onConnectGmail} disabled={gmailBusy}>
-          {gmailBusy ? 'Connecting...' : gmailConnected ? 'Reconnect Gmail' : 'Connect Gmail'}
-        </button>
-        {gmailError && <p className="settings-error" role="alert">{gmailError}</p>}
       </div>
 
       <GoogleCalendarConnectionCard

@@ -71,7 +71,6 @@ function CommitmentFormModal({
             <span>Due time</span>
             <input
               type="time"
-              required
               value={commitment.dueTime}
               onChange={(event) => onChange({ ...commitment, dueTime: event.target.value })}
             />

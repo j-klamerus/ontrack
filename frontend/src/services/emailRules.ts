@@ -1,5 +1,6 @@
 // Browser persistence and validation for the ordered rules used by Inbox scans.
 import type { EmailRule } from '../types/emailRule'
+import { getUserDataItem, setUserDataItem } from './userData'
 
 const STORAGE_KEY = 'ontrack-email-rules'
 
@@ -41,7 +42,7 @@ function validateRule(rule: unknown): asserts rule is EmailRule {
 
 /** Loads and validates saved rules; a browser with no saved rules starts empty. */
 export function getEmailRules(): EmailRule[] {
-  const savedRules = localStorage.getItem(STORAGE_KEY)
+  const savedRules = getUserDataItem(STORAGE_KEY)
 
   if (!savedRules) {
     return []
@@ -65,5 +66,5 @@ export function getEmailRules(): EmailRule[] {
 /** Validates the full rule list before storing its order in browser storage. */
 export function saveEmailRules(rules: EmailRule[]): void {
   rules.forEach(validateRule)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(rules))
+  setUserDataItem(STORAGE_KEY, JSON.stringify(rules))
 }

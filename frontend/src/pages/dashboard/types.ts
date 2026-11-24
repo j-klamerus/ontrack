@@ -2,7 +2,7 @@ import type { CalendarEvent, EventCategory } from '../../types/calendarEvent'
 import type { Commitment, Priority } from '../../types/commitment'
 
 export type DashboardSummary = {
-  totalEmails: number
+  totalEmails: number | null
   highPriorityEmails: number | null
   commitments: number
   events: number

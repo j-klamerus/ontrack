@@ -18,9 +18,11 @@ export const signalOptions: EmailSignal[] = [
 
 /** Formats an email timestamp consistently in the list and message detail views. */
 export const formatDate = (value: string) =>
-  new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit'
-  }).format(new Date(value))
+  Number.isNaN(Date.parse(value))
+    ? 'Unknown date'
+    : new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      }).format(new Date(value))

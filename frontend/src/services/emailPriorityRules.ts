@@ -1,5 +1,6 @@
 // Browser persistence and validation for the ordered rules used to set email priority.
 import type { EmailPriorityRule } from '../types/emailRule'
+import { getUserDataItem, setUserDataItem } from './userData'
 
 const STORAGE_KEY = 'ontrack-email-priority-rules'
 const priorityOrder: Record<EmailPriorityRule['priority'], number> = {
@@ -58,7 +59,7 @@ function validateRule(rule: unknown): asserts rule is EmailPriorityRule {
 
 /** Loads saved priority rules; a browser with no saved rules starts without priorities. */
 export function getEmailPriorityRules(): EmailPriorityRule[] {
-  const savedRules = localStorage.getItem(STORAGE_KEY)
+  const savedRules = getUserDataItem(STORAGE_KEY)
   if (!savedRules) {
     return []
   }
@@ -82,5 +83,5 @@ export function getEmailPriorityRules(): EmailPriorityRule[] {
 export function saveEmailPriorityRules(rules: EmailPriorityRule[]): void {
   const sortedRules = sortEmailPriorityRulesByPriority(rules)
   sortedRules.forEach(validateRule)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sortedRules))
+  setUserDataItem(STORAGE_KEY, JSON.stringify(sortedRules))
 }

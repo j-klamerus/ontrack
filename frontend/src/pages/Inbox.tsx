@@ -1,9 +1,9 @@
-// Coordinates demo email loading, manual rule scans, derived signals, and Inbox filtering.
+// Coordinates scanned Gmail messages, manual rule scans, derived signals, and Inbox filtering.
 import { useEffect, useMemo, useState } from 'react'
 import '../styles/Inbox.css'
 import EmailListPanel from './inbox/EmailListPanel'
 import MessageDetailPanel from './inbox/MessageDetailPanel'
-import { getEmails, saveEmailReadStates, saveEmailReadState } from '../services/emails'
+import { saveEmailReadStates, saveEmailReadState } from '../services/emails'
 import { getEmailRules } from '../services/emailRules'
 import { getEmailPriorityRules } from '../services/emailPriorityRules'
 import { getEmailSpamSettings } from '../services/emailSpamSettings'
@@ -31,10 +31,12 @@ import {
   signalOptions,
   type EmailSort,
 } from './inbox/types'
-import { analyzeGmail, type GmailAnalysis } from '../services/gmailAnalysis'
+import { analyzeGmail, toStudentEmails, type GmailAnalysis } from '../services/gmailAnalysis'
+import { saveGmailCommitmentSuggestions } from '../services/gmailCommitmentSuggestions'
 
 type InboxProps = {
   onUnreadCountChange: (count: number) => void
+  onGmailScanComplete: (summary: { totalEmails: number; highPriorityEmails: number }) => void
 }
 
 // Ignore optional/custom rule labels when converting backend labels to baseline categories.
@@ -48,7 +50,7 @@ const prioritySortOrder: Record<EmailPriority, number> = {
 }
 
 /** Owns Inbox scan state and turns backend rule results into visible categories and groups. */
-function Inbox({ onUnreadCountChange }: InboxProps) {
+function Inbox({ onUnreadCountChange, onGmailScanComplete }: InboxProps) {
   const [emails, setEmails] = useState<StudentEmail[]>([])
   const [emailRules, setEmailRules] = useState<EmailRule[]>([])
   const [priorityRules, setPriorityRules] = useState<EmailPriorityRule[]>([])
@@ -72,14 +74,15 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   const [gmailAnalyses, setGmailAnalyses] = useState<GmailAnalysis[] | null>(null)
   const [isAnalyzingGmail, setIsAnalyzingGmail] = useState(false)
   const [gmailAnalysisError, setGmailAnalysisError] = useState<string | null>(null)
+  const [gmailPlannerMessage, setGmailPlannerMessage] = useState<string | null>(null)
 
   useEffect(() => {
     let isMounted = true
 
-    // Load the bundled messages and browser-saved rules; do not classify until the user scans.
+    // Load Inbox settings without populating the list with bundled demo messages.
     const loadInbox = async () => {
       try {
-        const loadedEmails = await getEmails()
+        const loadedEmails: StudentEmail[] = []
         const loadedRules = getEmailRules()
         const loadedPriorityRules = getEmailPriorityRules()
         const loadedSpamSettings = getEmailSpamSettings()
@@ -186,6 +189,11 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
       )
       setRuleEvaluations(results)
       setClassificationCleared(false)
+      if (gmailAnalyses !== null) {
+        setScanSignature(null)
+        setScanPersistenceError(null)
+        return
+      }
       try {
         const signature = await createInboxScanSignature(
           emails,
@@ -218,10 +226,15 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   }
 
   const hasCategoryPriorityResults = ruleEvaluations !== null && !classificationCleared
+  const useGeminiAnalysis = gmailAnalyses !== null && ruleEvaluations === null && !classificationCleared
 
   const updateInboxView = (changes: Partial<InboxViewState>) => {
     const nextViewState = { ...viewState, ...changes }
     setViewState(nextViewState)
+    if (gmailAnalyses !== null) {
+      setViewPersistenceError(null)
+      return
+    }
     try {
       saveInboxViewState(nextViewState)
       setViewPersistenceError(null)
@@ -233,6 +246,10 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   const clearCategoriesAndPriorities = () => {
     setClassificationCleared(true)
     updateInboxView({ priorityFilter: 'All', signalFilter: 'All' })
+    if (gmailAnalyses !== null) {
+      setScanPersistenceError(null)
+      return
+    }
     if (ruleEvaluations === null || scanSignature === null) {
       setScanPersistenceError('The scan can be cleared for this session, but its results could not be saved.')
       return
@@ -269,12 +286,14 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
 
       return {
         ...email,
-        priority: hasCategoryPriorityResults ? evaluation?.priority ?? null : null,
+        priority: hasCategoryPriorityResults
+          ? evaluation?.priority ?? null
+          : useGeminiAnalysis ? email.priority : null,
         spamDetected: ruleEvaluations === null ? false : evaluation?.spamDetected ?? false,
-        signals
+        signals: useGeminiAnalysis ? email.signals : signals
       }
     }),
-    [emails, evaluationsByEmailId, hasCategoryPriorityResults, ruleEvaluations]
+    [emails, evaluationsByEmailId, hasCategoryPriorityResults, ruleEvaluations, useGeminiAnalysis]
   )
 
   const labelsByEmailId = useMemo(
@@ -416,7 +435,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   const suggestedReply = selectedEmail ? suggestedReplies[selectedEmail.id] ?? null : null
 
   const updateEmailState = (id: number, changes: Partial<StudentEmail>) => {
-    if (changes.read !== undefined) {
+    if (changes.read !== undefined && gmailAnalyses === null) {
       try {
         saveEmailReadState(id, changes.read)
         setLoadError(null)
@@ -487,7 +506,9 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
     }
 
     try {
-      saveEmailReadStates(unreadIds, true)
+      if (gmailAnalyses === null) {
+        saveEmailReadStates(unreadIds, true)
+      }
       setEmails((currentEmails) =>
         currentEmails.map((email) => unreadIds.includes(email.id) ? { ...email, read: true } : email)
       )
@@ -537,8 +558,47 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
   const handleAnalyzeGmail = async () => {
     setIsAnalyzingGmail(true)
     setGmailAnalysisError(null)
+    setGmailPlannerMessage(null)
     try {
-      setGmailAnalyses(await analyzeGmail(10))
+      const analyses = await analyzeGmail()
+      const liveEmails = toStudentEmails(analyses)
+      onGmailScanComplete({
+        totalEmails: analyses.length,
+        highPriorityEmails: analyses.filter((analysis) => analysis.priority === 'High').length
+      })
+      let plannerMessage: string
+      let plannerError: string | null = null
+      try {
+        const addedCount = saveGmailCommitmentSuggestions(analyses)
+        plannerMessage = addedCount > 0
+          ? `${addedCount} dated commitment${addedCount === 1 ? '' : 's'} saved for review in the Commitments tab. Undated items stay in Inbox.`
+          : 'No new dated commitments were found; undated items stay in Inbox.'
+      } catch (error) {
+        plannerMessage = ''
+        plannerError = error instanceof Error
+          ? `Gmail loaded, but commitment suggestions could not be saved: ${error.message}`
+          : 'Gmail loaded, but commitment suggestions could not be saved.'
+      }
+
+      const nextViewState: InboxViewState = {
+        ...viewState,
+        searchTerm: '',
+        activeFilter: 'All',
+        priorityFilter: 'All',
+        signalFilter: 'All',
+        selectedId: liveEmails[0]?.id ?? null
+      }
+      setEmails(liveEmails)
+      setGmailAnalyses(analyses)
+      setRuleEvaluations(null)
+      setClassificationCleared(false)
+      setScanSignature(null)
+      setScanError(null)
+      setScanPersistenceError(null)
+      setViewState(nextViewState)
+      setViewPersistenceError(null)
+      setGmailPlannerMessage(plannerMessage || null)
+      if (plannerError) setGmailAnalysisError(plannerError)
     } catch (error) {
       setGmailAnalysisError(error instanceof Error ? error.message : 'Unable to analyze Gmail messages.')
     } finally {
@@ -563,44 +623,18 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
       <div className="gmail-analysis-toolbar">
         <div>
           <strong>Live Gmail analysis</strong>
-          <span>Fetches up to 10 recent messages. Their content is sent to Google Gemini for analysis; results are not saved.</span>
+          <span>
+            {gmailAnalyses === null
+              ? 'Fetch up to 20 recent messages. Email bodies and full analysis are not saved; dated commitment suggestions are saved for your review.'
+              : `Showing ${emails.length} live Gmail messages. Email bodies are not saved; extracted dated commitments are available for review.`}
+          </span>
         </div>
         <button type="button" className="action-button" onClick={handleAnalyzeGmail} disabled={isAnalyzingGmail}>
-          {isAnalyzingGmail ? 'Analyzing...' : 'Analyze Gmail'}
+          {isAnalyzingGmail ? 'Fetching and analyzing...' : gmailAnalyses === null ? 'Analyze Gmail' : 'Refresh Gmail'}
         </button>
       </div>
       {gmailAnalysisError && <p className="gmail-analysis-error" role="alert">{gmailAnalysisError}</p>}
-      {gmailAnalyses && (
-        <div className="gmail-analysis-results" aria-live="polite">
-          <h2>Gemini results ({gmailAnalyses.length})</h2>
-          {gmailAnalyses.map((email) => (
-            <article className="gmail-analysis-card" key={email.id}>
-              <div className="gmail-analysis-heading">
-                <div>
-                  <h3>{email.subject}</h3>
-                  <p>{email.sender}{email.receivedAt ? ` · ${email.receivedAt}` : ''}</p>
-                </div>
-                <span className={`priority-badge priority-${email.priority.toLowerCase()}`}>{email.priority}</span>
-              </div>
-              <p>{email.summary}</p>
-              <div className="signal-tags">
-                {email.signals.map((signal) => <span className="signal-tag" key={signal}>{signal}</span>)}
-                <span className="signal-tag">Scam likelihood: {Math.round(email.spamLikelihood * 100)}%</span>
-              </div>
-              {email.commitments.length > 0 && (
-                <div>
-                  <strong>Suggested commitments</strong>
-                  <ul>{email.commitments.map((item, index) => (
-                    <li key={`${email.id}-${index}`}>
-                      {item.title}{item.dueAt ? ` — ${item.dueAt}` : ' — no date stated'}
-                    </li>
-                  ))}</ul>
-                </div>
-              )}
-            </article>
-          ))}
-        </div>
-      )}
+      {gmailPlannerMessage && <p className="gmail-analysis-status" role="status">{gmailPlannerMessage}</p>}
       <div className="inbox-shell">
         <EmailListPanel
           emails={emails}
@@ -621,6 +655,7 @@ function Inbox({ onUnreadCountChange }: InboxProps) {
           sortError={sortError}
           persistenceError={[viewPersistenceError, scanPersistenceError].filter(Boolean).join(' ') || null}
           hasActiveSearchFilters={hasActiveSearchFilters}
+          isLiveGmail={gmailAnalyses !== null}
           onSelectEmail={(id) => updateInboxView({ selectedId: id })}
           onSearchChange={(nextSearchTerm) => updateInboxView({ searchTerm: nextSearchTerm })}
           onFilterChange={(nextFilter) => updateInboxView({ activeFilter: nextFilter })}

@@ -311,6 +311,31 @@
   background-color: var(--color-surface);
 }
 
+:root[data-theme='dark'] .settings-page .gmail-connection-card {
+  border-color: #31577d;
+  background: linear-gradient(110deg, #172b40 0%, var(--color-surface) 76%);
+}
+
+:root[data-theme='dark'] .settings-page .settings-page-header h1,
+:root[data-theme='dark'] .settings-page .gmail-connection-title-row h2 {
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .settings-page .settings-page-header > div > p:last-child,
+:root[data-theme='dark'] .settings-page .gmail-connection-copy > p:last-child {
+  color: var(--color-text-secondary);
+}
+
+:root[data-theme='dark'] .settings-page .gmail-connection-icon {
+  background-color: #203d5d;
+  color: #93c5fd;
+}
+
+:root[data-theme='dark'] .settings-page .gmail-connection-card .settings-eyebrow,
+:root[data-theme='dark'] .settings-page-header .settings-eyebrow {
+  color: #93c5fd;
+}
+
 :root[data-theme='dark'] .settings-page .card-header-row h3,
 :root[data-theme='dark'] .settings-page .category-name,
 :root[data-theme='dark'] .settings-page .settings-leave-header h2,

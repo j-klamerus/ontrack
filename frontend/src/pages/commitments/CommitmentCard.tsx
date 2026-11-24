@@ -39,14 +39,16 @@ function CommitmentCard({
         <>
           <PlannerItemAction kind="edit" onClick={() => onEdit(commitment)} />
           <PlannerItemAction kind="delete" onClick={() => onDelete(commitment.id)} />
-          <PlannerItemAction
-            kind="calendar"
-            onClick={() => onViewInCalendar({
-              kind: 'Commitment',
-              id: commitment.id,
-              date: commitment.dueDate
-            })}
-          />
+          {commitment.dueTime && (
+            <PlannerItemAction
+              kind="calendar"
+              onClick={() => onViewInCalendar({
+                kind: 'Commitment',
+                id: commitment.id,
+                date: commitment.dueDate
+              })}
+            />
+          )}
         </>
       )}
       trailingContent={

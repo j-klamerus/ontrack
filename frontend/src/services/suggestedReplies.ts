@@ -1,6 +1,7 @@
 // Combines bundled reply examples with local edits and review decisions.
 import demoSuggestedReplies from '../data/demoSuggestedReplies.json'
 import type { StudentEmail } from '../types/email'
+import { getUserDataItem, setUserDataItem } from './userData'
 
 type SuggestedReplyRecord = {
   emailId: number
@@ -28,7 +29,7 @@ const getDemoReplies = (): SuggestedReplyRecord[] => {
 }
 
 const getSavedReplies = (): Record<string, string> => {
-  const savedReplies = localStorage.getItem(STORAGE_KEY)
+  const savedReplies = getUserDataItem(STORAGE_KEY)
   if (!savedReplies) {
     return {}
   }
@@ -67,15 +68,15 @@ export function saveSuggestedReply(emailId: number, reply: string): void {
   const savedReviews = readReviewedReplies()
   delete savedReviews[emailId]
 
-  localStorage.setItem(
+  setUserDataItem(
     STORAGE_KEY,
     JSON.stringify({ ...savedReplies, [emailId]: reply })
   )
-  localStorage.setItem(REVIEWED_STORAGE_KEY, JSON.stringify(savedReviews))
+  setUserDataItem(REVIEWED_STORAGE_KEY, JSON.stringify(savedReviews))
 }
 
 const readReviewedReplies = (): Record<string, 'confirmed' | 'dismissed'> => {
-  const savedReviews = localStorage.getItem(REVIEWED_STORAGE_KEY)
+  const savedReviews = getUserDataItem(REVIEWED_STORAGE_KEY)
   if (!savedReviews) {
     return {}
   }
@@ -101,7 +102,7 @@ const readReviewedReplies = (): Record<string, 'confirmed' | 'dismissed'> => {
 /** Hides a reply card after the user confirms or dismisses it. */
 export function resolveSuggestedReply(emailId: number, status: 'confirmed' | 'dismissed'): void {
   const reviews = readReviewedReplies()
-  localStorage.setItem(
+  setUserDataItem(
     REVIEWED_STORAGE_KEY,
     JSON.stringify({ ...reviews, [emailId]: status })
   )

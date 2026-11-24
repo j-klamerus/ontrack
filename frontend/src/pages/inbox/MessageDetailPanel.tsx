@@ -40,17 +40,19 @@ function MessageDetailPanel({
               <p className="detail-meta">{email.email}</p>
             </div>
 
-            <div className="message-actions">
-              <button type="button" className="action-button" onClick={() => onToggleRead(email.id)}>
-                {email.read ? 'Mark unread' : 'Mark read'}
-              </button>
-              <button type="button" className="action-button" onClick={() => onToggleImportant(email.id)}>
-                {email.important ? 'Remove importance' : 'Mark important'}
-              </button>
-              <button type="button" className="action-button danger" onClick={() => onToggleSpam(email.id)}>
-                {email.spam ? 'Restore email' : 'Move to Spam'}
-              </button>
-            </div>
+            {email.source !== 'gmail' && (
+              <div className="message-actions">
+                <button type="button" className="action-button" onClick={() => onToggleRead(email.id)}>
+                  {email.read ? 'Mark unread' : 'Mark read'}
+                </button>
+                <button type="button" className="action-button" onClick={() => onToggleImportant(email.id)}>
+                  {email.important ? 'Remove importance' : 'Mark important'}
+                </button>
+                <button type="button" className="action-button danger" onClick={() => onToggleSpam(email.id)}>
+                  {email.spam ? 'Restore email' : 'Move to Spam'}
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="message-subject-row">
@@ -97,7 +99,27 @@ function MessageDetailPanel({
               <p key={`${email.id}-${index}`}>{line || ' '}</p>
             ))}
           </div>
-          {email.important && (
+          {email.source === 'gmail' && email.gmailAnalysis ? (
+            <div className="ai-card">
+              <div className="ai-header">
+                <span className="section-label">Gemini analysis</span>
+              </div>
+              <p className="ai-summary">{email.summary}</p>
+              <p>Spam likelihood: {Math.round(email.gmailAnalysis.spamLikelihood * 100)}%</p>
+              {email.gmailAnalysis.commitments.length > 0 && (
+                <div className="ai-detected">
+                  <h5>Suggested commitments</h5>
+                  <ul>
+                    {email.gmailAnalysis.commitments.map((commitment, index) => (
+                      <li key={`${email.id}-commitment-${index}`}>
+                        {commitment.title}{commitment.dueAt ? ` — ${commitment.dueAt}` : ' — no date stated'}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : email.important ? (
             <div className="ai-card">
               <div className="ai-header">
                 <span className="section-label">AI summary</span>
@@ -110,9 +132,9 @@ function MessageDetailPanel({
                 </ul>
               </div>
             </div>
-          )}
+          ) : null}
 
-          {suggestedReply ? (
+          {email.source === 'gmail' ? null : suggestedReply ? (
             <SuggestedReplyCard
               email={email}
               reply={suggestedReply}

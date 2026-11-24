@@ -10,8 +10,10 @@ function SummaryCards({ summary }: SummaryCardsProps) {
     <div className="summary-grid">
       <div className="summary-card total-emails">
         <Mail className="summary-icon" size={30} strokeWidth={1.8} />
-        <span className="summary-number">{summary.totalEmails.toLocaleString()}</span>
-        <span className="summary-label">Total Emails</span>
+        <span className="summary-number">
+          {summary.totalEmails === null ? '--' : summary.totalEmails.toLocaleString()}
+        </span>
+        <span className="summary-label">Scanned Emails</span>
       </div>
 
       <div className="summary-card high-priority">

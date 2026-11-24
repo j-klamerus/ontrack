@@ -41,12 +41,19 @@
 ### Set Up Login
 The frontend login uses Supabase Auth. Create `frontend/.env` (in the frontend folder, not `frontend/src/`) with the Supabase project URL and publishable/anon key:
 ~~~
-VITE_SUPABASE_URL=https://amogopewpbsdlndfacbq.supabase.co
-VITE_SUPABASE_ANON_KEY=sb_publishable_p4uU0mVKkW3mW_BTPhXqgw_-25u3UAG
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your-supabase-publishable-key
 ~~~
-Restart Vite after changing this file. In Supabase, enable the Email provider for password sign-in and account creation. To use "Continue with Google", enable the Google provider under Authentication > Sign In / Providers, add the Supabase callback URL shown there to your Google OAuth client's authorized redirect URIs, and add your local and deployed frontend origins to Supabase's allowed redirect URLs. Gmail API access is separate from Google sign-in and requires its own Gmail authorization flow.
+Restart Vite after changing this file. In Supabase, enable the Email provider for password sign-in and account creation. To use "Continue with Google", enable the Google provider under Authentication > Sign In / Providers, add the Supabase callback URL shown there to your Google OAuth client's authorized redirect URIs, and add your local and deployed frontend origins to Supabase's allowed redirect URLs. The app keeps the auth session only in memory, so users must sign in again after a normal page reload. During the Gmail authorization redirect only, On Track keeps a short-lived sign-in snapshot in the current tab and restores it when Google returns to the app. Gmail API access is separate from Google sign-in and requires its own Gmail authorization flow; a backend restart may require reconnecting Gmail.
 
 The dashboard and Student Profile show details from the signed-in account. Profile fields are read-only; email/password accounts do not provide a name during registration, so the dashboard uses the email address when no name is available.
+
+### Set Up Supabase User Data
+1. In the Supabase dashboard for the project configured in `frontend/.env`, open **SQL Editor**.
+2. Run the migration in `supabase/migrations/20261123200000_user_app_data.sql`. It creates `public.user_app_data` and row-level security policies that allow authenticated users to access only their own rows.
+3. Restart Vite. User-owned planner changes, settings, categories, rules, and review state will load from Supabase and sync as they are changed.
+
+The browser keeps a per-account cache so the app can work across page reloads. If a cloud save fails, On Track displays an error and offers a retry; signing out waits for pending saves. On first sign-in, existing unscoped browser data is offered for import rather than silently assigned to an account. Bundled demo email/calendar fixtures are not copied to Supabase or shown in the planner. Gmail OAuth tokens and Gmail message bodies are not stored in this table. The Inbox starts empty and only displays messages fetched through **Analyze Gmail**; fetched messages and full Gemini analyses stay in the Inbox page state and are not saved, so fetch them again after leaving Inbox or reloading. Dashboard email totals reflect the latest Gmail scan in the current app session and are cleared on sign-out. Commitments and local calendar events use only the signed-in user's saved items and reviewed Gmail suggestions. The Gmail connection is read-only and does not add events to Google Calendar. Google Calendar selection and sync metadata remain in the existing backend-local prototype store. Never put a Supabase service-role key in the frontend.
 
 
 ### Setup the Backend
@@ -108,11 +115,11 @@ Calendar tests use mocked Google and Supabase responses, they do not verify a li
 
 This runs ESLint on the frontend code and can help catch common issues while developing. The backend does not currently have a lint script.
 
-### Demo Email Rules
+### Gmail Inbox and Email Rules
 
-The Inbox rule demo uses the backend endpoint `POST /api/email-rules/evaluate` when you click **Scan emails**. It sends the bundled sample emails from `frontend/src/data/demoEmails.json` and your locally saved category, priority, and spam settings to the backend; it does not fetch real Gmail messages. The Gmail connection card is a placeholder, and the backend's separate OAuth prototype routes are not used by the Inbox scan.
+The Inbox starts empty rather than showing bundled sample emails. Click **Analyze Gmail** to fetch up to 20 recent Gmail messages; only those fetched messages appear in the Inbox. Click **Scan emails** to apply your saved category, priority, and spam rules through the backend endpoint `POST /api/email-rules/evaluate`. The scan only classifies the fetched messages; it does not modify or label messages in Gmail.
 
-Before scanning, the Inbox doesn't show rule-derived categories, labels, priorities, or spam matches. After scanning, the backend returns matching labels and sorts emails by the first matching category rule. Rule order in Settings controls group order, unmatched messages appear under `Other`, and messages within each group are newest-first. Priority rules are checked separately: when multiple rules match, High takes precedence over Medium, then Low; saved rule order breaks ties. Emails with no matching priority rule stay unprioritized. The Dashboard uses matching saved scan results for its High Priority total; before the first scan, the total is shown as unavailable and suggested-reply emails have no rule-derived priorities. Use **Clear categories & priorities** in the Inbox to remove scan-derived category labels and priority results without removing spam detections; the dashboard count also reflects the cleared priorities until you scan again. The Inbox saves its scan results, clear state, search and filters, selected email, and sort choice in this browser, so they survive page changes and reloads. Saved scan results are reused only while the matching email content and rules are unchanged. Spam detection checks enabled content rules and exact blocked sender addresses. A detected match is shown in the Inbox and included in the **Spam** filter, but isn't moved automatically; use **Move to Spam** when you want to move a message into the demo spam queue. Signals and the category, priority, and spam results are for display in the demo only; the app does not modify or label messages in Gmail.
+Category rules determine group order, unmatched messages appear under `Other`, and messages within each group are newest-first. Priority rules are checked separately: when multiple rules match, High takes precedence over Medium, then Low; saved rule order breaks ties. Emails with no matching priority rule stay unprioritized. Scan results for fetched Gmail messages are temporary and are not saved with the messages. Spam detection checks enabled content rules and exact blocked sender addresses. A detected match is shown in the Inbox and included in the **Spam** filter, but Gmail messages are never moved or changed.
 
 Settings includes a Baseline Categories rule set for Assignment, Exam, Meeting, Appointment, Deadline, and Other, plus an optional Campus & Study Extras set with academic and campus-service rules. The baseline now covers common campus events and singular “quiz” mentions in the expanded sample inbox. There's also a Baseline Priorities set for common urgency, school tasks, and general notices, plus a Student-focused priority refinements set with more specific student actions and explicit weekday deadlines. Within each priority level, refinements are evaluated before baseline rules; priority level takes precedence overall (High, then Medium, then Low). Load both priority sets to use them together. A Baseline spam rules set looks for common account-pressure and sensitive-information requests. Each set can be loaded or unloaded as a group. Individual rules can be enabled, disabled, or deleted, and custom rules are preserved when unloading a set. You can also add exact sender email addresses to the blocked-senders list and remove them individually. These settings are saved in your browser.
 
@@ -130,15 +137,15 @@ Invoke-RestMethod http://localhost:3000/
 
 The response should contain `message: "Hello World!"`. This checks that the backend is reachable; the demo email scan is tested separately below.
 
-### Verify the Demo Email Scan
+### Verify the Gmail Inbox
 
-1. Start both the frontend and backend using the steps above.
-2. In the app, enter a valid email address and any password on the demo sign-in screen. Sign-in is simulated; no account is created or checked.
-3. Open **Settings** and load **Baseline Categories**, **Baseline Priorities**, **Student-focused priority refinements**, and **Baseline spam rules**. You can also load **Campus & Study Extras**, add a spam rule, or add an exact sender address to **Blocked senders**.
-4. Open **Inbox** and click **Scan emails**. The emails should be grouped and labeled by the category rules, get a priority when they match a priority rule, and show **Spam detected** when a spam rule or blocked sender matches. Emails without a priority match stay unprioritized. Detected spam isn't moved automatically; use **Move to Spam** to put it in the demo spam queue.
-5. To try the scan again after changing rules, return to **Inbox** and click **Rescan emails**.
+1. Start the frontend and backend using the steps above and sign in to your account.
+2. Connect Gmail using the app's Gmail authorization flow.
+3. Open **Settings** and configure category, priority, or spam rules as needed.
+4. Open **Inbox** and click **Analyze Gmail**. The Inbox should show the messages returned from Gmail; bundled sample messages are not displayed.
+5. Click **Scan emails** to apply your rules, or **Refresh Gmail** to fetch and analyze the latest messages again.
 
-The scan uses the bundled sample emails and requires the backend to be running. It does not connect to Gmail.
+Gmail fetching and email-rule scanning require the backend to be running. Fetched messages are not persisted, so use **Analyze Gmail** again after reloading or leaving the Inbox.
 
 ### LEGACY: Gemini Setup for the Separate `small-demo` Branch
 
