@@ -25,9 +25,6 @@ import { SETTINGS_STORAGE_KEY } from '../services/user'
 import { DEFAULT_PLANNER_KEY_DEFAULTS } from '../services/plannerKeyPreferences'
 import type { EventCategoryDefinition } from '../constants/eventCategories'
 import CategorySettingsCard from './settings/CategorySettingsCard'
-import EmailRulesCard from './settings/EmailRulesCard'
-import EmailPriorityRulesCard from './settings/EmailPriorityRulesCard'
-import EmailSpamSettingsCard from './settings/EmailSpamSettingsCard'
 import GmailConnectionCard from './settings/GmailConnectionCard'
 import PreferenceSettingsCards from './settings/PreferenceSettingsCards'
 import { getGmailConnectionStatus, startGmailConnection } from '../services/gmailAnalysis'
@@ -380,7 +377,7 @@ function Settings({
         <div>
           <p className="settings-eyebrow">ON TRACK</p>
           <h1>Settings</h1>
-          <p>Manage your Gmail connection, inbox rules, calendar, and preferences.</p>
+          <p>Manage your account, Gmail and calendar connections, categories, and preferences.</p>
         </div>
       </header>
 
@@ -392,6 +389,7 @@ function Settings({
       )}
 
       <GmailConnectionCard
+        user={user}
         connected={gmailConnected}
         busy={gmailBusy}
         error={gmailError}
@@ -410,12 +408,7 @@ function Settings({
           onRemoveCategory={handleRemoveCategory}
         />
 
-        {/* Rules have their own storage and save lifecycle, separate from general preferences. */}
-        <EmailRulesCard />
-        <EmailPriorityRulesCard />
-        <EmailSpamSettingsCard />
         <PreferenceSettingsCards
-          user={user}
           selectedCalendarId={selectedCalendarId}
           selectionLoading={selectionLoading}
           selectionError={selectionError}

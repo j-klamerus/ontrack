@@ -5,7 +5,8 @@ import {
   Mail,
   ClipboardList,
   CalendarDays,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Sparkles
 } from 'lucide-react'
 import './App.css'
 
@@ -14,6 +15,7 @@ import Inbox from './pages/Inbox'
 import Commitments from './pages/Commitments'
 import Calendar from './pages/Calendar'
 import Settings from './pages/Settings'
+import PremiumFeatures from './pages/PremiumFeatures'
 import { getDashboardSuggestions } from './services/dashboardSuggestions'
 import { getUserProfile, SETTINGS_STORAGE_KEY } from './services/user'
 import { getUserDataItem } from './services/userData'
@@ -43,7 +45,7 @@ const getInitialTheme = (): Theme => {
   return 'light'
 }
 
-type Page = 'Dashboard' | 'Inbox' | 'Commitments' | 'Calendar' | 'Settings'
+type Page = 'Dashboard' | 'Inbox' | 'Commitments' | 'Calendar' | 'Premium' | 'Settings'
 type SuggestionCounts = Record<PlannerPage, number>
 type PendingSettingsExit = { type: 'navigate'; page: Page } | { type: 'logout' }
 
@@ -230,7 +232,8 @@ function App({ user, onLogOut, authError }: AppProps) {
         onCancelLeave={() => setPendingSettingsExit(null)}
         onLeaveAnyway={finishSettingsExit}
       />
-    )
+    ),
+    Premium: <PremiumFeatures />
   }
 
   const navigationItems = [
@@ -295,6 +298,14 @@ function App({ user, onLogOut, authError }: AppProps) {
 
         <div className="sidebar-bottom">
           <button
+            className={`nav-item ${currentPage === 'Premium' ? 'active' : ''}`}
+            aria-current={currentPage === 'Premium' ? 'page' : undefined}
+            onClick={() => navigateToPage('Premium')}
+          >
+            <Sparkles size={20} strokeWidth={1.8} />
+            <span>Premium</span>
+          </button>
+          <button
             className={`nav-item ${currentPage === 'Settings' ? 'active' : ''}`}
             aria-current={currentPage === 'Settings' ? 'page' : undefined}
             onClick={() => navigateToPage('Settings')}
@@ -307,7 +318,7 @@ function App({ user, onLogOut, authError }: AppProps) {
 
       <main className="main-content">
         <header className="top-bar">
-          <h1>{currentPage}</h1>
+          <h1>{currentPage === 'Premium' ? 'Premium Features' : currentPage}</h1>
         </header>
 
         {authError && <p className="auth-error" role="alert">{authError}</p>}

@@ -103,25 +103,31 @@ Return an empty commitments array if there are no concrete student commitments.
 Email data (JSON):
 ${JSON.stringify(promptEmails)}`
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseJsonSchema: responseSchema,
-          temperature: 0.2,
-          maxOutputTokens: 8192,
-        },
-      }),
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`
+  const request: RequestInit = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
     },
-  )
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseJsonSchema: responseSchema,
+        temperature: 0.2,
+        maxOutputTokens: 8192,
+      },
+    }),
+  }
+  let response: Response | undefined
+  for (let attempt = 0; attempt <= 2; attempt += 1) {
+    response = await fetch(url, request)
+    if (response.status !== 503 || attempt === 2) break
+    await response.arrayBuffer()
+    await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)))
+  }
+  if (!response) throw new Error('Gemini request did not return a response.')
 
   const responseBody: unknown = await response.json().catch(() => null)
   if (!response.ok) {
@@ -141,6 +147,9 @@ ${JSON.stringify(promptEmails)}`
         ? { message: providerError.message }
         : {}),
     })
+    if (response.status === 503) {
+      throw new Error('Gemini is temporarily unavailable due to high demand. Please try scanning again in a minute.')
+    }
     throw new Error(`Gemini analysis failed (HTTP ${response.status}). Check backend configuration and try again.`)
   }
 
@@ -174,21 +183,29 @@ export async function analyzeEmails(emails: EmailForAnalysis[]): Promise<EmailAn
   const model = process.env.GEMINI_MODEL
   if (!apiKey || !model) throw new Error('Gemini is not configured on the backend.')
 
-  const sourceIds = new Set(emails.map((email) => email.id))
-  const firstBatch = validateAnalyses(await requestGemini(emails, apiKey, model), sourceIds)
-  const analysesById = new Map(firstBatch.map((analysis) => [analysis.id, analysis]))
-  const missingEmails = emails.filter((email) => !analysesById.has(email.id))
+  const analysesById = new Map<string, EmailAnalysis>()
+  const batchSize = 20
 
-  // Retry omitted messages individually so one difficult message cannot discard valid results.
-  for (const email of missingEmails) {
-    const [retry] = validateAnalyses(
-      await requestGemini([email], apiKey, model),
-      new Set([email.id]),
-    )
-    if (!retry) {
-      throw new Error('Gemini omitted a message in the batch and its individual retry. Try a smaller batch.')
+  for (let offset = 0; offset < emails.length; offset += batchSize) {
+    const batch = emails.slice(offset, offset + batchSize)
+    const sourceIds = new Set(batch.map((email) => email.id))
+    const firstBatch = validateAnalyses(await requestGemini(batch, apiKey, model), sourceIds)
+    for (const analysis of firstBatch) {
+      analysesById.set(analysis.id, analysis)
     }
-    analysesById.set(email.id, retry)
+    const missingEmails = batch.filter((email) => !analysesById.has(email.id))
+
+    // Retry omitted messages individually so one difficult message cannot discard valid results.
+    for (const email of missingEmails) {
+      const [retry] = validateAnalyses(
+        await requestGemini([email], apiKey, model),
+        new Set([email.id]),
+      )
+      if (!retry) {
+        throw new Error('Gemini omitted a message in the batch and its individual retry. Try a smaller batch.')
+      }
+      analysesById.set(email.id, retry)
+    }
   }
 
   return emails.map((email) => {

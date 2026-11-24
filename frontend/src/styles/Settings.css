@@ -75,12 +75,58 @@
   line-height: 1.2;
 }
 
-.gmail-connection-copy > p:last-child {
+.gmail-connection-description {
   max-width: 720px;
   margin: 9px 0 0;
   color: var(--color-text-secondary);
   font-size: 14px;
   line-height: 1.6;
+}
+
+.gmail-account-profile {
+  margin-top: 18px;
+  padding-top: 15px;
+  border-top: 1px solid var(--color-border);
+}
+
+.gmail-account-profile-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-bottom: 10px;
+}
+
+.gmail-account-profile-heading h3 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 15px;
+}
+
+.gmail-account-profile-heading p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.gmail-account-profile-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 24px;
+  margin: 0;
+}
+
+.gmail-account-profile-fields dt {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.gmail-account-profile-fields dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text-strong);
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .gmail-connection-action .primary-button {
@@ -661,6 +707,8 @@
   color: #b91c1c;
   font-size: 13px;
   line-height: 1.5;
+}
+
 .settings-page button {
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease,
     transform 100ms ease, box-shadow 100ms ease;
@@ -1071,6 +1119,10 @@
 
   .gmail-connection-action .primary-button {
     width: 100%;
+  }
+
+  .gmail-account-profile-fields {
+    grid-template-columns: 1fr;
   }
 
   .settings-card {

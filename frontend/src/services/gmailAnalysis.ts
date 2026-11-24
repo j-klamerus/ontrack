@@ -66,6 +66,10 @@ export async function startGmailConnection(): Promise<string> {
 }
 
 export async function analyzeGmail(maxResults = 20): Promise<GmailAnalysis[]> {
+  if (!Number.isInteger(maxResults) || maxResults < 10 || maxResults > 50) {
+    throw new Error('Email scan limit must be a whole number from 10 to 50.')
+  }
+
   const body = await readApiJson(await authenticatedFetch('/api/emails/analyze', {
     method: 'POST',
     body: JSON.stringify({ maxResults }),

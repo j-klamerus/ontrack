@@ -12,15 +12,31 @@ test('calendar API authenticates, stores selections, and normalizes Google event
   const originalDirectory = process.cwd()
   const directory = await mkdtemp(join(tmpdir(), 'ontrack-api-test-'))
   const originalFetch = globalThis.fetch
+  const environmentKeys = [
+    'SUPABASE_URL',
+    'SUPABASE_ANON_KEY',
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET',
+    'GOOGLE_CALENDAR_CLIENT_ID',
+    'GOOGLE_CALENDAR_CLIENT_SECRET',
+    'GOOGLE_CALENDAR_REDIRECT_URI'
+  ]
+  const originalEnvironment = Object.fromEntries(environmentKeys.map((key) => [key, process.env[key]]))
   process.chdir(directory)
   process.env.SUPABASE_URL = 'https://auth.invalid'
   process.env.SUPABASE_ANON_KEY = 'test-key'
-  process.env.GOOGLE_CALENDAR_CLIENT_ID = 'test-client'
-  process.env.GOOGLE_CALENDAR_CLIENT_SECRET = 'test-secret'
+  process.env.GOOGLE_CLIENT_ID = 'shared-test-client'
+  process.env.GOOGLE_CLIENT_SECRET = 'shared-test-secret'
+  delete process.env.GOOGLE_CALENDAR_CLIENT_ID
+  delete process.env.GOOGLE_CALENDAR_CLIENT_SECRET
   process.env.GOOGLE_CALENDAR_REDIRECT_URI = 'http://localhost/callback'
   const originalOAuth = google.auth.OAuth2
   const originalCalendar = google.calendar
+  const oauthConfigurations = []
   google.auth.OAuth2 = class {
+    constructor(clientId, clientSecret, redirectUri) {
+      oauthConfigurations.push({ clientId, clientSecret, redirectUri })
+    }
     generateAuthUrl(options) { return `https://accounts.google.com/?state=${options.state}` }
     async getToken() { return { tokens: { refresh_token: 'test-refresh' } } }
     setCredentials() {}
@@ -29,6 +45,13 @@ test('calendar API authenticates, stores selections, and normalizes Google event
     id: 'event-1', summary: 'Test event',
     start: { dateTime: '2025-03-09T06:30:00Z' },
     end: { dateTime: '2025-03-09T07:30:00Z' }
+  }
+  const homeWorkingLocation = {
+    id: 'home-weekdays',
+    summary: 'Home',
+    eventType: 'workingLocation',
+    start: { date: '2025-03-10' },
+    end: { date: '2025-03-11' }
   }
   const listRequests = []
   const syncedEvents = new Map()
@@ -40,7 +63,7 @@ test('calendar API authenticates, stores selections, and normalizes Google event
         listRequests.push(options)
         return options.pageToken
           ? { data: { items: [{ ...event, id: 'event-2' }, ...[...syncedEvents.values()].filter((item) => item.calendarId === options.calendarId).map((item) => item.event)] } }
-          : { data: { items: [event], nextPageToken: 'next-page' } }
+          : { data: { items: [event, homeWorkingLocation], nextPageToken: 'next-page' } }
       },
       insert: async ({ calendarId, requestBody }) => {
         if (!requestBody.id) return { data: event }
@@ -104,12 +127,25 @@ test('calendar API authenticates, stores selections, and normalizes Google event
 
     const base = `http://127.0.0.1:${server.address().port}`
     const headers = { Authorization: 'Bearer user-one', 'Content-Type': 'application/json' }
+    const calendarRedirectUri = process.env.GOOGLE_CALENDAR_REDIRECT_URI
+    delete process.env.GOOGLE_CALENDAR_REDIRECT_URI
+    const setupError = await originalFetch(`${base}/api/google/calendar/connect`, { headers })
+    assert.equal(setupError.status, 503)
+    assert.match((await setupError.json()).error, /GOOGLE_CALENDAR_REDIRECT_URI/)
+    process.env.GOOGLE_CALENDAR_REDIRECT_URI = calendarRedirectUri
+
     const connect = await (await originalFetch(`${base}/api/google/calendar/connect`, { headers })).json()
+    assert.deepEqual(oauthConfigurations[0], {
+      clientId: 'shared-test-client',
+      clientSecret: 'shared-test-secret',
+      redirectUri: calendarRedirectUri
+    })
     const state = new URL(connect.url).searchParams.get('state')
     assert.equal((await originalFetch(`${base}/auth/google/calendar/callback?state=${state}&code=test`, { redirect: 'manual' })).status, 302)
     const list = await originalFetch(`${base}/api/google/calendar/events?calendarId=work&timeZone=America%2FNew_York&timeMin=2025-03-01T00%3A00%3A00Z&timeMax=2025-04-01T00%3A00%3A00Z`, { headers })
     const listedEvents = (await list.json()).events
     assert.deepEqual(listedEvents.map((item) => item.googleEventId), ['event-1', 'event-2'])
+    assert.equal(listedEvents.some((item) => item.title === 'Home'), false)
     assert.equal(listRequests.length, 2)
     assert.equal(listRequests[1].pageToken, 'next-page')
     assert.equal(listRequests[1].calendarId, 'work')
@@ -172,11 +208,10 @@ test('calendar API authenticates, stores selections, and normalizes Google event
     google.auth.OAuth2 = originalOAuth
     google.calendar = originalCalendar
     process.chdir(originalDirectory)
-    delete process.env.SUPABASE_URL
-    delete process.env.SUPABASE_ANON_KEY
-    delete process.env.GOOGLE_CALENDAR_CLIENT_ID
-    delete process.env.GOOGLE_CALENDAR_CLIENT_SECRET
-    delete process.env.GOOGLE_CALENDAR_REDIRECT_URI
+    for (const [key, value] of Object.entries(originalEnvironment)) {
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
     const selections = join(directory, '.ontrack-data', 'calendar-selections')
     for (const name of await readdir(selections)) await unlink(join(selections, name))
     await rmdir(selections)

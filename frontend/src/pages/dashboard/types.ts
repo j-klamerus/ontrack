@@ -42,5 +42,34 @@ export const toUpcomingEvent = (event: CalendarEvent): DashboardUpcomingItem => 
   priority: event.priority
 })
 
-export const isUpcoming = ({ date, time }: DashboardUpcomingItem) =>
-  new Date(`${date}T${time}:00`) >= new Date()
+export const parseDashboardDateTime = (date: string, time: string): Date | null => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null
+  if (time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return null
+
+  const parsed = new Date(`${date}T${time || '00:00'}:00`)
+  if (Number.isNaN(parsed.getTime())) return null
+
+  const [year, month, day] = date.split('-').map(Number)
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() + 1 !== month ||
+    parsed.getDate() !== day
+  ) {
+    return null
+  }
+
+  return parsed
+}
+
+export const isUpcoming = ({ date, time }: DashboardUpcomingItem) => {
+  const dueAt = parseDashboardDateTime(date, time)
+  if (!dueAt) return false
+
+  if (!time) {
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+    return dueAt >= startOfToday
+  }
+
+  return dueAt >= new Date()
+}
