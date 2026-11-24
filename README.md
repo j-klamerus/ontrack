@@ -1,8 +1,3 @@
-# STILL TODO
-- As of now users must manually reconnect their gmail after the server restarts. Gmail/Google credentials need to be stored and linked to each users login on supabase. This seems pretty complicated so probably get some help from Copilot or Claude.
-- The backend now handles all the necessary api calls to get the emails and gemini response, but it only dumps it to the screen. Frontend needs work to actually display the gemini responses the way we want them shown.
-- The gemini responses need to be saved in the database and there needs to be some kind of logic implemented that checks if a given email has already been analyzed. If the email is found to have already been analyzed the stored result should be used instead of a new gemini call.
-
 # How to run the project:
 
 ## Requirements:
