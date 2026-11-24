@@ -35,7 +35,7 @@ const fieldLabels: Record<EmailRuleField, string> = {
 
 type SpamSettingsState = EmailSpamSettings & { error: string }
 
-/** Provides editable spam detection rules and a locally saved exact-address blocklist. */
+/** Provides editable spam rules and a saved exact-address blocklist. */
 function EmailSpamSettingsCard() {
   const [state, setState] = useState<SpamSettingsState>(() => {
     try {
@@ -133,11 +133,11 @@ function EmailSpamSettingsCard() {
   return (
     <div className="settings-card email-rules-card">
       <div className="card-header-row">
-        <h3>Email Spam Detection</h3>
+        <h3>Spam &amp; Phishing Detection</h3>
       </div>
       <p className="field-note email-rules-note">
         Scans flag messages that match an enabled rule or blocked sender. Detection does not move messages to Spam automatically.
-        Spam rules and sender blocks are saved in this browser.
+        Spam rules and sender blocks are saved to your account.
       </p>
 
       <form className="email-rule-form" onSubmit={addRule}>

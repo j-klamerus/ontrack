@@ -41,6 +41,18 @@ for (const [name, value] of Object.entries(requiredEnvironment)) {
   }
 }
 
+const frontendUrl = new URL(FRONTEND_URL)
+const allowedFrontendOrigins = new Set([frontendUrl.origin])
+if (frontendUrl.hostname === 'localhost') {
+  const loopbackFrontendUrl = new URL(frontendUrl)
+  loopbackFrontendUrl.hostname = '127.0.0.1'
+  allowedFrontendOrigins.add(loopbackFrontendUrl.origin)
+} else if (frontendUrl.hostname === '127.0.0.1') {
+  const loopbackFrontendUrl = new URL(frontendUrl)
+  loopbackFrontendUrl.hostname = 'localhost'
+  allowedFrontendOrigins.add(loopbackFrontendUrl.origin)
+}
+
 const app = express()
 const supabase = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!)
 const googleScopes = ['https://www.googleapis.com/auth/gmail.readonly']
@@ -51,7 +63,7 @@ const port = Number(PORT)
 const pendingAuthorizations = new Map<string, { userId: string; expiresAt: number }>()
 const gmailRefreshTokens = new Map<string, string>()
 
-app.use(cors({ origin: FRONTEND_URL }))
+app.use(cors({ origin: [...allowedFrontendOrigins] }))
 app.use(express.json({ limit: '1mb' }))
 app.use(googleCalendarRouter)
 
@@ -218,8 +230,8 @@ app.post('/api/emails/analyze', requireSignedInUser, async (req: AuthenticatedRe
 
   const requestedLimit = req.body?.maxResults
   const maxResults = requestedLimit === undefined ? 20 : Number(requestedLimit)
-  if (!Number.isInteger(maxResults) || maxResults < 1 || maxResults > 20) {
-    res.status(400).json({ error: 'maxResults must be an integer from 1 to 20.' })
+  if (!Number.isInteger(maxResults) || maxResults < 10 || maxResults > 50) {
+    res.status(400).json({ error: 'maxResults must be an integer from 10 to 50.' })
     return
   }
 

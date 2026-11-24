@@ -32,6 +32,7 @@ import {
   type EmailSort,
 } from './inbox/types'
 import { analyzeGmail, toStudentEmails, type GmailAnalysis } from '../services/gmailAnalysis'
+import { getEmailScanLimit } from '../services/emailScanLimit'
 import { saveGmailCommitmentSuggestions } from '../services/gmailCommitmentSuggestions'
 
 type InboxProps = {
@@ -560,7 +561,7 @@ function Inbox({ onUnreadCountChange, onGmailScanComplete }: InboxProps) {
     setGmailAnalysisError(null)
     setGmailPlannerMessage(null)
     try {
-      const analyses = await analyzeGmail()
+      const analyses = await analyzeGmail(getEmailScanLimit())
       const liveEmails = toStudentEmails(analyses)
       onGmailScanComplete({
         totalEmails: analyses.length,
@@ -625,7 +626,7 @@ function Inbox({ onUnreadCountChange, onGmailScanComplete }: InboxProps) {
           <strong>Live Gmail analysis</strong>
           <span>
             {gmailAnalyses === null
-              ? 'Fetch up to 20 recent messages. Email bodies and full analysis are not saved; dated commitment suggestions are saved for your review.'
+              ? 'Choose a scan size from 10 to 50 in Premium. Email bodies and full analysis are not saved; dated commitment suggestions are saved for your review.'
               : `Showing ${emails.length} live Gmail messages. Email bodies are not saved; extracted dated commitments are available for review.`}
           </span>
         </div>

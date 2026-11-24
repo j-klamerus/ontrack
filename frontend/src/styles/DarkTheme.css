@@ -424,6 +424,63 @@
   color: #fecaca;
 }
 
+:root[data-theme='dark'] .settings-page .email-rule-form > label,
+:root[data-theme='dark'] .settings-page .email-regex-builder > label:first-child,
+:root[data-theme='dark'] .settings-page .spam-sender-form label,
+:root[data-theme='dark'] .settings-page .email-rule-title,
+:root[data-theme='dark'] .settings-page .spam-sender-settings h4,
+:root[data-theme='dark'] .settings-page .email-rules-empty-state strong {
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .settings-page .email-rule-form input,
+:root[data-theme='dark'] .settings-page .email-rule-form select,
+:root[data-theme='dark'] .settings-page .email-regex-builder textarea,
+:root[data-theme='dark'] .settings-page .spam-sender-form input {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-surface-soft);
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .settings-page .email-regex-help,
+:root[data-theme='dark'] .settings-page .email-rule-set,
+:root[data-theme='dark'] .settings-page .spam-sender-row,
+:root[data-theme='dark'] .settings-page .email-rule-row,
+:root[data-theme='dark'] .settings-page .email-rules-empty-state {
+  border-color: var(--color-border);
+  background-color: var(--color-surface-soft);
+}
+
+:root[data-theme='dark'] .settings-page .email-regex-help summary,
+:root[data-theme='dark'] .settings-page .email-regex-whole-words,
+:root[data-theme='dark'] .settings-page .email-regex-examples,
+:root[data-theme='dark'] .settings-page .email-rule-condition,
+:root[data-theme='dark'] .settings-page .email-rule-outcome,
+:root[data-theme='dark'] .settings-page .email-rule-step,
+:root[data-theme='dark'] .settings-page .spam-sender-row,
+:root[data-theme='dark'] .settings-page .email-rules-empty-state {
+  color: var(--color-text-secondary);
+}
+
+:root[data-theme='dark'] .settings-page .email-regex-examples code,
+:root[data-theme='dark'] .settings-page .email-rule-pattern {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-surface);
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .settings-page .email-rule-action {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-surface);
+  color: var(--color-text-strong);
+}
+
+:root[data-theme='dark'] .settings-page .email-rule-action:hover:not(:disabled) {
+  border-color: #31577d;
+  background-color: #203d5d;
+  color: #bfdbfe;
+}
+
 :root[data-theme='dark'] .inbox-page .inbox-toolbar-heading h2,
 :root[data-theme='dark'] .inbox-page .sender-name,
 :root[data-theme='dark'] .inbox-page .message-header h3,

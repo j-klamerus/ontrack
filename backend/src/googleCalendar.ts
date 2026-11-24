@@ -28,17 +28,31 @@ const connectedUsers = new Map<string, ReturnType<typeof createCalendarOAuthClie
 const calendarSelections = new CalendarSelectionStore(resolve('.ontrack-data', 'calendar-selections'))
 const calendarSync = new CalendarSyncStore(resolve('.ontrack-data', 'calendar-sync'))
 
-/** Build a Google OAuth client from backend-only configuration. */
-function createCalendarOAuthClient() {
-  const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID?.trim()
-  const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET?.trim()
+type CalendarOAuthConfig = {
+  clientId: string
+  clientSecret: string
+  redirectUri: string
+}
+
+const calendarOAuthSetupError =
+  'Google Calendar setup is incomplete. Set GOOGLE_CALENDAR_REDIRECT_URI in backend/.env and register it as an authorized redirect URI in Google Cloud. The Gmail OAuth client ID and secret are reused unless Calendar-specific credentials are set.'
+
+/** Reuse the Gmail OAuth client by default; Calendar needs its own callback URI. */
+function getCalendarOAuthConfig(): CalendarOAuthConfig | null {
+  const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID?.trim() || process.env.GOOGLE_CLIENT_ID?.trim()
+  const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET?.trim() || process.env.GOOGLE_CLIENT_SECRET?.trim()
   const redirectUri = process.env.GOOGLE_CALENDAR_REDIRECT_URI?.trim()
 
   if (!clientId || !clientSecret || !redirectUri) {
-    throw new Error('Google Calendar OAuth is not configured in backend/.env.')
+    return null
   }
 
-  return new google.auth.OAuth2(clientId, clientSecret, redirectUri)
+  return { clientId, clientSecret, redirectUri }
+}
+
+/** Build a Google OAuth client from backend-only configuration. */
+function createCalendarOAuthClient(config: CalendarOAuthConfig) {
+  return new google.auth.OAuth2(config.clientId, config.clientSecret, config.redirectUri)
 }
 
 /** Validate the bearer token with Supabase; write an HTTP error when authentication fails. */
@@ -144,6 +158,12 @@ router.get('/api/google/calendar/connect', async (request, response) => {
     return
   }
 
+  const oauthConfig = getCalendarOAuthConfig()
+  if (!oauthConfig) {
+    response.status(503).json({ error: calendarOAuthSetupError })
+    return
+  }
+
   for (const [state, record] of pendingOAuthStates) {
     if (Date.now() - record.createdAt > oauthStateLifetimeMs) {
       pendingOAuthStates.delete(state)
@@ -153,7 +173,7 @@ router.get('/api/google/calendar/connect', async (request, response) => {
   const state = randomBytes(32).toString('hex')
   pendingOAuthStates.set(state, { userId, createdAt: Date.now() })
 
-  const oauthClient = createCalendarOAuthClient()
+  const oauthClient = createCalendarOAuthClient(oauthConfig)
   const url = oauthClient.generateAuthUrl({
     access_type: 'offline',
     include_granted_scopes: true,
@@ -192,7 +212,13 @@ router.get('/auth/google/calendar/callback', async (request, response) => {
     return
   }
 
-  const oauthClient = createCalendarOAuthClient()
+  const oauthConfig = getCalendarOAuthConfig()
+  if (!oauthConfig) {
+    response.redirect(`${frontendOrigin}/?calendar_connection=error`)
+    return
+  }
+
+  const oauthClient = createCalendarOAuthClient(oauthConfig)
   const { tokens } = await oauthClient.getToken(code)
   if (!tokens.refresh_token) {
     response.redirect(`${frontendOrigin}/?calendar_connection=error`)
@@ -327,7 +353,8 @@ router.get('/api/google/calendar/events', async (request, response) => {
       ...(timeMax ? { timeMax } : {}),
       ...(pageToken ? { pageToken } : {})
     })
-    events.push(...(data.items ?? []).map((event) => ({
+    const displayableEvents = (data.items ?? []).filter((event) => event.eventType !== 'workingLocation')
+    events.push(...displayableEvents.map((event) => ({
       ...normalizeGoogleCalendarEvent(event, calendarId, timeZone),
       ...(event.id && Object.hasOwn(syncEntries, event.id) ? { googleSourceId: syncEntries[event.id] } : {})
     })))

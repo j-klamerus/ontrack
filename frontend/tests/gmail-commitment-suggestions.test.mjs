@@ -20,6 +20,8 @@ test('Gmail commitments become deduplicated planner suggestions without storing 
     const { getDashboardSuggestions } = await server.ssrLoadModule('/src/services/dashboardSuggestions.ts')
     const { confirmDashboardSuggestion } = await server.ssrLoadModule('/src/services/reviewedSuggestions.ts')
     const { getCommitments } = await server.ssrLoadModule('/src/services/commitments.ts')
+    const { formatDateTime } = await server.ssrLoadModule('/src/pages/dashboard/formatters.ts')
+    const { isUpcoming } = await server.ssrLoadModule('/src/pages/dashboard/types.ts')
     const analyses = [{
       id: 'gmail-source-1',
       threadId: 'thread-1',
@@ -45,9 +47,13 @@ test('Gmail commitments become deduplicated planner suggestions without storing 
     assert.equal(suggestions.length, 2)
     assert.equal(suggestions[0].date, '2026-12-10')
     assert.equal(suggestions[0].time, '')
+    assert.equal(formatDateTime(suggestions[0].date, suggestions[0].time), 'Dec 10')
     assert.equal(suggestions[0].sourceEmail, 'teacher@example.edu')
     assert.equal(suggestions[1].date, '2026-12-11')
     assert.equal(suggestions[1].time, '13:30')
+    assert.equal(formatDateTime('not-a-date', ''), 'Date unavailable')
+    assert.equal(isUpcoming({ date: '2099-12-10', time: '' }), true)
+    assert.equal(isUpcoming({ date: 'not-a-date', time: '' }), false)
     assert.equal(suggestions[0].description.includes('Private'), false)
 
     assert.equal(saveGmailCommitmentSuggestions(analyses), 2)

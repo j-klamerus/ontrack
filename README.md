@@ -79,10 +79,8 @@ From the project root, run:
 cd frontend
 npm run lint
 ```
-For the local Google Calendar prototype, add the following settings to `backend/.env`. Copy the Supabase URL and publishable/anon key from `frontend/.env`; do not use a Supabase service-role key:
+For the local Google Calendar prototype, add the calendar redirect URI to `backend/.env`. Calendar reuses the Gmail OAuth client ID and secret by default; only set the Calendar-specific ID and secret if you use a separate OAuth client. Copy the Supabase URL and publishable/anon key from `frontend/.env`; do not use a Supabase service-role key:
 ~~~
-GOOGLE_CALENDAR_CLIENT_ID=your-calendar-oauth-client-id
-GOOGLE_CALENDAR_CLIENT_SECRET=your-calendar-oauth-client-secret
 GOOGLE_CALENDAR_REDIRECT_URI=http://localhost:3000/auth/google/calendar/callback
 SUPABASE_URL=your-supabase-project-url
 SUPABASE_ANON_KEY=your-supabase-publishable-key
@@ -93,7 +91,7 @@ The OAuth client must be a Web application with the redirect URI above. The prot
 
 #### Google Calendar setup
 1. In Google Cloud, enable the **Google Calendar API** for the project that contains the OAuth client. If the OAuth app is in testing mode, add your Google account as a test user.
-2. Register the exact redirect URI above on the OAuth client. The app requests the `calendar.calendarlist.readonly` and `calendar.events` scopes.
+2. Register `http://localhost:3000/auth/google/calendar/callback` as an authorized redirect URI. If reusing the Gmail OAuth client, keep its existing `http://localhost:3000/auth/google/callback` URI too. The app requests the `calendar.calendarlist.readonly` and `calendar.events` scopes.
 3. The frontend contacts `http://localhost:3000` by default. If the backend runs elsewhere, set `VITE_BACKEND_URL` in `frontend/.env` and `FRONTEND_ORIGIN` in `backend/.env`, then restart both.
 4. Start the backend from the `backend` directory (calendar choices and sync records are saved in `backend/.ontrack-data`). In Settings, click **Connect Google Calendar**, choose a **Primary calendar for On Track**, and click **Save Changes**.
 
@@ -117,13 +115,15 @@ This runs ESLint on the frontend code and can help catch common issues while dev
 
 ### Gmail Inbox and Email Rules
 
-The Inbox starts empty rather than showing bundled sample emails. Click **Analyze Gmail** to fetch up to 20 recent Gmail messages; only those fetched messages appear in the Inbox. Click **Scan emails** to apply your saved category, priority, and spam rules through the backend endpoint `POST /api/email-rules/evaluate`. The scan only classifies the fetched messages; it does not modify or label messages in Gmail.
+The Inbox starts empty rather than showing bundled sample emails. Click **Analyze Gmail** to fetch the number of recent messages selected in Premium (10–50; default 20); only those fetched messages appear in the Inbox. Gemini analyzes batches of at most 20 messages to keep each request bounded. Click **Scan emails** to apply your saved category, priority, and spam rules through the backend endpoint `POST /api/email-rules/evaluate`. The scan only classifies the fetched messages; it does not modify or label messages in Gmail.
 
 Category rules determine group order, unmatched messages appear under `Other`, and messages within each group are newest-first. Priority rules are checked separately: when multiple rules match, High takes precedence over Medium, then Low; saved rule order breaks ties. Emails with no matching priority rule stay unprioritized. Scan results for fetched Gmail messages are temporary and are not saved with the messages. Spam detection checks enabled content rules and exact blocked sender addresses. A detected match is shown in the Inbox and included in the **Spam** filter, but Gmail messages are never moved or changed.
 
-Settings includes a Baseline Categories rule set for Assignment, Exam, Meeting, Appointment, Deadline, and Other, plus an optional Campus & Study Extras set with academic and campus-service rules. The baseline now covers common campus events and singular “quiz” mentions in the expanded sample inbox. There's also a Baseline Priorities set for common urgency, school tasks, and general notices, plus a Student-focused priority refinements set with more specific student actions and explicit weekday deadlines. Within each priority level, refinements are evaluated before baseline rules; priority level takes precedence overall (High, then Medium, then Low). Load both priority sets to use them together. A Baseline spam rules set looks for common account-pressure and sensitive-information requests. Each set can be loaded or unloaded as a group. Individual rules can be enabled, disabled, or deleted, and custom rules are preserved when unloading a set. You can also add exact sender email addresses to the blocked-senders list and remove them individually. These settings are saved in your browser.
+Premium includes a Baseline Categories rule set for Assignment, Exam, Meeting, Appointment, Deadline, and Other, plus an optional Campus & Study Extras set with academic and campus-service rules. The baseline now covers common campus events and singular “quiz” mentions in the expanded sample inbox. There's also a Baseline Priorities set for common urgency, school tasks, and general notices, plus a Student-focused priority refinements set with more specific student actions and explicit weekday deadlines. Within each priority level, refinements are evaluated before baseline rules; priority level takes precedence overall (High, then Medium, then Low). Load both priority sets to use them together.
 
-For category, priority, and spam regex rules, Settings includes a guide and a phrase builder. Enter comma or line-separated phrases to create a pattern that matches any of them; the builder escapes regex symbols and can add whole-word boundaries. Regex matching ignores capitalization. Spam patterns are simple heuristics, so review flagged messages before moving them.
+Premium includes email scan-size controls, custom category and priority rules, and spam and phishing protection. Category and priority rules are saved in this browser. A Baseline spam rules set looks for common account-pressure and sensitive-information requests. Each set can be loaded or unloaded as a group. Individual spam rules can be enabled, disabled, or deleted, and custom spam rules are preserved when unloading a set. You can also add exact sender email addresses to the blocked-senders list and remove them individually. Spam settings are saved to your account.
+
+For category, priority, and spam regex rules, Premium includes a guide and a phrase builder. Enter comma or line-separated phrases to create a pattern that matches any of them; the builder escapes regex symbols and can add whole-word boundaries. Regex matching ignores capitalization. Spam patterns are simple heuristics, so review flagged messages before moving them.
 
 The frontend expects the backend at `http://localhost:3000`. To use another backend URL, set `VITE_API_BASE_URL` in the frontend environment.
 
@@ -141,7 +141,7 @@ The response should contain `message: "Hello World!"`. This checks that the back
 
 1. Start the frontend and backend using the steps above and sign in to your account.
 2. Connect Gmail using the app's Gmail authorization flow.
-3. Open **Settings** and configure category, priority, or spam rules as needed.
+3. Open **Premium** and configure category, priority, or spam rules as needed.
 4. Open **Inbox** and click **Analyze Gmail**. The Inbox should show the messages returned from Gmail; bundled sample messages are not displayed.
 5. Click **Scan emails** to apply your rules, or **Refresh Gmail** to fetch and analyze the latest messages again.
 
