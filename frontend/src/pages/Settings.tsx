@@ -13,7 +13,7 @@ import {
   moveReviewedSuggestionCategoryToOther,
   resetDashboardSuggestionReviews
 } from '../services/reviewedSuggestions'
-import { getCalendarEvents } from '../services/calendarEvents'
+import { getCalendarEvents, moveCalendarEventCategoryToOther } from '../services/calendarEvents'
 import { getCommitments, moveCommitmentCategoryToOther } from '../services/commitments'
 import {
   getSelectedGoogleCalendarId,
@@ -28,8 +28,11 @@ import CategorySettingsCard from './settings/CategorySettingsCard'
 import EmailRulesCard from './settings/EmailRulesCard'
 import EmailPriorityRulesCard from './settings/EmailPriorityRulesCard'
 import EmailSpamSettingsCard from './settings/EmailSpamSettingsCard'
+import GmailConnectionCard from './settings/GmailConnectionCard'
 import PreferenceSettingsCards from './settings/PreferenceSettingsCards'
 import { getGmailConnectionStatus, startGmailConnection } from '../services/gmailAnalysis'
+import { preserveSessionForGmailOAuthRedirect } from '../services/supabase'
+import { getUserDataItem, removeUserDataItem, setUserDataItem } from '../services/userData'
 import type { SettingsState } from './settings/types'
 import type { UserProfile } from '../types/user'
 import '../styles/Settings.css'
@@ -100,7 +103,7 @@ function Settings({
 }: SettingsProps) {
   const [settings, setSettings] = useState<SettingsState>(() => {
     try {
-      const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY)
+      const storedSettings = getUserDataItem(SETTINGS_STORAGE_KEY)
 
       if (!storedSettings) {
         return demoSettings
@@ -176,6 +179,7 @@ function Settings({
     setGmailError(null)
     try {
       const authorizationUrl = await startGmailConnection()
+      await preserveSessionForGmailOAuthRedirect()
       window.location.assign(authorizationUrl)
     } catch (error) {
       setGmailError(error instanceof Error ? error.message : 'Unable to start Gmail authorization.')
@@ -276,6 +280,7 @@ function Settings({
       for (const category of removed) {
         moveCategoryOverridesToOther(category.name)
         moveReviewedSuggestionCategoryToOther(category.name)
+        moveCalendarEventCategoryToOther(category.name)
         moveCommitmentCategoryToOther(category.name)
       }
       if (eventCount > 0) recordPlannerPageChange('calendar')
@@ -300,7 +305,7 @@ function Settings({
       if (calendarChanged && selectedCalendarId) {
         await saveSelectedGoogleCalendarId(selectedCalendarId)
       }
-      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
+      setUserDataItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
       setSavedSettings(settings)
       setCalendarChanged(false)
       onThemeChange(settings.darkTheme)
@@ -334,7 +339,7 @@ function Settings({
         setCategories((current) => current.filter((category) => !resetCategories.includes(category.name)))
       }
       if (resetPreferences) {
-        localStorage.removeItem(SETTINGS_STORAGE_KEY)
+        removeUserDataItem(SETTINGS_STORAGE_KEY)
         setSettings(defaultSettings)
         setSavedSettings(defaultSettings)
         onThemeChange(defaultSettings.darkTheme)
@@ -371,12 +376,27 @@ function Settings({
 
   return (
     <section className="settings-page">
+      <header className="settings-page-header">
+        <div>
+          <p className="settings-eyebrow">ON TRACK</p>
+          <h1>Settings</h1>
+          <p>Manage your Gmail connection, inbox rules, calendar, and preferences.</p>
+        </div>
+      </header>
+
       {saveMessage && (
         <div className={`save-banner save-banner-${saveMessage.tone}`} role="status" aria-live="polite">
           {saveMessage.tone === 'success' && <CheckCircle2 size={18} aria-hidden="true" />}
           <span>{saveMessage.text}</span>
         </div>
       )}
+
+      <GmailConnectionCard
+        connected={gmailConnected}
+        busy={gmailBusy}
+        error={gmailError}
+        onConnect={handleConnectGmail}
+      />
 
       <div className="settings-grid">
         <CategorySettingsCard
@@ -406,10 +426,6 @@ function Settings({
           }}
           settings={settings}
           updateSetting={updateSetting}
-          gmailConnected={gmailConnected}
-          gmailBusy={gmailBusy}
-          gmailError={gmailError}
-          onConnectGmail={handleConnectGmail}
         />
       </div>
 

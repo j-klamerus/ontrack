@@ -7,6 +7,7 @@ type DashboardSuggestionBase = {
   date: string
   time: string
   sourceEmailId: number
+  sourceEmail?: string
 }
 
 export type DashboardSuggestion =

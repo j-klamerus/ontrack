@@ -2,7 +2,6 @@ import type { Dispatch, SetStateAction } from 'react'
 import { PlannerItemAction, PlannerItemCard } from '../../components/PlannerItemCard'
 import type { EventCategory, EventPriority } from '../../types/calendarEvent'
 import type { DashboardSuggestion } from '../../types/dashboardSuggestion'
-import type { StudentEmail } from '../../types/email'
 import type { Priority } from '../../types/commitment'
 import { formatDateTime } from './formatters'
 
@@ -11,7 +10,6 @@ type ReviewSuggestionsPanelProps = {
   headingId: string
   emptyMessage: string
   suggestions: DashboardSuggestion[]
-  emails: StudentEmail[]
   eventCategories: EventCategory[]
   eventPriorities: EventPriority[]
   editingSuggestion: DashboardSuggestion | null
@@ -27,7 +25,6 @@ function ReviewSuggestionsPanel({
   headingId,
   emptyMessage,
   suggestions,
-  emails,
   eventCategories,
   eventPriorities,
   editingSuggestion,
@@ -50,7 +47,6 @@ function ReviewSuggestionsPanel({
       {suggestions.length ? (
         <div className="dashboard-item-list">
           {suggestions.map((suggestion) => {
-            const sourceEmail = emails.find((email) => email.id === suggestion.sourceEmailId)
             const isEditing = editingSuggestion?.id === suggestion.id
 
             return (
@@ -63,7 +59,7 @@ function ReviewSuggestionsPanel({
                 dateLabel={formatDateTime(suggestion.date, suggestion.time)}
                 subtitle={suggestion.kind === 'Calendar event'
                   ? suggestion.course
-                  : sourceEmail ? `From: ${sourceEmail.subject}` : undefined}
+                  : suggestion.sourceEmail ? `From: ${suggestion.sourceEmail}` : undefined}
                 description={suggestion.description}
                 isSuggestion
                 isEditing={isEditing}

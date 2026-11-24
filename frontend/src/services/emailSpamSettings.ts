@@ -1,5 +1,6 @@
 // Browser persistence and validation for spam rules and exact blocked sender addresses.
 import type { EmailSpamRule, EmailSpamSettings } from '../types/emailRule'
+import { getUserDataItem, setUserDataItem } from './userData'
 
 const STORAGE_KEY = 'ontrack-email-spam-settings'
 const emptySettings: EmailSpamSettings = { rules: [], blockedSenders: [] }
@@ -66,7 +67,7 @@ function validateSettings(settings: unknown): asserts settings is EmailSpamSetti
 
 /** Loads saved spam rules and sender blocks; a browser with no saved settings starts empty. */
 export function getEmailSpamSettings(): EmailSpamSettings {
-  const savedSettings = localStorage.getItem(STORAGE_KEY)
+  const savedSettings = getUserDataItem(STORAGE_KEY)
   if (!savedSettings) {
     return emptySettings
   }
@@ -85,5 +86,5 @@ export function getEmailSpamSettings(): EmailSpamSettings {
 /** Validates the complete spam configuration before storing it in this browser. */
 export function saveEmailSpamSettings(settings: EmailSpamSettings): void {
   validateSettings(settings)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+  setUserDataItem(STORAGE_KEY, JSON.stringify(settings))
 }

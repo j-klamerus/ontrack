@@ -2,6 +2,7 @@
 import type { EventCategory } from '../types/calendarEvent'
 import defaultSettingsData from '../data/defaultSettings.json'
 import demoSettingsData from '../data/demoSettings.json'
+import { getUserDataItem, setUserDataItem } from '../services/userData'
 
 export type EventCategoryDefinition = {
   name: EventCategory
@@ -32,7 +33,7 @@ const isHexColor = (value: unknown): value is string =>
   typeof value === 'string' && /^#[\da-f]{6}$/i.test(value)
 
 const readCustomCategories = (): StoredCategory[] => {
-  const saved = localStorage.getItem(CATEGORY_STORAGE_KEY)
+  const saved = getUserDataItem(CATEGORY_STORAGE_KEY)
   if (!saved) {
     return demoSettingsData.categories
   }
@@ -70,7 +71,7 @@ const readCustomCategories = (): StoredCategory[] => {
 }
 
 const readCategoryOverrides = (): CategoryOverride[] => {
-  const saved = localStorage.getItem(CATEGORY_OVERRIDES_STORAGE_KEY)
+  const saved = getUserDataItem(CATEGORY_OVERRIDES_STORAGE_KEY)
   if (!saved) {
     return []
   }
@@ -141,7 +142,7 @@ export function saveCustomEventCategories(categories: EventCategoryDefinition[])
   for (const category of categories) {
     validated = [...validated, createCustomEventCategory(category.name, category.color, validated)]
   }
-  localStorage.setItem(
+  setUserDataItem(
     CATEGORY_STORAGE_KEY,
     JSON.stringify(validated.filter((category) => category.isCustom).map(({ name, color }) => ({ name, color })))
   )
@@ -164,12 +165,12 @@ export function saveItemCategoryOverride(
     ? overrides.map((item) => item === existing ? { ...item, category } : item)
     : [...overrides, { kind, id, category }]
 
-  localStorage.setItem(CATEGORY_OVERRIDES_STORAGE_KEY, JSON.stringify(updated))
+  setUserDataItem(CATEGORY_OVERRIDES_STORAGE_KEY, JSON.stringify(updated))
 }
 
 export function moveCategoryOverridesToOther(category: EventCategory): void {
   const updated = readCategoryOverrides().map((item) =>
     item.category === category ? { ...item, category: 'Other' } : item
   )
-  localStorage.setItem(CATEGORY_OVERRIDES_STORAGE_KEY, JSON.stringify(updated))
+  setUserDataItem(CATEGORY_OVERRIDES_STORAGE_KEY, JSON.stringify(updated))
 }

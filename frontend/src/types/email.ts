@@ -2,6 +2,15 @@
 export type EmailPriority = 'High' | 'Medium' | 'Low'
 export type EmailSignal = 'Assignment' | 'Exam' | 'Meeting' | 'Appointment' | 'Deadline' | 'Other'
 
+export type GmailAnalysisDetails = {
+  spamLikelihood: number
+  commitments: Array<{
+    title: string
+    dueAt: string
+    confidence: number
+  }>
+}
+
 export type StudentEmail = {
   id: number
   sender: string
@@ -21,4 +30,6 @@ export type StudentEmail = {
   signals: EmailSignal[]
   summary: string
   warning?: string
+  source?: 'gmail'
+  gmailAnalysis?: GmailAnalysisDetails
 }

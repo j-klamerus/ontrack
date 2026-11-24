@@ -1,6 +1,7 @@
 // Loads bundled demo emails and persists the Inbox read state in browser storage.
 import demoEmails from '../data/demoEmails.json'
 import type { EmailPriority, EmailSignal, StudentEmail } from '../types/email'
+import { getUserDataItem, setUserDataItem } from './userData'
 
 type JsonRecord = Record<string, unknown>
 
@@ -42,7 +43,7 @@ const isStudentEmail = (value: unknown): value is StudentEmail =>
 
 // Parse persisted read flags separately so malformed browser data is reported to the Inbox.
 const getSavedReadStates = (): Record<string, boolean> => {
-  const savedReadStates = localStorage.getItem(EMAIL_READ_STATES_KEY)
+  const savedReadStates = getUserDataItem(EMAIL_READ_STATES_KEY)
   if (!savedReadStates) {
     return {}
   }
@@ -94,7 +95,7 @@ export function saveEmailReadState(emailId: number, read: boolean): void {
 /** Persists read status for multiple messages without changing their bundled data. */
 export function saveEmailReadStates(emailIds: number[], read: boolean): void {
   const readStates = getSavedReadStates()
-  localStorage.setItem(
+  setUserDataItem(
     EMAIL_READ_STATES_KEY,
     JSON.stringify({
       ...readStates,

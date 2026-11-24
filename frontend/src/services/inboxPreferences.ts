@@ -1,4 +1,5 @@
 import type { EmailSort } from '../pages/inbox/types'
+import { getUserDataItem, setUserDataItem } from './userData'
 
 const SORT_STORAGE_KEY = 'ontrack-inbox-sort'
 
@@ -7,7 +8,7 @@ const isEmailSort = (value: string): value is EmailSort =>
 
 /** Loads the saved Inbox sort, defaulting to category order for a new browser. */
 export function getInboxSortPreference(): EmailSort {
-  const savedSort = localStorage.getItem(SORT_STORAGE_KEY)
+  const savedSort = getUserDataItem(SORT_STORAGE_KEY)
   if (savedSort === null) {
     return 'category'
   }
@@ -25,5 +26,5 @@ export function saveInboxSortPreference(sort: EmailSort): void {
     throw new Error('Invalid Inbox sort preference.')
   }
 
-  localStorage.setItem(SORT_STORAGE_KEY, sort)
+  setUserDataItem(SORT_STORAGE_KEY, sort)
 }

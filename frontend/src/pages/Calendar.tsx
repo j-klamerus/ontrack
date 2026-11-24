@@ -24,9 +24,13 @@ import type {
 } from './calendar/types'
 import '../styles/Calendar.css'
 
-import { getCalendarEvents } from '../services/calendarEvents'
+import {
+  addCalendarEvent,
+  deleteCalendarEvent as removeCalendarEvent,
+  getCalendarEvents,
+  updateCalendarEvent
+} from '../services/calendarEvents'
 import { getDashboardSuggestions } from '../services/dashboardSuggestions'
-import { getEmails } from '../services/emails'
 import {
   canWriteGoogleCalendar,
   createGoogleCalendarEvent,
@@ -58,7 +62,6 @@ import {
   updateCommitment
 } from '../services/commitments'
 import type { Commitment } from '../types/commitment'
-import type { StudentEmail } from '../types/email'
 
 const priorityOptions: EventPriority[] = ['High', 'Medium', 'Low']
 
@@ -98,7 +101,6 @@ function Calendar({
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [commitments, setCommitments] = useState<Commitment[]>([])
   const [suggestions, setSuggestions] = useState<CalendarSuggestion[]>([])
-  const [emails, setEmails] = useState<StudentEmail[]>([])
   const [showEventForm, setShowEventForm] = useState(false)
   const [editingId, setEditingId] = useState<number | string | null>(null)
   const [formKind, setFormKind] = useState<'Calendar event' | 'Commitment'>('Calendar event')
@@ -133,11 +135,10 @@ function Calendar({
     const loadCalendar = async () => {
       setLoadError(null)
       try {
-        const [loadedEvents, loadedCommitments, loadedSuggestions, loadedEmails] = await Promise.all([
+        const [loadedEvents, loadedCommitments, loadedSuggestions] = await Promise.all([
           getCalendarEvents(),
           getCommitments(),
-          getDashboardSuggestions(),
-          getEmails()
+          getDashboardSuggestions()
         ])
         if (!isMounted) {
           return
@@ -153,7 +154,6 @@ function Calendar({
             (suggestion): suggestion is CalendarSuggestion => suggestion.kind === 'Calendar event'
           )
         )
-        setEmails(loadedEmails)
       } catch (error) {
         if (isMounted) {
           setLoadError(error instanceof Error ? error.message : 'Unable to load calendar events.')
@@ -311,7 +311,7 @@ function Calendar({
         priority: event.priority
       })),
       ...commitments
-        .filter((commitment) => !commitment.completed)
+        .filter((commitment) => !commitment.completed && commitment.dueTime)
         .map((commitment) => ({
           id: `commitment-${commitment.id}`,
           sourceId: commitment.id,
@@ -344,6 +344,7 @@ function Calendar({
       commitments
         .filter((commitment) =>
           commitment.dueDate === selectedDateIso &&
+          commitment.dueTime &&
           (!commitment.completed ||
             (selectedCalendarItem?.kind === 'Commitment' && selectedCalendarItem.id === commitment.id))
         )
@@ -394,6 +395,8 @@ function Calendar({
     try {
       if (event?.googleEventId && event.googleCalendarId) {
         await deleteGoogleCalendarEvent(event.googleCalendarId, event.googleEventId)
+      } else if (event) {
+        removeCalendarEvent(eventId)
       }
       setEvents((currentEvents) => currentEvents.filter((item) => item.id !== eventId))
       recordPlannerPageChange('calendar')
@@ -421,10 +424,9 @@ function Calendar({
     if (
       !editingCommitment.name.trim() ||
       !editingCommitment.course.trim() ||
-      !editingCommitment.dueDate ||
-      !editingCommitment.dueTime
+      !editingCommitment.dueDate
     ) {
-      setCommitmentFormError('Enter a title, course, due date, and due time.')
+      setCommitmentFormError('Enter a title, course, and due date.')
       return
     }
 
@@ -466,13 +468,12 @@ function Calendar({
   }
 
   /** Confirm a suggested event into browser-backed reviews, not directly into Google. */
-  const handleConfirmSuggestion = (suggestion: CalendarSuggestion) => {
+  const handleConfirmSuggestion = async (suggestion: CalendarSuggestion) => {
     setSavingSuggestionId(suggestion.id)
     setSuggestionError(null)
 
     try {
-      const sourceEmail = emails.find((email) => email.id === suggestion.sourceEmailId)
-      const confirmed = confirmDashboardSuggestion(suggestion, sourceEmail?.email ?? '')
+      const confirmed = await confirmDashboardSuggestion(suggestion, suggestion.sourceEmail ?? '')
       if (confirmed.kind !== 'Calendar event') {
         throw new Error('This suggestion is not a calendar event.')
       }
@@ -637,6 +638,17 @@ function Calendar({
         return
       }
     } else {
+      try {
+        if (editingId === null) {
+          addCalendarEvent(preparedEvent)
+        } else {
+          updateCalendarEvent(preparedEvent)
+        }
+      } catch (error) {
+        setFormError(error instanceof Error ? error.message : 'Unable to save the calendar event.')
+        return
+      }
+
       setEvents((currentEvents) => {
         if (editingId === null) {
           return [...currentEvents, preparedEvent]

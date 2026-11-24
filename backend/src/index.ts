@@ -217,7 +217,7 @@ app.post('/api/emails/analyze', requireSignedInUser, async (req: AuthenticatedRe
   }
 
   const requestedLimit = req.body?.maxResults
-  const maxResults = requestedLimit === undefined ? 10 : Number(requestedLimit)
+  const maxResults = requestedLimit === undefined ? 20 : Number(requestedLimit)
   if (!Number.isInteger(maxResults) || maxResults < 1 || maxResults > 20) {
     res.status(400).json({ error: 'maxResults must be an integer from 1 to 20.' })
     return

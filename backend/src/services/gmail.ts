@@ -7,6 +7,7 @@ export type EmailForAnalysis = {
   sender: string
   subject: string
   receivedAt: string | null
+  read: boolean
   body: string
 }
 
@@ -76,6 +77,7 @@ export async function fetchRecentEmails(
       sender: header('From') || '(unknown sender)',
       subject: header('Subject') || '(no subject)',
       receivedAt: header('Date') || null,
+      read: !(message.labelIds ?? []).includes('UNREAD'),
       body: body.slice(0, MAX_BODY_CHARACTERS),
     }
   }))

@@ -5,6 +5,12 @@ import type { Commitment, Priority } from '../types/commitment'
 import type { EventCategory } from '../types/calendarEvent'
 import type { DashboardSuggestion } from '../types/dashboardSuggestion'
 import { recordPlannerPageChange, type PlannerPage } from './plannerNavigation'
+import {
+  flushUserDataWrites,
+  getUserDataItem,
+  removeUserDataItem,
+  setUserDataItem
+} from './userData'
 
 type ConfirmedDashboardItem =
   | { kind: 'Commitment'; commitment: Commitment }
@@ -15,11 +21,12 @@ type ReviewedSuggestion =
   | ({ suggestionId: number; status: 'confirmed' } & ConfirmedDashboardItem)
 
 const STORAGE_KEY = 'ontrack-reviewed-suggestions'
+const LEGACY_DEMO_SUGGESTION_IDS = new Set([1, 2, 3, 4, 5, 6])
 type JsonRecord = Record<string, unknown>
 
-/** Clears saved decisions so dismissed and confirmed demo suggestions reappear. */
+/** Clears saved decisions so current Gmail suggestions can be reviewed again. */
 export function resetDashboardSuggestionReviews(): void {
-  localStorage.removeItem(STORAGE_KEY)
+  removeUserDataItem(STORAGE_KEY)
   recordPlannerPageChange('calendar')
   recordPlannerPageChange('commitments')
 }
@@ -77,7 +84,7 @@ const isReviewedSuggestion = (value: unknown): value is ReviewedSuggestion => {
 }
 
 const readReviewedSuggestions = (): ReviewedSuggestion[] => {
-  const savedRecords = localStorage.getItem(STORAGE_KEY)
+  const savedRecords = getUserDataItem(STORAGE_KEY)
   if (!savedRecords) {
     return []
   }
@@ -114,7 +121,14 @@ const readReviewedSuggestions = (): ReviewedSuggestion[] => {
     throw new Error('Saved suggestion reviews have an invalid format.')
   }
 
-  return migratedRecords
+  const userRecords = migratedRecords.filter(
+    (record) => !LEGACY_DEMO_SUGGESTION_IDS.has(record.suggestionId)
+  )
+  if (userRecords.length !== migratedRecords.length) {
+    setUserDataItem(STORAGE_KEY, JSON.stringify(userRecords))
+  }
+
+  return userRecords
 }
 
 /** Returns IDs of suggestions already confirmed or dismissed. */
@@ -129,8 +143,7 @@ export const getConfirmedCommitments = (): Commitment[] =>
       : []
   )
 
-/** Returns confirmed suggestions that were saved as calendar events. */
-/** Return confirmed calendar suggestions from browser storage, separately from Google events. */
+/** Returns confirmed calendar suggestions from browser storage, separately from Google events. */
 export const getConfirmedCalendarEvents = (): CalendarEvent[] =>
   readReviewedSuggestions().flatMap((record) =>
     record.status === 'confirmed' && record.kind === 'Calendar event'
@@ -152,22 +165,23 @@ export function moveReviewedSuggestionCategoryToOther(category: EventCategory): 
     }
     return record
   })
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(records))
+  setUserDataItem(STORAGE_KEY, JSON.stringify(records))
 }
 
 /**
  * Saves a suggestion as a planner item. Re-confirming an existing confirmation
  * returns that item; a previously dismissed suggestion cannot be confirmed.
  */
-export function confirmDashboardSuggestion(
+export async function confirmDashboardSuggestion(
   suggestion: DashboardSuggestion,
   sourceEmail: string
-): ConfirmedDashboardItem {
+): Promise<ConfirmedDashboardItem> {
   const records = readReviewedSuggestions()
   const existingRecord = records.find((record) => record.suggestionId === suggestion.id)
 
   if (existingRecord) {
     if (existingRecord.status === 'confirmed') {
+      await flushUserDataWrites()
       return existingRecord
     }
 
@@ -217,8 +231,9 @@ export function confirmDashboardSuggestion(
         }
       }
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([...records, reviewedRecord]))
+  setUserDataItem(STORAGE_KEY, JSON.stringify([...records, reviewedRecord]))
   recordPlannerPageChange(suggestion.kind === 'Commitment' ? 'commitments' : 'calendar')
+  await flushUserDataWrites()
 
   return reviewedRecord
 }
@@ -230,7 +245,7 @@ export function dismissDashboardSuggestion(suggestionId: number, kind: Dashboard
     return
   }
 
-  localStorage.setItem(
+  setUserDataItem(
     STORAGE_KEY,
     JSON.stringify([...records, { suggestionId, status: 'dismissed' }])
   )

@@ -1,4 +1,5 @@
 import { SETTINGS_STORAGE_KEY } from './user'
+import { getUserDataItem } from './userData'
 
 export type PlannerKeyPage = 'dashboard' | 'calendar' | 'commitments'
 
@@ -17,7 +18,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 export function getPlannerKeyDefaultOpen(
   page: PlannerKeyPage
 ): boolean {
-  const savedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY)
+  const savedSettings = getUserDataItem(SETTINGS_STORAGE_KEY)
   if (!savedSettings) {
     return DEFAULT_PLANNER_KEY_DEFAULTS[page]
   }

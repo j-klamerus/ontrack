@@ -18,14 +18,12 @@ import {
   updateCommitment
 } from '../services/commitments'
 import { getDashboardSuggestions } from '../services/dashboardSuggestions'
-import { getEmails } from '../services/emails'
 import {
   confirmDashboardSuggestion,
   dismissDashboardSuggestion
 } from '../services/reviewedSuggestions'
 import { recordPlannerPageChange } from '../services/plannerNavigation'
 import type { Commitment } from '../types/commitment'
-import type { StudentEmail } from '../types/email'
 import type { PlannerItemSelection } from '../types/plannerItemSelection'
 import '../styles/Commitments.css'
 
@@ -44,7 +42,6 @@ function Commitments({
   const eventCategories = getEventCategories()
   const [commitments, setCommitments] = useState<Commitment[]>([])
   const [suggestions, setSuggestions] = useState<CommitmentSuggestion[]>([])
-  const [emails, setEmails] = useState<StudentEmail[]>([])
   const [activeFilter, setActiveFilter] = useState<CommitmentFilter>('All')
   const [categoryFilter, setCategoryFilter] = useState(allFilterOption)
   const [priorityFilter, setPriorityFilter] = useState(allFilterOption)
@@ -60,15 +57,14 @@ function Commitments({
   const [commitmentFormError, setCommitmentFormError] = useState<string | null>(null)
 
   useEffect(() => {
-    Promise.all([getCommitments(), getDashboardSuggestions(), getEmails()])
-      .then(([loadedCommitments, loadedSuggestions, loadedEmails]) => {
+    Promise.all([getCommitments(), getDashboardSuggestions()])
+      .then(([loadedCommitments, loadedSuggestions]) => {
         setCommitments(loadedCommitments)
         setSuggestions(
           loadedSuggestions.filter(
             (suggestion): suggestion is CommitmentSuggestion => suggestion.kind === 'Commitment'
           )
         )
-        setEmails(loadedEmails)
       })
       .catch((error: unknown) => {
         setLoadError(error instanceof Error ? error.message : 'Unable to load commitments.')
@@ -195,10 +191,9 @@ function Commitments({
     if (
       !editingCommitment.name.trim() ||
       !editingCommitment.course.trim() ||
-      !editingCommitment.dueDate ||
-      !editingCommitment.dueTime
+      !editingCommitment.dueDate
     ) {
-      setCommitmentFormError('Enter a title, course, due date, and due time.')
+      setCommitmentFormError('Enter a title, course, and due date.')
       return
     }
 
@@ -278,13 +273,12 @@ function Commitments({
     setCommitmentFormError(null)
   }
 
-  const handleConfirmSuggestion = (suggestion: CommitmentSuggestion) => {
+  const handleConfirmSuggestion = async (suggestion: CommitmentSuggestion) => {
     setSavingSuggestionId(suggestion.id)
     setSuggestionError(null)
 
     try {
-      const sourceEmail = emails.find((email) => email.id === suggestion.sourceEmailId)
-      const confirmed = confirmDashboardSuggestion(suggestion, sourceEmail?.email ?? '')
+      const confirmed = await confirmDashboardSuggestion(suggestion, suggestion.sourceEmail ?? '')
       if (confirmed.kind !== 'Commitment') {
         throw new Error('This suggestion is not a commitment.')
       }
@@ -311,7 +305,7 @@ function Commitments({
   }
 
   const handleSaveSuggestion = () => {
-    if (!editingSuggestion || !editingSuggestion.title.trim() || !editingSuggestion.date || !editingSuggestion.time) {
+    if (!editingSuggestion || !editingSuggestion.title.trim() || !editingSuggestion.date) {
       return
     }
 
@@ -351,7 +345,6 @@ function Commitments({
       <CommitmentSummaryCards summary={summary} />
       <SuggestedCommitmentsPanel
         suggestions={suggestions}
-        emails={emails}
         categories={eventCategories}
         editingSuggestion={editingSuggestion}
         savingSuggestionId={savingSuggestionId}

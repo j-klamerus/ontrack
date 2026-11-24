@@ -14,9 +14,10 @@ import Inbox from './pages/Inbox'
 import Commitments from './pages/Commitments'
 import Calendar from './pages/Calendar'
 import Settings from './pages/Settings'
-import { getEmails } from './services/emails'
 import { getDashboardSuggestions } from './services/dashboardSuggestions'
 import { getUserProfile, SETTINGS_STORAGE_KEY } from './services/user'
+import { getUserDataItem } from './services/userData'
+import type { GmailScanSummary } from './types/gmailScanSummary'
 import {
   getPlannerPageChanges,
   markPlannerPageVisited,
@@ -30,7 +31,7 @@ type Theme = 'light' | 'dark'
 
 const getInitialTheme = (): Theme => {
   try {
-    const savedSettings = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
+    const savedSettings = getUserDataItem(SETTINGS_STORAGE_KEY)
     if (savedSettings) {
       const parsedSettings = JSON.parse(savedSettings) as { darkTheme?: boolean }
       return parsedSettings.darkTheme === true ? 'dark' : 'light'
@@ -61,6 +62,10 @@ function App({ user, onLogOut, authError }: AppProps) {
   const [calendarSelection, setCalendarSelection] = useState<PlannerItemSelection | null>(null)
   const [commitmentSelection, setCommitmentSelection] = useState<PlannerItemSelection | null>(null)
   const [unreadEmailCount, setUnreadEmailCount] = useState(0)
+  const [scannedGmailSummary, setScannedGmailSummary] = useState<{
+    userId: string
+    summary: GmailScanSummary
+  } | null>(null)
   const [navigationError, setNavigationError] = useState<string | null>(null)
   const [plannerPageChanges, setPlannerPageChanges] = useState<PlannerPageChanges>({
     calendar: false,
@@ -70,31 +75,13 @@ function App({ user, onLogOut, authError }: AppProps) {
     calendar: 0,
     commitments: 0
   })
+  const currentUserGmailSummary = scannedGmailSummary?.userId === user.id
+    ? scannedGmailSummary.summary
+    : null
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
-
-  useEffect(() => {
-    let isMounted = true
-
-    getEmails()
-      .then((emails) => {
-        if (isMounted) {
-          setUnreadEmailCount(emails.filter((email) => !email.read).length)
-          setNavigationError(null)
-        }
-      })
-      .catch((error: unknown) => {
-        if (isMounted) {
-          setNavigationError(error instanceof Error ? error.message : 'Unable to load unread email count.')
-        }
-      })
-
-    return () => {
-      isMounted = false
-    }
-  }, [])
 
   useEffect(() => {
     let isMounted = true
@@ -164,6 +151,7 @@ function App({ user, onLogOut, authError }: AppProps) {
       setPendingSettingsExit({ type: 'navigate', page })
       return
     }
+    if (page !== 'Inbox') setUnreadEmailCount(0)
     setCurrentPage(page)
   }
 
@@ -182,6 +170,7 @@ function App({ user, onLogOut, authError }: AppProps) {
       setPendingSettingsExit({ type: 'logout' })
       return
     }
+    setScannedGmailSummary(null)
     onLogOut()
   }
 
@@ -191,8 +180,10 @@ function App({ user, onLogOut, authError }: AppProps) {
     setSettingsDirty(false)
     setPendingSettingsExit(null)
     if (exit.type === 'logout') {
+      setScannedGmailSummary(null)
       onLogOut()
     } else {
+      if (exit.page !== 'Inbox') setUnreadEmailCount(0)
       setCurrentPage(exit.page)
     }
   }
@@ -201,11 +192,17 @@ function App({ user, onLogOut, authError }: AppProps) {
     Dashboard: (
       <Dashboard
         user={profile}
+        emailSummary={currentUserGmailSummary}
         onViewInCalendar={handleViewInCalendar}
         onViewInCommitments={handleViewInCommitments}
       />
     ),
-    Inbox: <Inbox onUnreadCountChange={setUnreadEmailCount} />,
+    Inbox: (
+      <Inbox
+        onUnreadCountChange={setUnreadEmailCount}
+        onGmailScanComplete={(summary) => setScannedGmailSummary({ userId: user.id, summary })}
+      />
+    ),
     Commitments: (
       <Commitments
         onViewInCalendar={handleViewInCalendar}

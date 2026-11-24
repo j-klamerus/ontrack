@@ -28,7 +28,7 @@ test('category removal preserves local commitments and suggestion records', asyn
     }
     commitments.addCommitment(commitment)
     commitments.updateCommitment({ ...commitment, name: 'Updated project' })
-    reviews.confirmDashboardSuggestion({
+    await reviews.confirmDashboardSuggestion({
       id: 902, kind: 'Calendar event', title: 'Reviewed project', course: 'Test',
       date: '2026-12-01', time: '10:00', category: 'Research Project', priority: 'High', description: ''
     }, '')
